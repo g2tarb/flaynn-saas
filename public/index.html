@@ -44,7 +44,9 @@
 <body>
     <a href="#main-content" class="skip-link">Aller au contenu principal</a>
 
-    <div id="ambient-bg" class="ambient-bg" aria-hidden="true"></div>
+    <div id="ambient-bg" class="ambient-bg" aria-hidden="true">
+        <canvas id="bg-canvas" class="three-canvas" aria-hidden="true"></canvas>
+    </div>
 
     <header class="nav-glass" role="banner">
         <div class="container nav-content">
@@ -88,13 +90,13 @@
             </div>
         </section>
 
-        <section id="pillars" class="section section--tight" aria-labelledby="pillars-title">
+        <section id="pillars" class="section section--tight" aria-labelledby="pillars-title" data-animate="reveal">
             <div class="container">
-                <header class="section-header">
+                <header class="section-header" data-animate-child>
                     <h2 id="pillars-title" class="heading-section">Cinq piliers. Une lecture unique.</h2>
                     <p class="section-lead">Chaque axe est pondéré comme en phase de due diligence : pas de vanity metrics, que des signaux actionnables.</p>
                 </header>
-                <ul class="pillars-grid" role="list">
+                <ul class="pillars-grid" role="list" data-animate-child>
                     <li class="card-glass pillar-card">
                         <span class="pillar-index" aria-hidden="true">01</span>
                         <h3 class="card-title">Market</h3>
@@ -124,17 +126,17 @@
             </div>
         </section>
 
-        <section class="section bento-section" aria-labelledby="preview-title">
+        <section class="section bento-section" aria-labelledby="preview-title" data-animate="reveal">
             <div class="container">
-                <header class="section-header">
+                <header class="section-header" data-animate-child>
                     <h2 id="preview-title" class="heading-section">Vue synthétique</h2>
                     <p class="section-lead">Exemple de sortie — les vôtres sont contextualisées à votre secteur et stade.</p>
                 </header>
-                <div class="bento-grid">
+                <div class="bento-grid" data-animate-child>
                     <article class="card-glass bento-item bento-large">
                         <h3 class="card-title">Score global</h3>
                         <div class="score-display">
-                            <span class="score-value js-score-counter">92</span>
+                            <span class="score-value js-score-counter" data-score="92">0</span>
                             <span class="score-max">/100</span>
                         </div>
                         <p class="card-body">Positionnement estimé dans le haut du cohort Flaynn sur votre verticale.</p>
@@ -153,14 +155,14 @@
             </div>
         </section>
 
-        <section id="scoring" class="section section--form" aria-labelledby="form-title">
+        <section id="scoring" class="section section--form" aria-labelledby="form-title" data-animate="reveal">
             <div class="container">
-                <header class="section-header">
+                <header class="section-header" data-animate-child>
                     <h2 id="form-title" class="heading-section">Démarrer votre <span class="gradient-text-inline">scoring</span></h2>
                     <p class="section-lead">Trois étapes. Données chiffrées uniquement — pas de pitch deck upload ici.</p>
                 </header>
 
-                <div class="scoring-form-wrap card-glass">
+                <div class="scoring-form-wrap card-glass" data-animate-child>
                     <form id="scoring-form" class="scoring-form" novalidate>
                         <div class="form-progress" role="status" aria-live="polite" aria-atomic="true">
                             <span class="form-progress__label">Étape <span id="step-current">1</span> sur 3</span>
@@ -260,9 +262,9 @@
             </div>
         </section>
 
-        <section id="investors" class="section section--investors" aria-labelledby="investors-title">
+        <section id="investors" class="section section--investors" aria-labelledby="investors-title" data-animate="reveal">
             <div class="container investors-layout">
-                <div class="investors-copy">
+                <div class="investors-copy" data-animate-child>
                     <h2 id="investors-title" class="heading-section">Investisseurs</h2>
                     <p class="section-lead">Flaynn aligne les dossiers sur des critères comparables : vous accédez à des startups pré-qualifiées sur des bases homogènes, avec un score et des piliers explicités.</p>
                     <ul class="investors-list" role="list">
@@ -272,7 +274,7 @@
                     </ul>
                     <a href="mailto:partenaires@flaynn.fr" class="btn-primary btn-inline">Écrire au partenariat</a>
                 </div>
-                <div class="card-glass investors-card">
+                <div class="card-glass investors-card" data-animate-child>
                     <p class="caption">Réseau en construction — priorité aux partenaires institutionnels et BA structurés.</p>
                     <p class="metric-visual metric-visual--muted">Due diligence friendly</p>
                 </div>

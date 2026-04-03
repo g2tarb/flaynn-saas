@@ -6,12 +6,13 @@ export const helmetConfig = {
       styleSrc: ["'self'", "https://fonts.googleapis.com", "https://api.fontshare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://api.fontshare.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https://votre-n8n-instance.com"],
+      connectSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://votre-n8n-instance.com'],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: []
     }
   },
-  crossOriginEmbedderPolicy: true,
+  /* COEP désactivée : import dynamique Three/GSAP depuis jsDelivr + WebGL sinon souvent bloqués */
+  crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: true,
   crossOriginResourcePolicy: true,
   dnsPrefetchControl: { allow: false },

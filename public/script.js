@@ -18,7 +18,7 @@ function initMorph(el) {
 }
 
 function initScoreCounter(el) {
-  const raw = el.textContent.trim();
+  const raw = el.dataset?.score ?? el.textContent.trim();
   const target = Number.parseInt(raw, 10);
   if (Number.isNaN(target)) return;
   let n = 0;
@@ -366,19 +366,59 @@ function getDeviceTier() {
 
 window.__FLAYNN_TIER = getDeviceTier();
 
-function bootDeferred() {
+async function bootDeferred() {
   const tier = window.__FLAYNN_TIER;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const morph = document.querySelector('.js-morph-text');
-  if (morph && tier >= 2) initMorph(morph);
+  const morphEl = document.querySelector('.js-morph-text');
+  const counterEl = document.querySelector('[data-score]');
 
-  const counter = document.querySelector('.js-score-counter');
-  if (counter) {
-    if (tier >= 2) initScoreCounter(counter);
-    else {
-      const raw = counter.textContent.trim();
-      const target = Number.parseInt(raw, 10);
-      if (!Number.isNaN(target)) counter.textContent = String(target);
+  if (reduced) {
+    if (counterEl) {
+      const t = Number.parseInt(counterEl.dataset.score || counterEl.textContent, 10);
+      if (!Number.isNaN(t)) {
+        counterEl.textContent = String(t);
+        const r = t / 100;
+        counterEl.style.color =
+          r < 0.4 ? 'var(--accent-rose)' : r < 0.7 ? 'var(--accent-amber)' : 'var(--accent-emerald)';
+      }
+    }
+  } else if (tier >= 2) {
+    try {
+      const { loadGsapBundle, initMorphGsap, initScrollReveal, initGsapScoreCounters } = await import(
+        './js/landing-motion.js'
+      );
+      await loadGsapBundle();
+      const gsap = window.gsap;
+      if (morphEl) initMorphGsap(gsap, morphEl, MORPH_PHRASES);
+      initScrollReveal(gsap);
+      initGsapScoreCounters(gsap);
+    } catch {
+      if (morphEl) initMorph(morphEl);
+      if (counterEl) initScoreCounter(counterEl);
+    }
+  } else if (counterEl) {
+    const target = Number.parseInt(counterEl.dataset.score || counterEl.textContent, 10);
+    if (!Number.isNaN(target)) {
+      counterEl.textContent = String(target);
+      const r = target / 100;
+      counterEl.style.color =
+        r < 0.4 ? 'var(--accent-rose)' : r < 0.7 ? 'var(--accent-amber)' : 'var(--accent-emerald)';
+    }
+  }
+
+  const debugThree = new URLSearchParams(window.location.search).get('debug_three') === '1';
+  /* Three.js : tier 2 = léger (cf. .md), tier 3 = dense */
+  if ((tier >= 2 || debugThree) && !reduced) {
+    try {
+      const { FlaynnNeuralBackground } = await import('./js/three-neural.js');
+      const canvas = document.getElementById('bg-canvas');
+      if (canvas) {
+        const particles = debugThree ? 1200 : tier >= 3 ? 2800 : 600;
+        new FlaynnNeuralBackground(canvas, { particles });
+      }
+    } catch {
+      /* WebGL / module indisponible : fond CSS (.ambient-bg) */
     }
   }
 
@@ -400,7 +440,9 @@ const scheduleIdle = (fn) => {
     window.setTimeout(fn, 200);
   }
 };
-scheduleIdle(bootDeferred);
+scheduleIdle(() => {
+  void bootDeferred();
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
