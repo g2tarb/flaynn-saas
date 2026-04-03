@@ -157,6 +157,11 @@ class ScoringFormController {
     this.form.querySelectorAll('.field__chips').forEach((group) => {
       group.querySelectorAll('.chip').forEach((chip) => {
         chip.addEventListener('click', () => {
+          // Liquid UX: Retour haptique natif sur les boutons tactiles
+          if (typeof navigator.vibrate === 'function') {
+            navigator.vibrate(15);
+          }
+
           group.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', 'false'));
           chip.setAttribute('aria-checked', 'true');
           const hidden = group.parentElement.querySelector('input[type="hidden"][name="stage"]');
@@ -164,13 +169,6 @@ class ScoringFormController {
             hidden.value = chip.dataset.value || '';
             hidden.dispatchEvent(new Event('input', { bubbles: true }));
           }
-          chip.animate(
-            [
-              { transform: 'scale(0.96)' },
-              { transform: 'scale(1)' }
-            ],
-            { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
-          );
           this.#updateStepButtons();
         });
       });
@@ -439,6 +437,55 @@ document.getElementById('footer-year').textContent = String(new Date().getFullYe
 document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring'));
 document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring'));
 
+function initLiquidUX() {
+  // 1. Glow effect dynamique (Bento Cards & Inputs)
+  const applyGlow = () => {
+    document.querySelectorAll('.card-glass, .field__input').forEach((el) => {
+      if (el.dataset.glowBound) return;
+      el.dataset.glowBound = 'true';
+      el.addEventListener('mousemove', (e) => {
+        const rect = el.getBoundingClientRect();
+        el.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+        el.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+      });
+    });
+  };
+  applyGlow();
+  // MutationObserver pour appliquer l'effet aux éléments créés dynamiquement
+  const observer = new MutationObserver(() => applyGlow());
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // 2. Physique du Mouvement "Spring" globale
+  const interactives = 'button, a, .chip, .nav-link, [role="button"]';
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest(interactives);
+    if (el && !el.disabled) {
+      el.style.transform = 'scale(0.96)';
+      el.style.transition = 'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+  });
+  const resetSpring = (e) => {
+    const el = e.target.closest(interactives);
+    if (el) {
+      el.style.transform = '';
+      el.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    }
+  };
+  document.addEventListener('pointerup', resetSpring);
+  document.addEventListener('pointercancel', resetSpring);
+  document.addEventListener('pointerout', resetSpring);
+
+  // 3. Retour haptique visuel au clavier (Flash sur la bordure)
+  document.addEventListener('input', (e) => {
+    if (e.target.matches('.field__input')) {
+      e.target.animate([
+        { boxShadow: '0 0 0 4px rgba(139, 92, 246, 0.3)' },
+        { boxShadow: '0 0 0 0px rgba(139, 92, 246, 0)' }
+      ], { duration: 350, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    }
+  });
+}
+
 const scheduleIdle = (fn) => {
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(fn, { timeout: 2000 });
@@ -448,6 +495,7 @@ const scheduleIdle = (fn) => {
 };
 scheduleIdle(() => {
   void bootDeferred();
+  initLiquidUX();
 });
 
 // PWA: Enregistrement du Service Worker

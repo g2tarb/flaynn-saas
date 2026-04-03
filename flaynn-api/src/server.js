@@ -1,10 +1,16 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Fastify from 'fastify';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import { errorHandler } from './middleware/error-handler.js';
 import dashboardApiRoutes from './routes/dashboard-api.js';
 import scoringRoutes from './routes/scoring.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function buildServer() {
   const fastify = Fastify({
@@ -46,6 +52,22 @@ export async function buildServer() {
 
   await fastify.register(dashboardApiRoutes);
   await fastify.register(scoringRoutes);
+
+  // Servir le front-end (SPA Monolithe) depuis le dossier public/
+  await fastify.register(fastifyStatic, {
+    root: path.join(__dirname, '../../public'),
+  });
+
+  // Gestion du fallback SPA (pour le routeur côté client)
+  fastify.setNotFoundHandler((request, reply) => {
+    if (request.url.startsWith('/api/')) {
+      reply.code(404).send({ error: 'NOT_FOUND', message: 'Route API introuvable.' });
+    } else if (request.url.startsWith('/dashboard')) {
+      reply.sendFile('dashboard/index.html');
+    } else {
+      reply.sendFile('index.html');
+    }
+  });
 
   fastify.get('/api/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 

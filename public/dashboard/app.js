@@ -282,6 +282,12 @@ class FlaynnRouter {
     document.addEventListener('click', (e) => {
       const link = e.target.closest('[data-route]');
       if (!link) return;
+
+      // Liquid UX: Retour haptique natif sur la bottom bar
+      if (typeof navigator.vibrate === 'function') {
+        navigator.vibrate(15);
+      }
+
       e.preventDefault();
       const path = link.getAttribute('data-route');
       if (path) this.navigate(path);
@@ -423,6 +429,42 @@ function buildRoutes(data) {
   ];
 }
 
+function initLiquidUX() {
+  const applyGlow = () => {
+    document.querySelectorAll('.card-glass').forEach((el) => {
+      if (el.dataset.glowBound) return;
+      el.dataset.glowBound = 'true';
+      el.addEventListener('mousemove', (e) => {
+        const rect = el.getBoundingClientRect();
+        el.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+        el.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+      });
+    });
+  };
+  applyGlow();
+  const observer = new MutationObserver(() => applyGlow());
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  const interactives = 'button, a, .dashboard-nav-side__link, .dashboard-nav-mobile__item, .nav-item';
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest(interactives);
+    if (el && !el.disabled) {
+      el.style.transform = 'scale(0.96)';
+      el.style.transition = 'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)';
+    }
+  });
+  const resetSpring = (e) => {
+    const el = e.target.closest(interactives);
+    if (el) {
+      el.style.transform = '';
+      el.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    }
+  };
+  document.addEventListener('pointerup', resetSpring);
+  document.addEventListener('pointercancel', resetSpring);
+  document.addEventListener('pointerout', resetSpring);
+}
+
 async function main() {
   const app = document.getElementById('app');
   if (!app) return;
@@ -450,4 +492,5 @@ async function main() {
   }
 }
 
+initLiquidUX();
 main();
