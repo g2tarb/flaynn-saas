@@ -355,18 +355,55 @@ class ScoringFormController {
   }
 }
 
-const morph = document.querySelector('.js-morph-text');
-if (morph) initMorph(morph);
+function getDeviceTier() {
+  const mem = typeof navigator.deviceMemory === 'number' ? navigator.deviceMemory : 4;
+  const conn = navigator.connection;
+  const ect = conn?.effectiveType || '4g';
+  if (conn?.saveData || ect === '2g' || ect === 'slow-2g') return 1;
+  if (mem <= 2 || ect === '3g') return 2;
+  return 3;
+}
 
-const counter = document.querySelector('.js-score-counter');
-if (counter) initScoreCounter(counter);
+window.__FLAYNN_TIER = getDeviceTier();
+
+function bootDeferred() {
+  const tier = window.__FLAYNN_TIER;
+
+  const morph = document.querySelector('.js-morph-text');
+  if (morph && tier >= 2) initMorph(morph);
+
+  const counter = document.querySelector('.js-score-counter');
+  if (counter) {
+    if (tier >= 2) initScoreCounter(counter);
+    else {
+      const raw = counter.textContent.trim();
+      const target = Number.parseInt(raw, 10);
+      if (!Number.isNaN(target)) counter.textContent = String(target);
+    }
+  }
+
+  const scoringForm = document.getElementById('scoring-form');
+  if (scoringForm) {
+    new ScoringFormController(scoringForm);
+  }
+}
 
 document.getElementById('footer-year').textContent = String(new Date().getFullYear());
 
 document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring'));
 document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring'));
 
-const scoringForm = document.getElementById('scoring-form');
-if (scoringForm) {
-  new ScoringFormController(scoringForm);
+const scheduleIdle = (fn) => {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(fn, { timeout: 2000 });
+  } else {
+    window.setTimeout(fn, 200);
+  }
+};
+scheduleIdle(bootDeferred);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+  });
 }

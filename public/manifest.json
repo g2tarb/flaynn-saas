@@ -1,10 +1,21 @@
 {
-  "name": "Flaynn — Scoring startups",
+  "name": "Flaynn — Scoring Startups",
   "short_name": "Flaynn",
+  "description": "Plateforme de scoring objectif pour startups françaises et mise en relation investisseur.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#030407",
   "background_color": "#030407",
-  "lang": "fr-FR"
+  "lang": "fr-FR",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

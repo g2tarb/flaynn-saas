@@ -64,6 +64,7 @@
 
   html {
     scroll-behavior: smooth;
+    overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -965,6 +966,10 @@
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
     transition-duration: 0.01ms;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 
   .card-glass:hover {

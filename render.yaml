@@ -1,0 +1,12 @@
+# Render Blueprint — API Fastify + fichiers statiques (public/)
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: flaynn-saas
+    runtime: node
+    rootDir: flaynn-api
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
