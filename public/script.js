@@ -444,6 +444,22 @@ async function bootDeferred() {
 
 document.getElementById('footer-year').textContent = String(new Date().getFullYear());
 
+/* ── Nav auth state ─────────────────────────────────────────────────────── */
+(function updateNavAuth() {
+  const auth = (() => {
+    try { return JSON.parse(localStorage.getItem('flaynn_auth') || 'null'); } catch { return null; }
+  })();
+  const link = /** @type {HTMLAnchorElement|null} */ (document.getElementById('nav-member-link'));
+  if (!link) return;
+  if (auth) {
+    link.textContent = auth.name ? auth.name.split(' ')[0] : 'Mon espace';
+    link.style.color = 'var(--accent-violet)';
+  } else {
+    link.textContent = 'Connexion';
+    link.href = '/auth/';
+  }
+})();
+
 /* ── Warp navigation : intercepte les liens vers /dashboard/ ───────────── */
 /**
  * Affiche l'overlay glassmorphism + déclenche le warp Three.js.
