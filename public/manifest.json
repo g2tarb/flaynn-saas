@@ -1,0 +1,10 @@
+{
+  "name": "Flaynn — Scoring startups",
+  "short_name": "Flaynn",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#030407",
+  "background_color": "#030407",
+  "lang": "fr-FR"
+}

@@ -1,0 +1,372 @@
+/**
+ * Flaynn — landing (vanilla, pas d'innerHTML pour données dynamiques)
+ */
+
+const MORPH_PHRASES = [
+  'avant la diligence.',
+  'avec des données.',
+  'sans storytelling creux.'
+];
+
+function initMorph(el) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let i = 0;
+  window.setInterval(() => {
+    i = (i + 1) % MORPH_PHRASES.length;
+    el.textContent = MORPH_PHRASES[i];
+  }, 4000);
+}
+
+function initScoreCounter(el) {
+  const raw = el.textContent.trim();
+  const target = Number.parseInt(raw, 10);
+  if (Number.isNaN(target)) return;
+  let n = 0;
+  const step = () => {
+    n = Math.min(target, n + Math.max(1, Math.ceil((target - n) / 10)));
+    el.textContent = String(n);
+    if (n < target) window.requestAnimationFrame(step);
+  };
+  window.requestAnimationFrame(step);
+}
+
+function scrollToId(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const focusable = el.querySelector('input, button, select, textarea');
+  if (focusable) window.setTimeout(() => focusable.focus(), 400);
+}
+
+function showToast(root, message, variant) {
+  if (!root) return;
+  const t = document.createElement('div');
+  t.className = `toast toast--${variant}`;
+  t.setAttribute('role', 'alert');
+  t.textContent = message;
+  root.appendChild(t);
+  window.requestAnimationFrame(() => {
+    t.classList.add('is-visible');
+  });
+  window.setTimeout(() => {
+    t.classList.remove('is-visible');
+    window.setTimeout(() => t.remove(), 300);
+  }, 4200);
+}
+
+function buildSuccessView(reference) {
+  const wrap = document.createElement('div');
+  wrap.className = 'form-success-inner';
+
+  const icon = document.createElement('div');
+  icon.className = 'form-success__icon';
+  icon.setAttribute('aria-hidden', 'true');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '32');
+  svg.setAttribute('height', '32');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'var(--accent-emerald)');
+  path.setAttribute('stroke-width', '2');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  path.setAttribute('d', 'M5 13l4 4L19 7');
+  svg.appendChild(path);
+  icon.appendChild(svg);
+
+  const title = document.createElement('h3');
+  title.className = 'form-success__title';
+  title.textContent = 'Scoring enregistré';
+
+  const text = document.createElement('p');
+  text.className = 'form-success__text';
+  text.textContent =
+    'Nous analysons votre dossier. Vous recevrez une synthèse sous 24h ouvrées à l’adresse indiquée.';
+
+  const ref = document.createElement('p');
+  ref.className = 'form-success__ref';
+  ref.textContent = `Référence : ${reference}`;
+
+  wrap.appendChild(icon);
+  wrap.appendChild(title);
+  wrap.appendChild(text);
+  wrap.appendChild(ref);
+  return wrap;
+}
+
+class ScoringFormController {
+  constructor(form) {
+    this.form = form;
+    this.currentStep = 1;
+    this.totalSteps = 3;
+    this.toastRoot = document.getElementById('toast-root');
+    this.successEl = document.getElementById('form-success');
+    this.progressFill = document.getElementById('progress-fill');
+    this.stepLabel = document.getElementById('step-current');
+    this.#bind();
+    this.#initChips();
+    this.#updateProgress();
+    this.#updateStepButtons();
+  }
+
+  #bind() {
+    this.form.querySelectorAll('.field__input').forEach((input) => {
+      input.addEventListener('input', () => this.#validateField(input, false));
+      input.addEventListener('blur', () => this.#validateField(input, true));
+    });
+
+    this.form.querySelector('#stage')?.addEventListener('input', () => {
+      const h = this.form.querySelector('#stage');
+      if (h) this.#validateField(h, false);
+    });
+
+    this.form.querySelector('#sector')?.addEventListener('change', () => {
+      const s = this.form.querySelector('#sector');
+      if (s) this.#validateField(s, false);
+    });
+
+    this.form.querySelectorAll('.btn-form--next').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const next = Number(btn.getAttribute('data-next'), 10);
+        if (!this.#validateStep(this.currentStep, true)) return;
+        this.#goToStep(next);
+      });
+    });
+
+    this.form.querySelectorAll('.btn-form--ghost').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const back = Number(btn.getAttribute('data-back'), 10);
+        this.#goToStep(back);
+      });
+    });
+
+    this.form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      this.#submit();
+    });
+  }
+
+  #initChips() {
+    this.form.querySelectorAll('.field__chips').forEach((group) => {
+      group.querySelectorAll('.chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          group.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', 'false'));
+          chip.setAttribute('aria-checked', 'true');
+          const hidden = group.parentElement.querySelector('input[type="hidden"][name="stage"]');
+          if (hidden) {
+            hidden.value = chip.dataset.value || '';
+            hidden.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          chip.animate(
+            [
+              { transform: 'scale(0.96)' },
+              { transform: 'scale(1)' }
+            ],
+            { duration: 180, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+          );
+          this.#updateStepButtons();
+        });
+      });
+    });
+  }
+
+  #validateField(input, showError) {
+    const field = input.closest('.field');
+    if (!field || !field.dataset.validate) return true;
+    if (input.type === 'hidden' && input.id !== 'stage') return true;
+    const rules = field.dataset.validate.split('|');
+    const value = input.value.trim();
+    let error = '';
+
+    for (const rule of rules) {
+      if (rule === 'required' && !value) {
+        error = 'Ce champ est requis.';
+        break;
+      }
+      if (rule.startsWith('min:') && value.length < Number(rule.split(':')[1])) {
+        error = `Minimum ${rule.split(':')[1]} caractères.`;
+        break;
+      }
+      if (rule.startsWith('max:') && value.length > Number(rule.split(':')[1])) {
+        error = `Maximum ${rule.split(':')[1]} caractères.`;
+        break;
+      }
+      if (rule === 'email' && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        error = 'Email invalide.';
+        break;
+      }
+      if (rule === 'urlopt' && value) {
+        try {
+          new URL(value);
+        } catch {
+          error = 'URL invalide.';
+          break;
+        }
+      }
+      if (rule === 'numopt' && value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) {
+          error = 'Nombre invalide.';
+          break;
+        }
+      }
+    }
+
+    field.classList.toggle('field--valid', !error && !!value);
+    field.classList.toggle('field--error', !!error && showError);
+    const errEl = field.querySelector('.field__error');
+    if (errEl) errEl.textContent = showError ? error : '';
+    this.#updateStepButtons();
+    return !error;
+  }
+
+  #validateStep(step, showError) {
+    const container = this.form.querySelector(`.form-step[data-step="${step}"]`);
+    if (!container) return false;
+    let ok = true;
+    container.querySelectorAll('.field__input, input[type="hidden"]').forEach((input) => {
+      if (input.type === 'hidden' && input.name === 'stage') {
+        const field = input.closest('.field');
+        if (field && field.dataset.validate?.includes('required') && !input.value.trim()) {
+          ok = false;
+          if (showError) {
+            field.classList.add('field--error');
+            const errEl = field.querySelector('.field__error');
+            if (errEl) errEl.textContent = 'Sélectionnez un stade.';
+          }
+        }
+        return;
+      }
+      if (!this.#validateField(input, showError)) ok = false;
+    });
+    return ok;
+  }
+
+  #updateStepButtons() {
+    const step = this.form.querySelector(`.form-step[data-step="${this.currentStep}"]`);
+    if (!step) return;
+
+    if (this.currentStep === 3) {
+      const email = this.form.querySelector('#email');
+      const submitBtn = this.form.querySelector('#btn-submit');
+      if (email && submitBtn) {
+        const ok = this.#validateField(email, false);
+        submitBtn.disabled = !ok;
+      }
+      return;
+    }
+
+    const nextBtn = step.querySelector('.btn-form--next');
+    if (!nextBtn) return;
+    const valid = this.#validateStep(this.currentStep, false);
+    nextBtn.disabled = !valid;
+  }
+
+  #goToStep(target) {
+    if (target < 1 || target > this.totalSteps) return;
+    const currentEl = this.form.querySelector(`.form-step[data-step="${this.currentStep}"]`);
+    const nextEl = this.form.querySelector(`.form-step[data-step="${target}"]`);
+    if (!currentEl || !nextEl) return;
+
+    currentEl.classList.remove('is-active');
+    currentEl.hidden = true;
+    currentEl.classList.add('is-hidden');
+
+    nextEl.hidden = false;
+    nextEl.classList.remove('is-hidden');
+    nextEl.classList.add('is-active');
+
+    this.currentStep = target;
+    this.#updateProgress();
+    this.#updateStepButtons();
+
+    const first = nextEl.querySelector('.field__input, .chip');
+    if (first) first.focus();
+  }
+
+  #updateProgress() {
+    if (this.progressFill) {
+      this.progressFill.style.width = `${(this.currentStep / this.totalSteps) * 100}%`;
+    }
+    if (this.stepLabel) {
+      this.stepLabel.textContent = String(this.currentStep);
+    }
+  }
+
+  async #submit() {
+    if (!this.#validateStep(3, true)) return;
+
+    const btn = this.form.querySelector('#btn-submit');
+    const label = btn?.querySelector('.btn-form__text');
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = 'Envoi…';
+
+    const payload = {
+      startup_name: this.form.querySelector('#startup-name')?.value.trim() ?? '',
+      sector: this.form.querySelector('#sector')?.value ?? '',
+      stage: this.form.querySelector('#stage')?.value ?? '',
+      pitch: this.form.querySelector('#pitch')?.value.trim() ?? '',
+      email: this.form.querySelector('#email')?.value.trim() ?? ''
+    };
+
+    const urlVal = this.form.querySelector('#url')?.value.trim() ?? '';
+    if (urlVal) payload.url = urlVal;
+
+    const rev = this.form.querySelector('#revenue_monthly')?.value.trim() ?? '';
+    if (rev !== '') payload.revenue_monthly = Number(rev);
+
+    const team = this.form.querySelector('#team_size')?.value.trim() ?? '';
+    if (team !== '') payload.team_size = Number(team);
+
+    try {
+      const res = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Flaynn-Source': 'web-form' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20000)
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const msg =
+          data.error === 'VALIDATION_FAILED'
+            ? 'Vérifiez les champs et réessayez.'
+            : 'Service temporairement indisponible.';
+        throw new Error(msg);
+      }
+
+      const ref = data.reference || '—';
+      this.form.classList.add('is-hidden');
+      this.form.hidden = true;
+      if (this.successEl) {
+        this.successEl.replaceChildren();
+        this.successEl.appendChild(buildSuccessView(ref));
+        this.successEl.hidden = false;
+        this.successEl.classList.remove('is-hidden');
+        this.successEl.focus();
+      }
+    } catch (err) {
+      showToast(this.toastRoot, err.message || 'Erreur réseau.', 'error');
+      if (btn) btn.disabled = false;
+      if (label) label.textContent = 'Soumettre';
+    }
+  }
+}
+
+const morph = document.querySelector('.js-morph-text');
+if (morph) initMorph(morph);
+
+const counter = document.querySelector('.js-score-counter');
+if (counter) initScoreCounter(counter);
+
+document.getElementById('footer-year').textContent = String(new Date().getFullYear());
+
+document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring'));
+document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring'));
+
+const scoringForm = document.getElementById('scoring-form');
+if (scoringForm) {
+  new ScoringFormController(scoringForm);
+}

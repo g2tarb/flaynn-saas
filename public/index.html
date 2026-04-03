@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Flaynn audite votre startup sur 5 piliers (Market, Product, Traction, Team, Execution) et vous connecte aux investisseurs alignés avec votre stage.">
+    <meta name="theme-color" content="#030407">
+    <meta name="color-scheme" content="dark">
+
+    <title>Flaynn · Scoring startup & mise en relation investisseur</title>
+
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700&f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="defaut.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+
+    <div id="ambient-bg" class="ambient-bg" aria-hidden="true"></div>
+
+    <header class="nav-glass" role="banner">
+        <div class="container nav-content">
+            <a href="#" class="logo-container" aria-label="Flaynn — Accueil">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <rect width="24" height="24" rx="6" fill="var(--accent-violet)"/>
+                    <path d="M7 17L17 7M17 7H9M17 7V15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="logo-text">Flaynn</span>
+            </a>
+            <nav role="navigation" aria-label="Menu principal">
+                <a href="#pillars" class="nav-link">Méthode</a>
+                <a href="#scoring" class="nav-link">Scoring</a>
+                <a href="#investors" class="nav-link">Investisseurs</a>
+            </nav>
+            <button type="button" class="btn-primary nav-cta" id="btn-header-cta">
+                Lancer l'audit
+            </button>
+        </div>
+    </header>
+
+    <main id="main-content" role="main">
+        <section class="hero section" aria-labelledby="hero-title">
+            <div class="container hero-layout">
+                <p class="hero-badge">
+                    <span class="pulse-dot" aria-hidden="true"></span>
+                    Accès beta — places limitées
+                </p>
+                <h1 id="hero-title" class="text-display">
+                    La vérité sur votre startup,<br>
+                    <span class="gradient-text js-morph-text">avant la diligence.</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Score objectif sur cinq piliers, benchmark marché et lecture investisseur — pour préparer votre levée avec des données, pas du storytelling creux.
+                </p>
+                <div class="hero-actions">
+                    <button type="button" class="btn-primary btn-large" id="btn-hero-cta">Démarrer mon scoring</button>
+                    <p class="caption">Réponse sous 24h ouvrées après soumission complète.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="pillars" class="section section--tight" aria-labelledby="pillars-title">
+            <div class="container">
+                <header class="section-header">
+                    <h2 id="pillars-title" class="heading-section">Cinq piliers. Une lecture unique.</h2>
+                    <p class="section-lead">Chaque axe est pondéré comme en phase de due diligence : pas de vanity metrics, que des signaux actionnables.</p>
+                </header>
+                <ul class="pillars-grid" role="list">
+                    <li class="card-glass pillar-card">
+                        <span class="pillar-index" aria-hidden="true">01</span>
+                        <h3 class="card-title">Market</h3>
+                        <p class="card-body">TAM / SAM / SOM, dynamique concurrentielle, timing et défensibilité.</p>
+                    </li>
+                    <li class="card-glass pillar-card">
+                        <span class="pillar-index" aria-hidden="true">02</span>
+                        <h3 class="card-title">Product</h3>
+                        <p class="card-body">Proposition de valeur, différenciation technique et roadmap crédible.</p>
+                    </li>
+                    <li class="card-glass pillar-card">
+                        <span class="pillar-index" aria-hidden="true">03</span>
+                        <h3 class="card-title">Traction</h3>
+                        <p class="card-body">Revenus, rétention, unit economics — au-delà du slide deck.</p>
+                    </li>
+                    <li class="card-glass pillar-card">
+                        <span class="pillar-index" aria-hidden="true">04</span>
+                        <h3 class="card-title">Team</h3>
+                        <p class="card-body">Complémentarité, exécution passée, capacité à recruter.</p>
+                    </li>
+                    <li class="card-glass pillar-card">
+                        <span class="pillar-index" aria-hidden="true">05</span>
+                        <h3 class="card-title">Execution</h3>
+                        <p class="card-body">Capacité à livrer : process, données, cadence.</p>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="section bento-section" aria-labelledby="preview-title">
+            <div class="container">
+                <header class="section-header">
+                    <h2 id="preview-title" class="heading-section">Vue synthétique</h2>
+                    <p class="section-lead">Exemple de sortie — les vôtres sont contextualisées à votre secteur et stade.</p>
+                </header>
+                <div class="bento-grid">
+                    <article class="card-glass bento-item bento-large">
+                        <h3 class="card-title">Score global</h3>
+                        <div class="score-display">
+                            <span class="score-value js-score-counter">92</span>
+                            <span class="score-max">/100</span>
+                        </div>
+                        <p class="card-body">Positionnement estimé dans le haut du cohort Flaynn sur votre verticale.</p>
+                    </article>
+                    <article class="card-glass bento-item">
+                        <h3 class="card-title">Marché</h3>
+                        <p class="metric-visual">TAM indicatif €2.4B</p>
+                        <p class="caption">Ordre de grandeur — affiné après entretien.</p>
+                    </article>
+                    <article class="card-glass bento-item">
+                        <h3 class="card-title">Traction</h3>
+                        <p class="metric-visual metric-visual--emerald">MoM +15%</p>
+                        <p class="caption">Illustration — vos métriques réelles remplacent ce placeholder.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section id="scoring" class="section section--form" aria-labelledby="form-title">
+            <div class="container">
+                <header class="section-header">
+                    <h2 id="form-title" class="heading-section">Démarrer votre <span class="gradient-text-inline">scoring</span></h2>
+                    <p class="section-lead">Trois étapes. Données chiffrées uniquement — pas de pitch deck upload ici.</p>
+                </header>
+
+                <div class="scoring-form-wrap card-glass">
+                    <form id="scoring-form" class="scoring-form" novalidate>
+                        <div class="form-progress" role="status" aria-live="polite" aria-atomic="true">
+                            <span class="form-progress__label">Étape <span id="step-current">1</span> sur 3</span>
+                            <div class="form-progress__track" aria-hidden="true">
+                                <div class="form-progress__fill" id="progress-fill"></div>
+                            </div>
+                        </div>
+
+                        <fieldset class="form-step is-active" data-step="1" id="form-step-1">
+                            <legend class="fieldset-legend">Startup</legend>
+                            <div class="field" data-validate="required|min:2|max:100">
+                                <label for="startup-name" class="field__label">Nom de la startup</label>
+                                <input type="text" id="startup-name" name="startup_name" class="field__input" autocomplete="organization" required minlength="2" maxlength="100" placeholder="ex. Flaynn">
+                                <span class="field__border" aria-hidden="true"></span>
+                                <span class="field__error" role="alert"></span>
+                            </div>
+                            <div class="field" data-validate="required">
+                                <label for="sector" class="field__label">Secteur</label>
+                                <div class="field__select-wrap">
+                                    <select id="sector" name="sector" class="field__input field__input--select" required>
+                                        <option value="" disabled selected>Sélectionner</option>
+                                        <option value="fintech">FinTech</option>
+                                        <option value="healthtech">HealthTech</option>
+                                        <option value="saas">SaaS / B2B</option>
+                                        <option value="marketplace">Marketplace</option>
+                                        <option value="deeptech">DeepTech</option>
+                                        <option value="greentech">GreenTech</option>
+                                        <option value="other">Autre</option>
+                                    </select>
+                                </div>
+                                <span class="field__error" role="alert"></span>
+                            </div>
+                            <div class="field" data-validate="required">
+                                <span class="field__label" id="stage-label">Stade</span>
+                                <div class="field__chips" role="radiogroup" aria-labelledby="stage-label">
+                                    <button type="button" class="chip" role="radio" aria-checked="false" data-value="idea">Idée</button>
+                                    <button type="button" class="chip" role="radio" aria-checked="false" data-value="mvp">MVP</button>
+                                    <button type="button" class="chip" role="radio" aria-checked="false" data-value="seed">Seed</button>
+                                    <button type="button" class="chip" role="radio" aria-checked="false" data-value="serieA">Série A</button>
+                                    <button type="button" class="chip" role="radio" aria-checked="false" data-value="serieB_plus">Série B+</button>
+                                </div>
+                                <input type="hidden" name="stage" id="stage" value="" required>
+                                <span class="field__error" role="alert"></span>
+                            </div>
+                            <button type="button" class="btn-form btn-form--next" data-next="2" disabled>Continuer</button>
+                        </fieldset>
+
+                        <fieldset class="form-step is-hidden" data-step="2" id="form-step-2" hidden>
+                            <legend class="fieldset-legend">Détails</legend>
+                            <div class="field" data-validate="required|min:50|max:2000">
+                                <label for="pitch" class="field__label">Pitch structuré (problème, solution, traction)</label>
+                                <textarea id="pitch" name="pitch" class="field__input field__input--textarea" rows="5" required minlength="50" maxlength="2000" placeholder="Minimum 50 caractères."></textarea>
+                                <span class="field__error" role="alert"></span>
+                            </div>
+                            <div class="field" data-validate="urlopt">
+                                <label for="url" class="field__label">Site web (optionnel)</label>
+                                <input type="url" id="url" name="url" class="field__input" inputmode="url" placeholder="https://">
+                                <span class="field__error" role="alert"></span>
+                            </div>
+                            <div class="field field--inline">
+                                <div class="field" data-validate="numopt">
+                                    <label for="revenue_monthly" class="field__label">MRR approx. (€)</label>
+                                    <input type="number" id="revenue_monthly" name="revenue_monthly" class="field__input" min="0" max="100000000" step="1000" placeholder="0">
+                                    <span class="field__error" role="alert"></span>
+                                </div>
+                                <div class="field" data-validate="numopt">
+                                    <label for="team_size" class="field__label">Taille équipe</label>
+                                    <input type="number" id="team_size" name="team_size" class="field__input" min="1" max="10000" step="1" placeholder="0">
+                                    <span class="field__error" role="alert"></span>
+                                </div>
+                            </div>
+                            <div class="form-step-actions">
+                                <button type="button" class="btn-form btn-form--ghost" data-back="1">Retour</button>
+                                <button type="button" class="btn-form btn-form--next" data-next="3" disabled>Continuer</button>
+                            </div>
+                        </fieldset>
+
+                        <fieldset class="form-step is-hidden" data-step="3" id="form-step-3" hidden>
+                            <legend class="fieldset-legend">Contact</legend>
+                            <div class="field" data-validate="required|email">
+                                <label for="email" class="field__label">Email professionnel</label>
+                                <input type="email" id="email" name="email" class="field__input" autocomplete="email" required placeholder="vous@startup.com">
+                                <span class="field__border" aria-hidden="true"></span>
+                                <span class="field__error" role="alert"></span>
+                            </div>
+                            <p class="form-legal">En soumettant, vous acceptez d’être recontacté au sujet de votre scoring. Pas de revente de données.</p>
+                            <div class="form-step-actions">
+                                <button type="button" class="btn-form btn-form--ghost" data-back="2">Retour</button>
+                                <button type="submit" class="btn-form btn-form--submit" id="btn-submit">
+                                    <span class="btn-form__text">Soumettre</span>
+                                </button>
+                            </div>
+                        </fieldset>
+                    </form>
+                    <div id="form-success" class="form-success is-hidden" hidden tabindex="-1"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="investors" class="section section--investors" aria-labelledby="investors-title">
+            <div class="container investors-layout">
+                <div class="investors-copy">
+                    <h2 id="investors-title" class="heading-section">Investisseurs</h2>
+                    <p class="section-lead">Flaynn aligne les dossiers sur des critères comparables : vous accédez à des startups pré-qualifiées sur des bases homogènes, avec un score et des piliers explicités.</p>
+                    <ul class="investors-list" role="list">
+                        <li>Pipeline filtré par secteur et stade</li>
+                        <li>Lecture standardisée pour accélérer la première décision</li>
+                        <li>Coordination possible avec vos équipes analystes</li>
+                    </ul>
+                    <a href="mailto:partenaires@flaynn.fr" class="btn-primary btn-inline">Écrire au partenariat</a>
+                </div>
+                <div class="card-glass investors-card">
+                    <p class="caption">Réseau en construction — priorité aux partenaires institutionnels et BA structurés.</p>
+                    <p class="metric-visual metric-visual--muted">Due diligence friendly</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+        <div class="container footer-grid">
+            <div class="footer-brand">
+                <span class="logo-text">Flaynn</span>
+                <p class="footer-tagline">Scoring objectif pour l’écosystème français.</p>
+            </div>
+            <div class="footer-links">
+                <span class="footer-heading">Navigation</span>
+                <a href="#pillars" class="footer-link">Méthode</a>
+                <a href="#scoring" class="footer-link">Scoring</a>
+                <a href="#investors" class="footer-link">Investisseurs</a>
+            </div>
+            <p class="footer-copy">© <span id="footer-year"></span> Flaynn. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <div id="toast-root" class="toast-root" aria-live="assertive"></div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
