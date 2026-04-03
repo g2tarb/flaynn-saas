@@ -617,6 +617,14 @@
 
     <div id="toast-root" class="toast-root" aria-live="assertive"></div>
 
+    <!-- Page transition overlay (warp speed) -->
+    <div id="page-transition-overlay" role="status" aria-live="assertive" aria-label="Chargement en cours">
+        <div class="transition-panel glass-panel">
+            <div class="transition-spinner" aria-hidden="true"></div>
+            <span class="transition-label">Chargement</span>
+        </div>
+    </div>
+
     <script type="module" src="register-sw.js"></script>
     <script type="module" src="script.js"></script>
 </body>

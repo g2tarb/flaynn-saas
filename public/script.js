@@ -426,7 +426,10 @@ async function bootDeferred() {
       const canvas = document.getElementById('bg-canvas');
       if (canvas) {
         const particles = debugThree ? 1200 : tier >= 3 ? 2800 : 600;
-        new FlaynnNeuralBackground(canvas, { particles });
+        /* Exposé globalement pour que triggerWarpTransition soit accessible
+           depuis les intercepteurs de navigation ci-dessous.
+           @type {any} — cast intentionnel, propriété custom sur window */
+        /** @type {any} */ (window).globalBg = new FlaynnNeuralBackground(canvas, { particles });
       }
     } catch {
       /* WebGL / module indisponible : fond CSS (.ambient-bg) */
@@ -440,6 +443,39 @@ async function bootDeferred() {
 }
 
 document.getElementById('footer-year').textContent = String(new Date().getFullYear());
+
+/* ── Warp navigation : intercepte les liens vers /dashboard/ ───────────── */
+/**
+ * Affiche l'overlay glassmorphism + déclenche le warp Three.js.
+ * Si globalBg n'est pas disponible (WebGL absent / tier 1),
+ * la navigation se fait normalement sans effet.
+ * @param {string} targetUrl
+ * @param {Event}  e
+ */
+function warpNavigate(targetUrl, e) {
+  e.preventDefault();
+
+  const overlay = document.getElementById('page-transition-overlay');
+  if (overlay) overlay.classList.add('is-active');
+
+  const bg = /** @type {any} */ (window).globalBg;
+  if (bg && typeof bg.triggerWarpTransition === 'function') {
+    bg.triggerWarpTransition(targetUrl);
+  } else {
+    /* Fallback : redirection directe après l'apparition de l'overlay */
+    window.setTimeout(() => { window.location.href = targetUrl; }, 300);
+  }
+}
+
+/* Sélecteur large : capture tous les liens pointant vers /dashboard/ */
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('a[href]');
+  if (!link) return;
+  const href = link.getAttribute('href');
+  if (href && (href.startsWith('/dashboard') || href === '/dashboard/')) {
+    warpNavigate(href, e);
+  }
+});
 
 document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring'));
 document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring'));
