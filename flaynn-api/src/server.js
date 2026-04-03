@@ -116,7 +116,7 @@ export const start = async () => {
     await fastify.register(fastifyJwt, {
       secret: env.JWT_SECRET
     });
-    await fastify.register(authPlugin);
+    await authPlugin(fastify);
     await fastify.register(deviceDetect);
 
     fastify.setErrorHandler(errorHandler);
