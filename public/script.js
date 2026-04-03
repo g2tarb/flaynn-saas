@@ -334,6 +334,7 @@ class ScoringFormController {
       const res = await fetch('/api/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Flaynn-Source': 'web-form' },
+        credentials: 'same-origin',
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(20000)
       });
@@ -342,16 +343,9 @@ class ScoringFormController {
 
       if (!res.ok) {
         const msg =
-          res.status === 401
-            ? 'Connectez-vous pour lancer un scoring.'
-            : res.status === 403
-              ? 'Votre session ne permet pas cette action.'
-              : data.error === 'VALIDATION_FAILED'
-                ? 'Vérifiez les champs et réessayez.'
-                : 'Service temporairement indisponible.';
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('flaynn_auth');
-        }
+          data.error === 'VALIDATION_FAILED'
+            ? 'Vérifiez les champs et réessayez.'
+            : 'Service temporairement indisponible.';
         throw new Error(msg);
       }
 
@@ -454,22 +448,10 @@ async function bootDeferred() {
 document.getElementById('footer-year').textContent = String(new Date().getFullYear());
 
 /* ── Nav auth state : Connexion + S'inscrire (invité) ou Mon espace (connecté) ─ */
-(async function updateNavAuth() {
-  let auth = (() => {
+(function updateNavAuth() {
+  const auth = (() => {
     try { return JSON.parse(localStorage.getItem('flaynn_auth') || 'null'); } catch { return null; }
   })();
-  if (!auth) {
-    try {
-      const res = await fetch('/api/auth/session', { credentials: 'same-origin' });
-      if (res.ok) {
-        const data = await res.json();
-        auth = data.user;
-        localStorage.setItem('flaynn_auth', JSON.stringify(data.user));
-      }
-    } catch {
-      /* invité */
-    }
-  }
   const guest = document.getElementById('nav-auth-guest');
   const userLink = /** @type {HTMLAnchorElement|null} */ (document.getElementById('nav-member-link'));
   const mobileGuest = document.getElementById('nav-mobile-auth-guest');
@@ -489,7 +471,6 @@ document.getElementById('footer-year').textContent = String(new Date().getFullYe
       mobileUser.textContent = auth.name ? String(auth.name).split(' ')[0] : 'Mon espace';
     }
   } else {
-    localStorage.removeItem('flaynn_auth');
     if (guest) guest.hidden = false;
     if (mobileGuest) mobileGuest.hidden = false;
     if (userLink) userLink.hidden = true;

@@ -18,16 +18,39 @@ export default async function scoringRoutes(fastify) {
   fastify.post('/api/score', {
     config: {
       rateLimit: { max: 3, timeWindow: '1 minute' }
-    },
-    onRequest: [fastify.authenticate]
+    }
   }, async (request, reply) => {
     try {
       const parsed = ScoreSubmissionSchema.parse(request.body);
-      const userEmail = request.user.email;
-      const payload = { ...parsed, email: userEmail };
-      const reference = `FLY-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      let userEmail = null;
 
+      // 1. Tente de récupérer l'email depuis le cookie JWT s'il est présent
+      const accessToken = request.cookies?.flaynn_at;
+      if (accessToken) {
+        try {
+          const decoded = fastify.jwt.verify(accessToken);
+          userEmail = decoded.email;
+        } catch (err) {
+          request.log.warn('Token invalide ou expiré lors du scoring, passage en mode invité.');
+        }
+      }
+
+      // 2. Si non connecté, vérifie si l'email du formulaire existe déjà en base
+      if (!userEmail) {
+        try {
+          const userCheck = await pool.query('SELECT email FROM users WHERE email = $1', [parsed.email]);
+          if (userCheck.rowCount > 0) {
+            userEmail = userCheck.rows[0].email;
+          }
+        } catch (err) {
+          request.log.warn('Erreur lors de la vérification de l\'utilisateur existant.');
+        }
+      }
+
+      const payload = { ...parsed, email: userEmail || parsed.email };
+      const reference = `FLY-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       const initialData = { status: 'pending_webhook', payload };
+      
       await pool.query(
         'INSERT INTO scores (reference_id, user_email, startup_name, data) VALUES ($1, $2, $3, $4::jsonb)',
         [reference, userEmail, payload.startup_name, JSON.stringify(initialData)]
