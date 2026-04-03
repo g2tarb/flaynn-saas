@@ -3,7 +3,9 @@
 services:
   - type: web
     name: flaynn-api
-    env: docker
+    env: node
+    buildCommand: cd flaynn-api && npm install
+    startCommand: cd flaynn-api && npm start
     envVars:
       - key: NODE_VERSION
         value: 22.0.0
