@@ -1,9 +1,11 @@
-const CACHE_NAME = 'flaynn-cache-v1';
+const CACHE_NAME = 'flaynn-cache-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
   '/favicon.svg',
+  '/defaut.css',
   '/script.js',
+  '/auth/app.js',
   '/dashboard/app.js'
 ];
 
