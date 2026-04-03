@@ -436,8 +436,10 @@ async function bootDeferred() {
     }
   }
 
-  const scoringForm = document.getElementById('scoring-form');
-  if (scoringForm) {
+  const scoringFormSection = document.getElementById('scoring-form');
+  const scoringForm =
+    scoringFormSection?.querySelector('form') || document.getElementById('scoring-form-form');
+  if (scoringForm instanceof HTMLFormElement) {
     new ScoringFormController(scoringForm);
   }
 }
@@ -508,12 +510,12 @@ document.addEventListener('click', (e) => {
   }
 });
 
-document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring'));
-document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring'));
-document.getElementById('btn-sticky-cta')?.addEventListener('click', () => scrollToId('scoring'));
+document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
+document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
+document.getElementById('btn-sticky-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
 document.getElementById('btn-mobile-cta')?.addEventListener('click', () => {
   closeMobileMenu();
-  scrollToId('scoring');
+  scrollToId('scoring-form');
 });
 
 // ── Nav mobile ──────────────────────────────────────────────────────────────
@@ -555,7 +557,7 @@ const stickyCtaEl = document.getElementById('mobile-sticky-cta');
 if (stickyCtaEl) {
   stickyCtaEl.removeAttribute('aria-hidden');
   const heroSection = document.querySelector('.hero');
-  const formSection = document.getElementById('scoring');
+  const formSection = document.getElementById('scoring-form');
   const observer = new IntersectionObserver(
     () => {
       const heroVisible = heroSection

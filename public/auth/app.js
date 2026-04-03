@@ -5,7 +5,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('register') === '1') {
+  if (params.get('register') === '1' || window.location.hash === '#register') {
     const regTab = document.querySelector('.auth-tab[data-tab="register"]');
     if (regTab) regTab.click();
   }

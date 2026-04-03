@@ -27,12 +27,16 @@
     <link rel="manifest" href="manifest.json">
 
     <link rel="dns-prefetch" href="https://api.fontshare.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link rel="preload" href="defaut.css" as="style">
     <link rel="modulepreload" href="script.js">
+    <link rel="modulepreload" href="js/landing-motion.js">
+    <link rel="modulepreload" href="js/three-neural.js">
 
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700&f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
@@ -61,13 +65,13 @@
             <nav role="navigation" aria-label="Menu principal" class="nav-links-desktop">
                 <a href="#process" class="nav-link">Comment ça marche</a>
                 <a href="#pillars" class="nav-link">Méthode</a>
-                <a href="#scoring" class="nav-link">Scoring</a>
+                <a href="#scoring-form" class="nav-link">Scoring</a>
                 <a href="#investors" class="nav-link">Investisseurs</a>
             </nav>
             <div class="nav-actions">
                 <div class="nav-auth-guest" id="nav-auth-guest">
-                    <a href="/auth/" class="btn-ghost btn-nav-auth" id="nav-auth-login">Connexion</a>
-                    <a href="/auth/?register=1" class="btn-primary btn-nav-signup" id="nav-auth-register">S'inscrire</a>
+                    <a href="/auth" class="btn-ghost btn-nav-auth" id="nav-auth-login">Connexion</a>
+                    <a href="/auth#register" class="btn-primary btn-nav-signup" id="nav-auth-register">S'inscrire</a>
                 </div>
                 <a href="/dashboard/" class="btn-ghost btn-nav-user" id="nav-member-link" hidden>Mon espace</a>
                 <button type="button" class="btn-primary nav-cta" id="btn-header-cta">
@@ -88,11 +92,11 @@
             <nav class="nav-mobile-links">
                 <a href="#process" class="nav-mobile-link">Comment ça marche</a>
                 <a href="#pillars" class="nav-mobile-link">Méthode</a>
-                <a href="#scoring" class="nav-mobile-link">Scoring</a>
+                <a href="#scoring-form" class="nav-mobile-link">Scoring</a>
                 <a href="#investors" class="nav-mobile-link">Investisseurs</a>
                 <div class="nav-mobile-auth" id="nav-mobile-auth-guest">
-                    <a href="/auth/" class="nav-mobile-link">Connexion</a>
-                    <a href="/auth/?register=1" class="nav-mobile-link">S'inscrire</a>
+                    <a href="/auth" class="nav-mobile-link">Connexion</a>
+                    <a href="/auth#register" class="nav-mobile-link">S'inscrire</a>
                 </div>
                 <a href="/dashboard/" class="nav-mobile-link nav-mobile-link--user" id="nav-mobile-member" hidden>Mon espace</a>
             </nav>
@@ -107,12 +111,17 @@
         <!-- HERO -->
         <section class="hero section" aria-labelledby="hero-title">
             <div class="container hero-layout">
+                <div class="hero-orbit" aria-hidden="true">
+                    <span class="hero-orbit__ring hero-orbit__ring--outer"></span>
+                    <span class="hero-orbit__ring hero-orbit__ring--inner"></span>
+                    <span class="hero-orbit__core"></span>
+                </div>
                 <p class="hero-badge">
                     <span class="pulse-dot" aria-hidden="true"></span>
                     Accès beta — places limitées
                 </p>
-                <h1 id="hero-title" class="text-display">
-                    La vérité sur votre startup,<br>
+                <h1 id="hero-title" class="text-display hero__title">
+                    Obtenez la vérité sur votre startup,<br>
                     <span class="gradient-text js-morph-text">avant la diligence.</span>
                 </h1>
                 <p class="hero-subtitle">
@@ -128,6 +137,20 @@
                     <a href="#process" class="btn-ghost btn-ghost--hero">
                         Voir comment ça marche
                     </a>
+                </div>
+                <div class="hero-proof" aria-label="Preuves de valeur">
+                    <div class="hero-proof__item">
+                        <span class="hero-proof__kicker">Lecture</span>
+                        <span class="hero-proof__value">Investor-grade</span>
+                    </div>
+                    <div class="hero-proof__item">
+                        <span class="hero-proof__kicker">Sortie</span>
+                        <span class="hero-proof__value">Score + synthèse</span>
+                    </div>
+                    <div class="hero-proof__item">
+                        <span class="hero-proof__kicker">Signal</span>
+                        <span class="hero-proof__value">Benchmark sectoriel</span>
+                    </div>
                 </div>
                 <div class="hero-stats" aria-label="Statistiques clés">
                     <div class="hero-stat">
@@ -377,7 +400,7 @@
         </section>
 
         <!-- SCORING FORM -->
-        <section id="scoring" class="section section--form" aria-labelledby="form-title" data-animate="reveal">
+        <section id="scoring-form" class="section section--form scoring-form" aria-labelledby="form-title" data-animate="reveal">
             <div class="container">
                 <header class="section-header section-header--centered" data-animate-child>
                     <p class="section-eyebrow">Commencer</p>
@@ -386,7 +409,11 @@
                 </header>
 
                 <div class="scoring-form-wrap card-glass" data-animate-child>
-                    <form id="scoring-form" class="scoring-form" novalidate>
+                    <div class="form-shell-intro">
+                        <p class="form-shell-intro__eyebrow">Audit fondateur</p>
+                        <p class="form-shell-intro__text">Nous collectons uniquement les signaux utiles à une première lecture investisseur: stade, marché, traction et contact.</p>
+                    </div>
+                    <form id="scoring-form-form" class="scoring-form__form" novalidate>
                         <div class="form-progress" role="status" aria-live="polite" aria-atomic="true">
                             <div class="form-progress__header">
                                 <span class="form-progress__label">Étape <span id="step-current">1</span> sur 3</span>
@@ -596,7 +623,7 @@
                     <span class="footer-heading">Plateforme</span>
                     <a href="#process" class="footer-link">Comment ça marche</a>
                     <a href="#pillars" class="footer-link">Méthode</a>
-                    <a href="#scoring" class="footer-link">Scoring</a>
+                    <a href="#scoring-form" class="footer-link">Scoring</a>
                     <a href="/dashboard/" class="footer-link">Espace membre</a>
                 </div>
                 <div class="footer-nav-col">
@@ -634,6 +661,16 @@
     </div>
 
     <script type="module" src="register-sw.js"></script>
-    <script type="module" src="script.js"></script>
+    <script type="module">
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+        window.__FLAYNN_DEVICE__ = {
+            memory: typeof navigator.deviceMemory === 'number' ? navigator.deviceMemory : null,
+            effectiveType: connection?.effectiveType || '4g',
+            saveData: Boolean(connection?.saveData),
+            reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        };
+
+        await import('./script.js');
+    </script>
 </body>
 </html>
