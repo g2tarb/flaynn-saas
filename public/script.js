@@ -88,10 +88,16 @@ function buildSuccessView(reference) {
   ref.className = 'form-success__ref';
   ref.textContent = `Référence : ${reference}`;
 
+  const cta = document.createElement('a');
+  cta.className = 'btn-primary btn-inline form-success__cta';
+  cta.href = `/dashboard/?id=${encodeURIComponent(reference)}`;
+  cta.textContent = 'Ouvrir mon espace membre';
+
   wrap.appendChild(icon);
   wrap.appendChild(title);
   wrap.appendChild(text);
   wrap.appendChild(ref);
+  wrap.appendChild(cta);
   return wrap;
 }
 
@@ -443,3 +449,12 @@ const scheduleIdle = (fn) => {
 scheduleIdle(() => {
   void bootDeferred();
 });
+
+// PWA: Enregistrement du Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service Worker non enregistré:', err);
+    });
+  });
+}

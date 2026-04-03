@@ -9,7 +9,8 @@
   },
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch-path=./src src/server.js"
+    "dev": "node --watch-path=./src src/server.js",
+    "build:icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",
@@ -22,6 +23,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "pino-pretty": "^11.0.0"
+    "pino-pretty": "^11.0.0",
+    "sharp": "^0.33.5"
   }
 }

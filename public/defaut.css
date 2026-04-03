@@ -945,6 +945,10 @@
     color: var(--accent-violet);
   }
 
+  a.form-success__cta {
+    text-decoration: none;
+  }
+
   .toast-root {
     position: fixed;
     bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
