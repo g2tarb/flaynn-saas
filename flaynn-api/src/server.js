@@ -3,6 +3,7 @@ import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import fastifyJwt from '@fastify/jwt';
 import dotenv from 'dotenv';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +40,9 @@ const start = async () => {
       max: 100,
       timeWindow: '1 minute',
       allowList: ['127.0.0.1']
+    });
+    await fastify.register(fastifyJwt, {
+      secret: process.env.JWT_SECRET || 'flaynn-dev-super-secret-key-change-in-prod'
     });
 
     fastify.setErrorHandler(errorHandler);

@@ -2,12 +2,14 @@
 # https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: flaynn-saas
-    runtime: node
+    name: flaynn-api
+    env: node
     rootDir: flaynn-api
     buildCommand: npm install
     startCommand: npm start
     envVars:
+      - key: NODE_VERSION
+        value: 22.0.0
       - key: NODE_ENV
         value: production
       - key: CORS_ORIGIN

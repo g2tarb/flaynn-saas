@@ -38,9 +38,15 @@ export default async function authRoutes(fastify) {
         return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Email ou mot de passe incorrect.' });
       }
 
+      // 3. Génération du JWT sécurisé
+      const token = fastify.jwt.sign(
+        { email: user.email, name: user.name },
+        { expiresIn: '7d' } // Valide 7 jours
+      );
+
       return reply.code(200).send({
         success: true,
-        token: 'flaynn-mock-jwt-token', // TO-DO: Générer un vrai JWT crypté
+        token,
         user: { name: user.name, email: user.email }
       });
     } catch (err) {
@@ -70,9 +76,15 @@ export default async function authRoutes(fastify) {
       const passwordHash = await argon2.hash(parsed.password);
       mockDB.set(parsed.email, { name: parsed.name, email: parsed.email, passwordHash });
 
+      // 3. Génération du JWT sécurisé pour connexion immédiate
+      const token = fastify.jwt.sign(
+        { email: parsed.email, name: parsed.name },
+        { expiresIn: '7d' }
+      );
+
       return reply.code(200).send({
         success: true,
-        token: 'flaynn-mock-jwt-token', // TO-DO: Générer un vrai JWT crypté
+        token,
         user: { name: parsed.name, email: parsed.email }
       });
     } catch (err) {
