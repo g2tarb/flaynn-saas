@@ -111,8 +111,15 @@
     transition: top var(--duration-fast) var(--ease-out-expo);
   }
 
-  .skip-link:focus {
+  .skip-link:focus,
+  .skip-link:focus-visible {
     top: 0;
+  }
+
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
   }
 
   .sr-only {

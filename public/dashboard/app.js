@@ -27,6 +27,16 @@ function clearEl(node) {
   node.replaceChildren();
 }
 
+/** Arrête la simulation force en cours (évite fuites si navigation SPA). */
+let activeForceSimulation = null;
+
+function stopForceSimulation() {
+  if (activeForceSimulation) {
+    activeForceSimulation.stop();
+    activeForceSimulation = null;
+  }
+}
+
 function renderScoreRadial(container, score, d3) {
   const size = 240;
   const thickness = 12;
@@ -97,7 +107,15 @@ function renderPillarRadar(container, pillars, d3) {
   const maxR = 120;
   const angle = (i) => ((2 * Math.PI) / pillars.length) * i - Math.PI / 2;
 
-  const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${size} ${size}`).attr('role', 'img');
+  const svg = d3
+    .select(container)
+    .append('svg')
+    .attr('viewBox', `0 0 ${size} ${size}`)
+    .attr('role', 'img')
+    .attr(
+      'aria-label',
+      'Radar des cinq piliers : Market, Product, Traction, Team, Execution — scores sur 100'
+    );
 
   for (let i = 1; i <= 5; i += 1) {
     svg
@@ -152,13 +170,20 @@ function renderPillarRadar(container, pillars, d3) {
 }
 
 function renderCompetitiveGraph(container, data, d3) {
+  stopForceSimulation();
+
   const w = Math.max(container.clientWidth || 400, 320);
   const h = 420;
 
   const nodes = data.nodes.map((d) => ({ ...d }));
   const links = data.links.map((d) => ({ ...d }));
 
-  const svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${w} ${h}`).attr('role', 'img');
+  const svg = d3
+    .select(container)
+    .append('svg')
+    .attr('viewBox', `0 0 ${w} ${h}`)
+    .attr('role', 'img')
+    .attr('aria-label', 'Graphe de marché : positionnement relatif et liens concurrents / partenaires');
 
   const simulation = d3
     .forceSimulation(nodes)
@@ -234,6 +259,8 @@ function renderCompetitiveGraph(container, data, d3) {
       .attr('y2', (d) => d.target.y);
     node.attr('transform', (d) => `translate(${d.x},${d.y})`);
   });
+
+  activeForceSimulation = simulation;
 }
 
 function normalizePath(pathname) {
@@ -280,8 +307,14 @@ class FlaynnRouter {
       }
       return;
     }
+    stopForceSimulation();
+    this.root.setAttribute('aria-busy', 'true');
     clearEl(this.root);
-    await match.handler(this.root, path, this.data);
+    try {
+      await match.handler(this.root, path, this.data);
+    } finally {
+      this.root.setAttribute('aria-busy', 'false');
+    }
     this.#syncNav(path);
     this.root.focus();
   }
@@ -391,17 +424,30 @@ function buildRoutes(data) {
 }
 
 async function main() {
-  const data = await fetchDashboard();
-  const routes = buildRoutes(data);
   const app = document.getElementById('app');
   if (!app) return;
-  new FlaynnRouter(routes, app, data);
-}
 
-main().catch((err) => {
-  const app = document.getElementById('app');
-  if (app) {
+  clearEl(app);
+  app.setAttribute('aria-busy', 'true');
+  const loading = el('p', 'dashboard-loading', {
+    textContent: 'Chargement de votre espace…'
+  });
+  loading.setAttribute('role', 'status');
+  app.appendChild(loading);
+
+  try {
+    const data = await fetchDashboard();
+    clearEl(app);
+    app.setAttribute('aria-busy', 'false');
+    const routes = buildRoutes(data);
+    new FlaynnRouter(routes, app, data);
+  } catch (err) {
+    clearEl(app);
+    app.setAttribute('aria-busy', 'false');
     const p = el('p', 'dashboard-app__lead', { textContent: err.message || 'Erreur de chargement.' });
+    p.setAttribute('role', 'alert');
     app.appendChild(p);
   }
-});
+}
+
+main();

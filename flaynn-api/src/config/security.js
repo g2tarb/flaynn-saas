@@ -1,3 +1,13 @@
+function n8nConnectOrigin() {
+  const u = process.env.N8N_SCORE_WEBHOOK_URL;
+  if (!u) return [];
+  try {
+    return [new URL(u).origin];
+  } catch {
+    return [];
+  }
+}
+
 export const helmetConfig = {
   contentSecurityPolicy: {
     directives: {
@@ -6,7 +16,9 @@ export const helmetConfig = {
       styleSrc: ["'self'", "https://fonts.googleapis.com", "https://api.fontshare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://api.fontshare.com"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://votre-n8n-instance.com'],
+      connectSrc: ["'self'", 'https://cdn.jsdelivr.net', ...n8nConnectOrigin()],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: []
     }
@@ -25,9 +37,11 @@ export const helmetConfig = {
   xssFilter: true
 };
 
+const prodOrigin = process.env.CORS_ORIGIN || 'https://flaynn.fr';
+
 export const corsConfig = {
-  origin: process.env.NODE_ENV === 'production' ? 'https://flaynn.com' : 'http://localhost:3000',
+  origin: process.env.NODE_ENV === 'production' ? prodOrigin : 'http://localhost:3000',
   methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Flaynn-Source'],
   credentials: true
 };

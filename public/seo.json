@@ -2,6 +2,8 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "Flaynn",
+  "url": "https://flaynn.fr/",
+  "image": "https://flaynn.fr/favicon.svg",
   "applicationCategory": "BusinessApplication",
   "description": "Plateforme de scoring objectif pour startups françaises et mise en relation investisseur.",
   "operatingSystem": "Web",

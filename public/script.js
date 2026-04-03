@@ -443,9 +443,3 @@ const scheduleIdle = (fn) => {
 scheduleIdle(() => {
   void bootDeferred();
 });
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
-  });
-}

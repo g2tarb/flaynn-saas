@@ -37,15 +37,26 @@ function mockDashboard(id) {
 }
 
 export default async function dashboardApiRoutes(fastify) {
-  fastify.get('/api/dashboard/:id', async (request, reply) => {
-    const raw = request.params.id;
-    const parsed = idSchema.safeParse(raw);
-    if (!parsed.success) {
-      return reply.code(400).send({
-        error: 'INVALID_ID',
-        message: 'Identifiant de dossier invalide.'
-      });
+  fastify.get(
+    '/api/dashboard/:id',
+    {
+      config: {
+        rateLimit: {
+          max: 60,
+          timeWindow: '1 minute'
+        }
+      }
+    },
+    async (request, reply) => {
+      const raw = request.params.id;
+      const parsed = idSchema.safeParse(raw);
+      if (!parsed.success) {
+        return reply.code(400).send({
+          error: 'INVALID_ID',
+          message: 'Identifiant de dossier invalide.'
+        });
+      }
+      return mockDashboard(parsed.data);
     }
-    return mockDashboard(parsed.data);
-  });
+  );
 }

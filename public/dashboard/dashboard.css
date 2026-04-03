@@ -97,6 +97,13 @@
   outline: none;
 }
 
+.dashboard-loading {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  padding: var(--space-8) 0;
+  text-align: center;
+}
+
 .dashboard-app__section {
   display: flex;
   flex-direction: column;
