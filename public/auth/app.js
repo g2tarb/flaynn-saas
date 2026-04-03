@@ -10,6 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtn = document.getElementById('submit-btn');
   const submitText = submitBtn.querySelector('.btn__text');
   const errorEl = document.getElementById('auth-error');
+  const pwToggle = document.querySelector('.auth-toggle-pw');
+  const pwInput = document.getElementById('password');
+  const strengthContainer = document.getElementById('pw-strength-container');
+  const strengthFill = document.getElementById('pw-strength-fill');
+  const strengthLabel = document.getElementById('pw-strength-label');
   let currentMode = 'login';
 
   // Basculement des onglets
@@ -23,16 +28,47 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentMode === 'register') {
         nameField.hidden = false;
         nameInput.required = true;
+        if (strengthContainer) strengthContainer.hidden = false;
         submitText.textContent = "Créer mon compte";
       } else {
         nameField.hidden = true;
         nameInput.required = false;
+        if (strengthContainer) strengthContainer.hidden = true;
         submitText.textContent = "Se connecter";
       }
       errorEl.textContent = '';
       form.classList.remove('field--error');
     });
   });
+
+  // Toggle Mot de passe
+  if (pwToggle && pwInput) {
+    pwToggle.addEventListener('click', () => {
+      const isPassword = pwInput.type === 'password';
+      pwInput.type = isPassword ? 'text' : 'password';
+      pwToggle.setAttribute('aria-label', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+      pwToggle.style.color = isPassword ? 'var(--text-primary)' : 'var(--text-tertiary)';
+    });
+  }
+
+  // Indicateur de force du mot de passe
+  if (pwInput && strengthFill && strengthLabel) {
+    pwInput.addEventListener('input', () => {
+      if (currentMode !== 'register') return;
+      const val = pwInput.value;
+      let score = 0;
+      if (val.length >= 8) score++;
+      if (/[A-Z]/.test(val)) score++;
+      if (/[0-9]/.test(val)) score++;
+      if (/[^a-zA-Z0-9]/.test(val)) score++;
+
+      const levels = ['', 'weak', 'medium', 'strong', 'strong'];
+      const labels = ['', 'Faible', 'Moyen', 'Fort', 'Fort'];
+
+      strengthFill.className = `auth-pw-strength__fill auth-pw-strength__fill--${levels[score] || 'weak'}`;
+      strengthLabel.textContent = val.length ? labels[score] || 'Faible' : '';
+    });
+  }
 
   // Soumission du formulaire
   form.addEventListener('submit', async (e) => {
@@ -60,8 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erreur lors de l\'authentification');
 
-      // Stockage de l'authentification et redirection vers le dashboard
-      localStorage.setItem('flaynn_auth', JSON.stringify(data.user));
+      // Stockage de l'authentification (incluant le token) et redirection vers le dashboard
+      localStorage.setItem('flaynn_auth', JSON.stringify({ ...data.user, token: data.token }));
       window.location.replace('/dashboard/');
     } catch (err) {
       errorEl.textContent = err.message;

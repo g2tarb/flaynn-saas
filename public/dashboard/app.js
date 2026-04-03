@@ -457,9 +457,40 @@ function buildRoutes(data) {
     {
       path: /^\/dashboard\/?$/,
       async handler(root) {
-        const d3 = await loadD3();
         const section = el('section', 'dashboard-app__section');
 
+        if (data.isList) {
+          section.appendChild(el('h2', 'heading-section', { textContent: 'Mes Analyses' }));
+          
+          if (!data.items || data.items.length === 0) {
+            const emptyMsg = el('p', 'dashboard-app__lead', { textContent: 'Vous n\'avez pas encore soumis de startup. Retournez à l\'accueil pour lancer une analyse.' });
+            const backBtn = el('a', 'btn-primary', { href: '/', textContent: 'Lancer un scoring' });
+            backBtn.style.display = 'inline-flex';
+            backBtn.style.marginTop = 'var(--space-4)';
+            section.appendChild(emptyMsg);
+            section.appendChild(backBtn);
+            root.appendChild(section);
+            return;
+          }
+
+          const grid = el('div', 'dashboard-grid-2');
+          data.items.forEach(item => {
+            const card = el('article', 'card-glass');
+            card.style.padding = 'var(--space-5)';
+            card.style.cursor = 'pointer';
+            card.addEventListener('click', () => { window.location.href = `/dashboard/?id=${item.reference_id}`; });
+            const title = el('h3', 'dashboard-card-title', { textContent: item.startup_name || item.reference_id });
+            const date = el('p', 'dashboard-meta', { textContent: 'Analysée le ' + new Date(item.created_at).toLocaleDateString('fr-FR') });
+            card.appendChild(title);
+            card.appendChild(date);
+            grid.appendChild(card);
+          });
+          section.appendChild(grid);
+          root.appendChild(section);
+          return;
+        }
+
+        const d3 = await loadD3();
         /* Demo banner */
         if (data.isDemo) section.appendChild(buildDemoBanner());
 
@@ -518,8 +549,13 @@ function buildRoutes(data) {
     {
       path: /^\/dashboard\/pillars$/,
       async handler(root) {
-        const d3 = await loadD3();
         const section = el('section', 'dashboard-app__section');
+        if (data.isList) {
+          section.appendChild(el('p', 'dashboard-meta', { textContent: 'Veuillez sélectionner une analyse dans l\'onglet Overview.' }));
+          root.appendChild(section);
+          return;
+        }
+        const d3 = await loadD3();
         if (data.isDemo) section.appendChild(buildDemoBanner());
 
         section.appendChild(el('h2', 'heading-section', { textContent: 'Analyse par pilier' }));
@@ -580,8 +616,13 @@ function buildRoutes(data) {
     {
       path: /^\/dashboard\/network$/,
       async handler(root) {
-        const d3 = await loadD3();
         const section = el('section', 'dashboard-app__section');
+        if (data.isList) {
+          section.appendChild(el('p', 'dashboard-meta', { textContent: 'Veuillez sélectionner une analyse dans l\'onglet Overview.' }));
+          root.appendChild(section);
+          return;
+        }
+        const d3 = await loadD3();
         if (data.isDemo) section.appendChild(buildDemoBanner());
 
         section.appendChild(el('h2', 'heading-section', { textContent: 'Analyse de marché' }));
@@ -710,8 +751,14 @@ function initTopbar(auth) {
       window.location.replace('/');
     });
 
+    const listBtn = el('a', 'dashboard-meta', { href: '/dashboard/' });
+    listBtn.textContent = 'Mes analyses';
+    listBtn.style.textDecoration = 'none';
+    listBtn.style.marginRight = 'var(--space-3)';
+
     userBtn.appendChild(avatar);
     userBtn.appendChild(nameSpan);
+    userBtn.appendChild(listBtn);
     userBtn.appendChild(logoutBtn);
     topbar.appendChild(userBtn);
   } else {
@@ -782,18 +829,25 @@ async function main() {
   } else {
     /* Utilisateur connecté : tente l'API, fallback démo si indisponible */
     try {
-      const id = new URLSearchParams(window.location.search).get('id') || 'demo';
-      const res = await fetch(`/api/dashboard/${encodeURIComponent(id)}`);
-      if (!res.ok) throw new Error('API indisponible');
-      const apiData = await res.json();
-      data = { ...apiData, isDemo: false };
-      const titleEl = document.getElementById('dashboard-startup-name');
-      if (titleEl && apiData.startupName) {
-        /* Si l'élément a été remplacé par initTopbar, on ne le modifie pas */
+      const id = new URLSearchParams(window.location.search).get('id');
+      const headers = auth && auth.token ? { 'Authorization': `Bearer ${auth.token}` } : {};
+      
+      if (id && id !== 'demo') {
+        const res = await fetch(`/api/dashboard/${encodeURIComponent(id)}`, { headers });
+        if (res.status === 401 || res.status === 403) throw new Error('Non autorisé');
+        if (!res.ok) throw new Error('API indisponible');
+        const apiData = await res.json();
+        data = { ...apiData, isDemo: false, isList: false };
+      } else {
+        const res = await fetch(`/api/dashboard/list`, { headers });
+        if (res.status === 401 || res.status === 403) throw new Error('Non autorisé');
+        if (!res.ok) throw new Error('API indisponible');
+        const listData = await res.json();
+        data = { isDemo: false, isList: true, items: listData };
       }
     } catch {
       /* Fallback démo si API pas prête */
-      data = { ...DEMO_DATA, isDemo: false };
+      data = { ...DEMO_DATA, isDemo: true };
     }
     clearEl(app);
     app.setAttribute('aria-busy', 'false');

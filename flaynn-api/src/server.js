@@ -13,6 +13,7 @@ import { errorHandler } from './middleware/error-handler.js';
 import scoringRoutes from './routes/scoring.js';
 import dashboardApiRoutes from './routes/dashboard-api.js';
 import authRoutes from './routes/auth.js';
+import { initDB } from './config/db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Définition du chemin vers le dossier frontend public
@@ -33,6 +34,12 @@ const fastify = Fastify({
 const start = async () => {
   try {
     fastify.log.info(`[ARCHITECT-PRIME] Initialisation de la sécurité...`);
+    
+    if (process.env.DATABASE_URL) {
+      await initDB(fastify.log);
+    } else {
+      fastify.log.warn(`[ARCHITECT-PRIME] AVERTISSEMENT: DATABASE_URL manquant. Connectez PostgreSQL.`);
+    }
     
     await fastify.register(helmet, helmetConfig);
     await fastify.register(cors, corsConfig);

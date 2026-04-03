@@ -1,62 +1,69 @@
 import { z } from 'zod';
+import { pool } from '../config/db.js';
 
 const idSchema = z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/);
 
-function mockDashboard(id) {
-  const seed = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const score = 55 + (seed % 40);
-
-  const pillars = [
-    { name: 'Market', score: Math.min(100, 45 + ((seed * 3) % 45)) },
-    { name: 'Product', score: Math.min(100, 50 + ((seed * 5) % 40)) },
-    { name: 'Traction', score: Math.min(100, 40 + ((seed * 7) % 50)) },
-    { name: 'Team', score: Math.min(100, 48 + ((seed * 11) % 40)) },
-    { name: 'Execution', score: Math.min(100, 42 + ((seed * 13) % 48)) }
-  ];
-
-  return {
-    id,
-    startupName: id === 'demo' ? 'Startup démo' : `Dossier ${id}`,
-    score,
-    pillars,
-    graph: {
-      nodes: [
-        { id: 'you', label: 'Vous', type: 'user' },
-        { id: 'c1', label: 'Comp A', type: 'competitor' },
-        { id: 'c2', label: 'Comp B', type: 'competitor' },
-        { id: 'p1', label: 'Partenaire', type: 'partner' }
-      ],
-      links: [
-        { source: 'you', target: 'c1', strength: 0.6 },
-        { source: 'you', target: 'c2', strength: 0.4 },
-        { source: 'you', target: 'p1', strength: 0.8 }
-      ]
-    },
-    updatedAt: new Date().toISOString()
-  };
-}
-
 export default async function dashboardApiRoutes(fastify) {
-  fastify.get(
-    '/api/dashboard/:id',
-    {
-      config: {
-        rateLimit: {
-          max: 60,
-          timeWindow: '1 minute'
-        }
+  // Route 1 : Récupérer la liste des analyses d'un utilisateur
+  fastify.get('/api/dashboard/list', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    onRequest: async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Veuillez vous reconnecter.' });
       }
-    },
-    async (request, reply) => {
-      const raw = request.params.id;
-      const parsed = idSchema.safeParse(raw);
-      if (!parsed.success) {
-        return reply.code(400).send({
-          error: 'INVALID_ID',
-          message: 'Identifiant de dossier invalide.'
-        });
-      }
-      return mockDashboard(parsed.data);
     }
-  );
+  }, async (request, reply) => {
+    try {
+      const userEmail = request.user.email;
+      const { rows } = await pool.query(
+        'SELECT reference_id, startup_name, created_at FROM scores WHERE user_email = $1 ORDER BY created_at DESC',
+        [userEmail]
+      );
+      return reply.code(200).send(rows);
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Erreur lors de la récupération des analyses.' });
+    }
+  });
+
+  // Route 2 : Récupérer une analyse spécifique par son ID
+  fastify.get('/api/dashboard/:id', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+    onRequest: async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Veuillez vous reconnecter.' });
+      }
+    }
+  }, async (request, reply) => {
+    const raw = request.params.id;
+    const parsed = idSchema.safeParse(raw);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'INVALID_ID', message: 'Identifiant de dossier invalide.' });
+    }
+
+    try {
+      const userEmail = request.user.email;
+      const { rows } = await pool.query(
+        'SELECT data, startup_name FROM scores WHERE reference_id = $1 AND user_email = $2',
+        [parsed.data, userEmail]
+      );
+
+      if (rows.length === 0) {
+        return reply.code(404).send({ error: 'NOT_FOUND', message: 'Analyse introuvable ou en cours de génération.' });
+      }
+
+      return reply.code(200).send({
+        id: parsed.data,
+        startupName: rows[0].startup_name,
+        ...rows[0].data
+      });
+    } catch (err) {
+      request.log.error(err);
+      return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Erreur serveur.' });
+    }
+  });
 }

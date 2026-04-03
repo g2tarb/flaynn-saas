@@ -35,7 +35,7 @@
 
       <form id="auth-form" novalidate>
         <div class="field" id="field-name" hidden>
-          <label for="name" class="field__label">Nom de la startup ou complet</label>
+          <label for="name" class="field__label">Nom de la startup</label>
           <input type="text" id="name" name="name" class="field__input" placeholder="ex: Flaynn SaaS">
         </div>
         <div class="field">
@@ -43,14 +43,26 @@
           <input type="email" id="email" name="email" class="field__input" required placeholder="contact@flaynn.fr">
         </div>
         <div class="field">
-          <label for="password" class="field__label">Mot de passe</label>
+          <label for="password" class="field__label">
+            Mot de passe
+            <button type="button" class="auth-toggle-pw" aria-label="Afficher le mot de passe">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </label>
           <input type="password" id="password" name="password" class="field__input" required placeholder="••••••••">
+        </div>
+
+        <div class="auth-pw-strength" id="pw-strength-container" hidden>
+          <div class="auth-pw-strength__track">
+            <div class="auth-pw-strength__fill" id="pw-strength-fill"></div>
+          </div>
+          <span class="auth-pw-strength__label" id="pw-strength-label"></span>
         </div>
 
         <div id="auth-error" class="field__error" role="alert"></div>
 
         <div class="form-actions">
-          <button type="submit" class="btn--primary" id="submit-btn">
+          <button type="submit" class="btn-primary" id="submit-btn" style="width: 100%;">
             <span class="btn__text">Se connecter</span>
           </button>
         </div>

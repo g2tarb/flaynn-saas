@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import argon2 from 'argon2';
-
-// Base de données en mémoire temporaire (À remplacer par PostgreSQL/MongoDB)
-const mockDB = new Map();
+import { pool } from '../config/db.js';
 
 // Schémas Zod stricts
 const LoginSchema = z.object({
@@ -26,14 +24,15 @@ export default async function authRoutes(fastify) {
     try {
       const parsed = LoginSchema.parse(request.body);
       
-      // 1. On cherche l'utilisateur
-      const user = mockDB.get(parsed.email);
-      if (!user) {
+      // 1. On cherche l'utilisateur dans la base de données
+      const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [parsed.email]);
+      if (rows.length === 0) {
         return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Email ou mot de passe incorrect.' });
       }
+      const user = rows[0];
 
       // 2. On vérifie la signature cryptographique du mot de passe
-      const isPasswordValid = await argon2.verify(user.passwordHash, parsed.password);
+      const isPasswordValid = await argon2.verify(user.password_hash, parsed.password);
       if (!isPasswordValid) {
         return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Email ou mot de passe incorrect.' });
       }
@@ -67,16 +66,22 @@ export default async function authRoutes(fastify) {
     try {
       const parsed = RegisterSchema.parse(request.body);
       
-      // 1. On vérifie l'existence de l'email
-      if (mockDB.has(parsed.email)) {
+      // 1. On vérifie l'existence de l'email dans la base de données
+      const { rowCount } = await pool.query('SELECT id FROM users WHERE email = $1', [parsed.email]);
+      if (rowCount > 0) {
         return reply.code(409).send({ error: 'CONFLICT', message: 'Cet email est déjà utilisé.' });
       }
 
       // 2. On hache le mot de passe avec Argon2 (salage inclus automatiquement)
       const passwordHash = await argon2.hash(parsed.password);
-      mockDB.set(parsed.email, { name: parsed.name, email: parsed.email, passwordHash });
+      
+      // 3. Sauvegarde dans PostgreSQL
+      await pool.query(
+        'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3)',
+        [parsed.name, parsed.email, passwordHash]
+      );
 
-      // 3. Génération du JWT sécurisé pour connexion immédiate
+      // 4. Génération du JWT sécurisé pour connexion immédiate
       const token = fastify.jwt.sign(
         { email: parsed.email, name: parsed.name },
         { expiresIn: '7d' }
