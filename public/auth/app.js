@@ -139,8 +139,4 @@ document.addEventListener('DOMContentLoaded', () => {
       el.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
     });
   });
-  
-  if (typeof navigator.serviceWorker !== 'undefined') {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
-  }
 });

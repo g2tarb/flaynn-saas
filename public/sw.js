@@ -1,4 +1,5 @@
-const CACHE_NAME = 'flaynn-cache-v
+const CACHE_NAME = 'flaynn-cache-v3';
+const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
   '/favicon.svg',
@@ -10,9 +11,7 @@ const CACHE_NAME = 'flaynn-cache-v
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE))
   );
   self.skipWaiting();
 });
@@ -25,6 +24,7 @@ self.addEventListener('activate', (event) => {
           if (name !== CACHE_NAME) {
             return caches.delete(name);
           }
+          return undefined;
         })
       );
     })
@@ -33,10 +33,33 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // On ne met en cache que les requêtes GET qui ne ciblent pas l'API Fastify
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) return;
+  const requestUrl = new URL(event.request.url);
+
+  // ARCHITECT-PRIME: on laisse le navigateur gérer les CDN externes.
+  // Sinon le SW intercepte les fontes cross-origin et amplifie les erreurs CSP.
+  if (
+    event.request.method !== 'GET' ||
+    requestUrl.origin !== self.location.origin ||
+    requestUrl.pathname.startsWith('/api/')
+  ) {
+    return;
+  }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => cachedResponse || fetch(event.request))
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+
+        const responseClone = networkResponse.clone();
+        void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        return networkResponse;
+      });
+    })
   );
 });
