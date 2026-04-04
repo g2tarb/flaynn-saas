@@ -14,7 +14,7 @@ export const helmetConfig = {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://api.fontshare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://api.fontshare.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://api.fontshare.com", "https://cdn.fontshare.com"],
       imgSrc: ["'self'", "data:"],
       connectSrc: [
         "'self'", 

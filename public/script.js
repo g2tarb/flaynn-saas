@@ -175,7 +175,7 @@ class ScoringFormController {
     });
   }
 
-  #validateField(input, showError) {
+  #validateField(input, showError, skipButtonUpdate = false) {
     const field = input.closest('.field');
     if (!field || !field.dataset.validate) return true;
     if (input.type === 'hidden' && input.id !== 'stage') return true;
@@ -221,7 +221,9 @@ class ScoringFormController {
     field.classList.toggle('field--error', !!error && showError);
     const errEl = field.querySelector('.field__error');
     if (errEl) errEl.textContent = showError ? error : '';
-    this.#updateStepButtons();
+    
+    if (!skipButtonUpdate) this.#updateStepButtons();
+    
     return !error;
   }
 
@@ -242,7 +244,7 @@ class ScoringFormController {
         }
         return;
       }
-      if (!this.#validateField(input, showError)) ok = false;
+      if (!this.#validateField(input, showError, true)) ok = false;
     });
     return ok;
   }
@@ -255,7 +257,7 @@ class ScoringFormController {
       const email = this.form.querySelector('#email');
       const submitBtn = this.form.querySelector('#btn-submit');
       if (email && submitBtn) {
-        const ok = this.#validateField(email, false);
+        const ok = this.#validateField(email, false, true);
         submitBtn.disabled = !ok;
       }
       return;
