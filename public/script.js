@@ -110,10 +110,19 @@ function buildSuccessView(reference) {
   ref.className = 'form-success__ref';
   ref.textContent = `Référence : ${reference}`;
 
+  const auth = (() => {
+    try { return JSON.parse(localStorage.getItem('flaynn_auth') || 'null'); } catch { return null; }
+  })();
+
   const cta = document.createElement('a');
   cta.className = 'btn-primary btn-inline form-success__cta';
-  cta.href = `/dashboard/?id=${encodeURIComponent(reference)}`;
-  cta.textContent = 'Ouvrir mon espace membre';
+  if (auth) {
+    cta.href = `/dashboard/?id=${encodeURIComponent(reference)}`;
+    cta.textContent = 'Voir mon analyse';
+  } else {
+    cta.href = `/auth/#register`;
+    cta.textContent = 'Créer un compte pour suivre mon analyse';
+  }
 
   wrap.appendChild(icon);
   wrap.appendChild(title);
@@ -757,6 +766,23 @@ function initLiquidUX() {
   });
 }
 
+function initBarReveal() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('.pillar-score-bar, .bento-pillar-track').forEach(el => el.classList.add('is-revealed'));
+    return;
+  }
+  const observer = new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('is-revealed');
+        obs.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: '0px 0px -5% 0px', threshold: 0 });
+
+  document.querySelectorAll('.pillar-score-bar, .bento-pillar-track, .score-ring-wrap').forEach(el => observer.observe(el));
+}
+
 const scheduleIdle = (fn) => {
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(fn, { timeout: 2000 });
@@ -768,6 +794,7 @@ scheduleIdle(() => {
   void bootDeferred();
   initLiquidUX();
   initModals();
+  initBarReveal();
 });
 
 // PWA: Enregistrement du Service Worker

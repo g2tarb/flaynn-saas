@@ -51,18 +51,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (user) window.location.replace('/dashboard/');
   });
 
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('register') === '1' || window.location.hash === '#register') {
-    const regTab = document.querySelector('.auth-tab[data-tab="register"]');
-    if (regTab) regTab.click();
-  }
-
   const form = document.getElementById('auth-form');
   const nameField = document.getElementById('field-name');
   const nameInput = document.getElementById('name');
   const submitBtn = document.getElementById('submit-btn');
   const submitText = submitBtn.querySelector('.btn__text');
   const errorEl = document.getElementById('auth-error');
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('register') === '1' || window.location.hash === '#register') {
+    const regTab = document.querySelector('.auth-tab[data-tab="register"]');
+    if (regTab) regTab.click();
+  }
+
+  // Message de session expirée (redirect depuis dashboard)
+  if (params.get('expired') === '1') {
+    errorEl.textContent = 'Votre session a expiré. Veuillez vous reconnecter.';
+    window.history.replaceState(null, '', '/auth/');
+  }
   const pwToggle = document.querySelector('.auth-toggle-pw');
   const pwInput = document.getElementById('password');
   const strengthContainer = document.getElementById('pw-strength-container');
@@ -104,13 +110,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Indicateur de force du mot de passe
+  // Indicateur de force du mot de passe — synchronisé avec la politique backend (min 12 chars)
   if (pwInput && strengthFill && strengthLabel) {
     pwInput.addEventListener('input', () => {
       if (currentMode !== 'register') return;
       const val = pwInput.value;
       let score = 0;
-      if (val.length >= 8) score++;
+      if (val.length >= 12) score++;
       if (/[A-Z]/.test(val)) score++;
       if (/[0-9]/.test(val)) score++;
       if (/[^a-zA-Z0-9]/.test(val)) score++;
@@ -119,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const labels = ['', 'Faible', 'Moyen', 'Fort', 'Fort'];
 
       strengthFill.className = `auth-pw-strength__fill auth-pw-strength__fill--${levels[score] || 'weak'}`;
-      strengthLabel.textContent = val.length ? labels[score] || 'Faible' : '';
+      strengthLabel.textContent = val.length ? (val.length < 12 ? 'Trop court (min. 12)' : labels[score] || 'Faible') : '';
     });
   }
 
@@ -127,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorEl.textContent = '';
+    errorEl.className = 'field__error';
     submitBtn.disabled = true;
     submitText.textContent = 'Authentification...';
 
@@ -134,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
       email: form.email.value.trim(),
       password: form.password.value
     };
-    
+
     if (currentMode === 'register') {
       payload.name = form.name.value.trim();
     }
@@ -148,9 +155,35 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const data = await res.json();
+
+      // Gestion rate limit (429)
+      if (res.status === 429) {
+        throw new Error('Trop de tentatives. Veuillez patienter quelques minutes avant de réessayer.');
+      }
+
+      // Gestion account lockout (401 avec message spécifique)
+      if (res.status === 401 && data.message && data.message.includes('bloqué')) {
+        throw new Error('Compte temporairement verrouillé (15 min). Trop de tentatives échouées.');
+      }
+
       if (!res.ok) throw new Error(data.message || 'Erreur lors de l\'authentification');
 
-      localStorage.setItem('flaynn_auth', JSON.stringify(data.user));
+      // Vérification de session réelle avant redirect
+      // (anti-enumération : le backend peut renvoyer 200 sans poser de cookie)
+      const sessionCheck = await fetch('/api/auth/session', { credentials: 'same-origin' });
+      if (!sessionCheck.ok) {
+        // Pas de vraie session → afficher un message générique de succès sans redirect
+        errorEl.className = 'field__error field__error--success';
+        errorEl.textContent = currentMode === 'register'
+          ? 'Si cet email n\'était pas déjà enregistré, votre compte a été créé. Vérifiez votre email ou connectez-vous.'
+          : 'Vérifiez vos identifiants et réessayez.';
+        submitBtn.disabled = false;
+        submitText.textContent = currentMode === 'register' ? 'Créer mon compte' : 'Se connecter';
+        return;
+      }
+
+      const sessionData = await sessionCheck.json();
+      localStorage.setItem('flaynn_auth', JSON.stringify(sessionData.user));
       window.location.replace('/dashboard/');
     } catch (err) {
       errorEl.textContent = err.message;

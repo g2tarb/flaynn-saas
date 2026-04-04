@@ -157,7 +157,7 @@ CREATE TABLE refresh_tokens (
 #### `POST /api/auth/register` — Inscription (rate limit: 5/15min)
 ```javascript
 // Zod Schema
-{ name: z.string().trim().min(2).max(100), email: z.string().email().max(254), password: z.string().min(8).max(100) }
+{ name: z.string().trim().min(2).max(100), email: z.string().email().max(254), password: z.string().min(12).max(100) }
 // Réponse 200 : { success: true, user: { name, email } } + Set-Cookie (flaynn_at, flaynn_rt)
 // Réponse 409 : { error: "CONFLICT", message: "Cet email est déjà utilisé." }
 // Réponse 422 : { error: "VALIDATION_FAILED", message: "..." }
@@ -166,7 +166,7 @@ CREATE TABLE refresh_tokens (
 #### `POST /api/auth/login` — Connexion (rate limit: 5/15min)
 ```javascript
 // Zod Schema
-{ email: z.string().email().max(254), password: z.string().min(8).max(100) }
+{ email: z.string().email().max(254), password: z.string().min(12).max(100) }
 // Réponse 200 : { success: true, user: { name, email } } + Set-Cookie
 // Réponse 401 : { error: "UNAUTHORIZED", message: "Email ou mot de passe incorrect." }
 ```

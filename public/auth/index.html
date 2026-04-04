@@ -3,28 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0a0d14">
+  <meta name="theme-color" content="#030407">
+  <meta name="color-scheme" content="dark">
   <title>Espace Membre — Flaynn</title>
-  <!-- On réutilise le CSS principal pour hériter de la DA Dark Clarity -->
+
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700&f[]=general-sans@400,500,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="/defaut.css">
-  <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: var(--surface-void); }
-    .auth-wrap { width: 100%; max-width: 440px; padding: var(--space-4); }
-    .auth-card { padding: var(--space-6) var(--space-5); }
-    .auth-tabs { display: flex; gap: var(--space-4); border-bottom: 1px solid var(--border-default); margin-bottom: var(--space-5); padding-bottom: var(--space-2); }
-    .auth-tab { background: none; border: none; padding: 0 var(--space-2) var(--space-2); color: var(--text-secondary); font: 500 1rem var(--font-body); cursor: pointer; transition: color 0.3s; position: relative; }
-    .auth-tab.is-active { color: var(--text-primary); }
-    .auth-tab.is-active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent-violet); border-radius: 2px 2px 0 0; }
-    .logo-container { text-align: center; margin-bottom: var(--space-6); }
-    .logo-container a { color: var(--text-primary); text-decoration: none; font: 900 1.5rem var(--font-display); letter-spacing: -0.03em; }
-    .form-actions { margin-top: var(--space-5); }
-  </style>
+  <link rel="stylesheet" href="/auth/auth.css">
 </head>
-<body>
+<body class="auth-body">
+
+  <div id="ambient-bg" class="ambient-bg" aria-hidden="true"></div>
 
   <div class="auth-wrap">
     <div class="logo-container">
-      <a href="/">Flaynn.</a>
+      <a href="/">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect width="24" height="24" rx="6" fill="var(--accent-violet)"/>
+          <path d="M7 17L17 7M17 7H9M17 7V15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Flaynn</span>
+      </a>
     </div>
 
     <article class="card-glass auth-card">
@@ -35,12 +40,12 @@
 
       <form id="auth-form" novalidate>
         <div class="field" id="field-name" hidden>
-          <label for="name" class="field__label">Nom de la startup</label>
-          <input type="text" id="name" name="name" class="field__input" placeholder="ex: Flaynn SaaS">
+          <label for="name" class="field__label">Nom complet</label>
+          <input type="text" id="name" name="name" class="field__input" placeholder="Votre nom">
         </div>
         <div class="field">
           <label for="email" class="field__label">Email professionnel</label>
-          <input type="email" id="email" name="email" class="field__input" required placeholder="contact@flaynn.fr">
+          <input type="email" id="email" name="email" class="field__input" required placeholder="contact@startup.com">
         </div>
         <div class="field">
           <label for="password" class="field__label">
@@ -49,7 +54,7 @@
               <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             </button>
           </label>
-          <input type="password" id="password" name="password" class="field__input" required placeholder="••••••••">
+          <input type="password" id="password" name="password" class="field__input" required minlength="12" placeholder="Min. 12 caracteres">
         </div>
 
         <div class="auth-pw-strength" id="pw-strength-container" hidden>
@@ -62,11 +67,20 @@
         <div id="auth-error" class="field__error" role="alert"></div>
 
         <div class="form-actions">
-          <button type="submit" class="btn-primary" id="submit-btn" style="width: 100%;">
+          <button type="submit" class="btn-primary btn-gradient auth-submit" id="submit-btn">
             <span class="btn__text">Se connecter</span>
           </button>
         </div>
       </form>
+
+      <div class="auth-footer-link">
+        <a href="/" class="auth-back-link">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M13 8H3M7 4l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Retour a l'accueil
+        </a>
+      </div>
     </article>
   </div>
 

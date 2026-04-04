@@ -508,14 +508,30 @@ function buildRoutes(data) {
         // ARCHITECT-PRIME : Gestion des états asynchrones (En cours / Erreur)
         if (data.status === 'pending_analysis' || data.status === 'pending_webhook') {
           section.appendChild(el('h2', 'heading-section', { textContent: 'Analyse en cours...' }));
-          section.appendChild(el('p', 'dashboard-app__lead', { textContent: 'Notre IA Claude 3.5 Sonnet est en train d\'évaluer vos données. Cela prend généralement moins de 15 secondes. Veuillez patienter, la page se rafraîchira automatiquement.' }));
+          const leadText = el('p', 'dashboard-app__lead', { textContent: 'Notre IA est en train d\'évaluer vos données. Cela prend généralement moins de 30 secondes.' });
+          section.appendChild(leadText);
+
+          // Indicateur de progression pulsant
+          const spinner = el('div', 'polling-spinner');
+          const spinnerDot = el('span', 'polling-spinner__dot');
+          const spinnerLabel = el('span', 'polling-spinner__label', { textContent: 'Évaluation en cours...' });
+          spinner.appendChild(spinnerDot);
+          spinner.appendChild(spinnerLabel);
+          section.appendChild(spinner);
+
           root.appendChild(section);
 
-          // ARCHITECT-PRIME : Polling (Rafraîchissement automatique)
+          // Polling silencieux avec notification
+          let pollCount = 0;
           const pollInterval = setInterval(async () => {
-            // Si l'utilisateur change d'onglet, la section est détruite, on arrête proprement le polling
             if (!document.body.contains(section)) {
               clearInterval(pollInterval);
+              return;
+            }
+            pollCount++;
+            if (pollCount > 60) {
+              clearInterval(pollInterval);
+              spinnerLabel.textContent = 'L\'analyse prend plus de temps que prévu. Rafraîchissez la page dans quelques minutes.';
               return;
             }
             try {
@@ -524,11 +540,13 @@ function buildRoutes(data) {
                 const newData = await res.json();
                 if (newData.status !== 'pending_analysis' && newData.status !== 'pending_webhook') {
                   clearInterval(pollInterval);
-                  window.location.reload(); // Rafraîchit l'application avec les nouvelles données IA
+                  spinnerLabel.textContent = 'Analyse terminée — chargement des résultats...';
+                  spinnerDot.classList.add('polling-spinner__dot--done');
+                  window.setTimeout(() => window.location.reload(), 800);
                 }
               }
             } catch (err) {}
-          }, 3000); // Vérification silencieuse toutes les 3 secondes
+          }, 3000);
 
           return;
         }
@@ -924,13 +942,21 @@ async function main() {
       
       if (id && id !== 'demo') {
         const res = await fetch(`/api/dashboard/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
-        if (res.status === 401 || res.status === 403) throw new Error('Non autorisé');
+        if (res.status === 401 || res.status === 403) {
+          clearAuth();
+          window.location.replace('/auth/?expired=1');
+          return;
+        }
         if (!res.ok) throw new Error('API indisponible');
         const apiData = await res.json();
         data = { ...apiData, isDemo: false, isList: false };
       } else {
         const res = await fetch(`/api/dashboard/list`, { credentials: 'same-origin' });
-        if (res.status === 401 || res.status === 403) throw new Error('Non autorisé');
+        if (res.status === 401 || res.status === 403) {
+          clearAuth();
+          window.location.replace('/auth/?expired=1');
+          return;
+        }
         if (!res.ok) throw new Error('API indisponible');
         const listData = await res.json();
         data = { isDemo: false, isList: true, items: listData };
