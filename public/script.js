@@ -273,6 +273,52 @@ class ScoringFormController {
     const nextEl = this.form.querySelector(`.form-step[data-step="${target}"]`);
     if (!currentEl || !nextEl) return;
 
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduceMotion || currentEl === nextEl || typeof currentEl.animate !== 'function') {
+      this.#swapStepDom(target, currentEl, nextEl);
+      const f = nextEl.querySelector('.field__input, .chip');
+      if (f) f.focus();
+      return;
+    }
+
+    const forward = target > this.currentStep;
+    const exitX = forward ? -18 : 18;
+    const enterX = forward ? 22 : -22;
+    const easing = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+    const exitAnim = currentEl.animate(
+      [
+        { opacity: 1, transform: 'translateX(0)' },
+        { opacity: 0, transform: `translateX(${exitX}px)` }
+      ],
+      { duration: 280, easing, fill: 'both' }
+    );
+
+    exitAnim.finished
+      .then(() => {
+        exitAnim.cancel();
+        this.#swapStepDom(target, currentEl, nextEl);
+        const enterAnim = nextEl.animate(
+          [
+            { opacity: 0, transform: `translateX(${enterX}px)` },
+            { opacity: 1, transform: 'translateX(0)' }
+          ],
+          { duration: 320, easing, fill: 'both' }
+        );
+        return enterAnim.finished.then(() => {
+          enterAnim.cancel();
+          const first = nextEl.querySelector('.field__input, .chip');
+          if (first) first.focus();
+        });
+      })
+      .catch(() => {
+        this.#swapStepDom(target, currentEl, nextEl);
+        const f = nextEl.querySelector('.field__input, .chip');
+        if (f) f.focus();
+      });
+  }
+
+  #swapStepDom(target, currentEl, nextEl) {
     currentEl.classList.remove('is-active');
     currentEl.hidden = true;
     currentEl.classList.add('is-hidden');
@@ -284,9 +330,6 @@ class ScoringFormController {
     this.currentStep = target;
     this.#updateProgress();
     this.#updateStepButtons();
-
-    const first = nextEl.querySelector('.field__input, .chip');
-    if (first) first.focus();
   }
 
   #updateProgress() {
@@ -594,50 +637,38 @@ if (stickyCtaEl) {
 }
 
 function initLiquidUX() {
-  // 1. Glow effect dynamique (Bento Cards & Inputs)
+  const setMouseFromEvent = (el, e) => {
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+    el.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+  };
+
+  // 1. Glow magnétique : cartes glass, champs, wrappers .field (bordure scoring)
   const applyGlow = () => {
-    document.querySelectorAll('.card-glass, .field__input').forEach((el) => {
+    document.querySelectorAll('.card-glass, .field__input, .scoring-form .field').forEach((el) => {
       if (el.dataset.glowBound) return;
       el.dataset.glowBound = 'true';
-      el.addEventListener('mousemove', (e) => {
-        const rect = el.getBoundingClientRect();
-        el.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
-        el.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
-      });
+      const move = (e) => setMouseFromEvent(el, e);
+      el.addEventListener('mousemove', move, { passive: true });
+      el.addEventListener('touchmove', move, { passive: true });
     });
   };
   applyGlow();
-  // MutationObserver pour appliquer l'effet aux éléments créés dynamiquement
   const observer = new MutationObserver(() => applyGlow());
   observer.observe(document.body, { childList: true, subtree: true });
 
-  // 2. Physique du Mouvement "Spring" globale
-  const interactives = 'button, a, .chip, .nav-link, [role="button"]';
-  document.addEventListener('pointerdown', (e) => {
-    const el = e.target.closest(interactives);
-    if (el && !el.disabled) {
-      el.style.transform = 'scale(0.96)';
-      el.style.transition = 'transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)';
-    }
-  });
-  const resetSpring = (e) => {
-    const el = e.target.closest(interactives);
-    if (el) {
-      el.style.transform = '';
-      el.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    }
-  };
-  document.addEventListener('pointerup', resetSpring);
-  document.addEventListener('pointercancel', resetSpring);
-  document.addEventListener('pointerout', resetSpring);
+  // 2. Spring scale (0.97) — géré en CSS (:active + ease-out-back au relâchement). Rien ici.
 
-  // 3. Retour haptique visuel au clavier (Flash sur la bordure)
+  // 3. Flash discret sur saisie (complète le focus ring CSS)
   document.addEventListener('input', (e) => {
     if (e.target.matches('.field__input')) {
-      e.target.animate([
-        { boxShadow: '0 0 0 4px rgba(139, 92, 246, 0.3)' },
-        { boxShadow: '0 0 0 0px rgba(139, 92, 246, 0)' }
-      ], { duration: 350, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+      e.target.animate(
+        [
+          { boxShadow: '0 0 0 4px rgba(139, 92, 246, 0.28)' },
+          { boxShadow: '0 0 0 0px rgba(139, 92, 246, 0)' }
+        ],
+        { duration: 350, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+      );
     }
   });
 }
