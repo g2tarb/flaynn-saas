@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { randomBytes } from 'node:crypto';
 import { claudeScoringService } from '../services/claude-scoring.js';
 import { sheetsSyncService } from '../services/sheets-sync.js';
 import { pool } from '../config/db.js';
@@ -49,7 +50,8 @@ export default async function scoringRoutes(fastify) {
       }
 
       const payload = { ...parsed, email: userEmail || parsed.email };
-      const reference = `FLY-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      // ARCHITECT-PRIME: randomBytes CSPRNG au lieu de Math.random() (prédictible)
+      const reference = `FLY-${randomBytes(4).toString('hex').toUpperCase()}`;
       const initialData = { status: 'pending_analysis', payload };
       
       await pool.query(

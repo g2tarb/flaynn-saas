@@ -37,6 +37,7 @@ const envSchema = z.object({
   N8N_SECRET_TOKEN: z.string().min(16).optional(),
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-').optional(),
   REDIS_URL: z.string().url().default('redis://127.0.0.1:6379'),
+  LOAD_TEST: z.enum(['true', 'false']).default('false'),
   GOOGLE_SHEETS_WEBHOOK_URL: z.string().url().startsWith('https://script.google.com/').optional(),
   CORS_ORIGIN: z.string().optional()
 });
@@ -114,7 +115,7 @@ export const start = async () => {
     await fastify.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
-      allowList: ['127.0.0.1'], // Eviter de bannir localhost pendant les tests
+      allowList: env.LOAD_TEST === 'true' ? [] : ['127.0.0.1'], // ARCHITECT-PRIME: On lève l'immunité pour le test de charge
       redis: fastify.redis, // Délégation du compteur à Redis
       onExceeded: async function (request, key) {
         request.log.warn(`[SECOPS] Rate Limit dépassé. Ban IP Redis 15 minutes: ${request.ip}`);

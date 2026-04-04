@@ -15,7 +15,7 @@ export const n8nBridge = {
         headers: {
           'Content-Type': 'application/json',
           'X-Flaynn-Source': 'web-api',
-          'X-Flaynn-Signature': secretToken || '',
+          ...(secretToken ? { 'X-Flaynn-Signature': secretToken } : {}),
           'X-Request-Id': requestId || '' // Traçabilité de bout en bout
         },
         body: JSON.stringify(payload),

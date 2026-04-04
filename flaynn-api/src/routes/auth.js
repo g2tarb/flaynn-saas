@@ -154,7 +154,15 @@ export default async function authRoutes(fastify) {
         return reply.code(503).send(SERVICE_UNAVAILABLE_BODY);
       }
       if (err && err.code === '23505') {
-        return reply.code(409).send({ error: 'CONFLICT', message: 'Cet email est déjà utilisé.' });
+        // ARCHITECT-PRIME: Race condition — le SELECT n'a rien trouvé mais l'INSERT échoue sur la contrainte UNIQUE.
+        // On renvoie la même réponse 200 que la mitigation d'énumération pour ne pas fuiter l'existence du compte.
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100));
+        request.log.warn(`[SECOPS] Race condition 23505 interceptée sur register (email masqué).`);
+        return reply.code(200).send({
+          success: true,
+          message: 'Si cet email n\'était pas déjà enregistré, votre compte a été créé.',
+          user: { name: parsed.name, email: parsed.email }
+        });
       }
       request.log.error(err);
       return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Erreur interne du serveur.' });

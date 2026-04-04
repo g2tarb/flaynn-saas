@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { timingSafeEqual } from 'node:crypto';
 import { pool } from '../config/db.js';
 import { FlaynnError } from '../utils/errors.js';
 
@@ -13,10 +14,12 @@ export default async function webhookRoutes(fastify) {
       rateLimit: { max: 100, timeWindow: '1 minute' }
     }
   }, async (request, reply) => {
-    // Vérification stricte du token interne (Zero Trust Policy)
+    // ARCHITECT-PRIME: Vérification en temps constant pour immuniser contre les timing attacks
     const signature = request.headers['x-flaynn-signature'];
-    if (!signature || signature !== process.env.N8N_SECRET_TOKEN) {
-      request.log.warn('Tentative d\'accès non autorisée au webhook n8n');
+    const expected = process.env.N8N_SECRET_TOKEN;
+    if (!signature || !expected || signature.length !== expected.length ||
+        !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      request.log.warn('[SECOPS] Tentative d\'accès non autorisée au webhook n8n');
       return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Signature invalide.' });
     }
 
