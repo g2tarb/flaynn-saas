@@ -36,7 +36,7 @@ const envSchema = z.object({
   N8N_WEBHOOK_URL: z.string().url().optional(),
   N8N_SECRET_TOKEN: z.string().min(16).optional(),
   ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-').optional(),
-  REDIS_URL: z.string().url().default('redis://127.0.0.1:6379'),
+  REDIS_URL: z.string().url().optional(),
   LOAD_TEST: z.enum(['true', 'false']).default('false'),
   GOOGLE_SHEETS_WEBHOOK_URL: z.string().url().startsWith('https://script.google.com/').optional(),
   CORS_ORIGIN: z.string().optional()
@@ -107,21 +107,34 @@ export const start = async () => {
       fastify.log.warn(`[ARCHITECT-PRIME] AVERTISSEMENT: DATABASE_URL manquant. Connectez PostgreSQL.`);
     }
     
-    fastify.log.info(`[ARCHITECT-PRIME] Connexion à Redis...`);
-    await fastify.register(fastifyRedis, { url: env.REDIS_URL });
+    // Redis : optionnel — fallback in-memory si non configuré
+    if (env.REDIS_URL) {
+      fastify.log.info(`[ARCHITECT-PRIME] Connexion à Redis...`);
+      await fastify.register(fastifyRedis, { url: env.REDIS_URL });
+      fastify.log.info(`[ARCHITECT-PRIME] Redis connecté.`);
+    } else {
+      fastify.log.warn(`[ARCHITECT-PRIME] REDIS_URL absent — rate limit en mémoire (non distribué).`);
+    }
 
     await fastify.register(helmet, helmetConfig);
     await fastify.register(cors, corsConfig);
-    await fastify.register(rateLimit, {
+
+    const rateLimitOpts = {
       max: 100,
       timeWindow: '1 minute',
-      allowList: env.LOAD_TEST === 'true' ? [] : ['127.0.0.1'], // ARCHITECT-PRIME: On lève l'immunité pour le test de charge
-      redis: fastify.redis, // Délégation du compteur à Redis
-      onExceeded: async function (request, key) {
+      allowList: env.LOAD_TEST === 'true' ? [] : ['127.0.0.1'],
+    };
+
+    // Délégation Redis si disponible
+    if (fastify.redis) {
+      rateLimitOpts.redis = fastify.redis;
+      rateLimitOpts.onExceeded = async function (request, key) {
         request.log.warn(`[SECOPS] Rate Limit dépassé. Ban IP Redis 15 minutes: ${request.ip}`);
         await fastify.redis.set(`ban:${request.ip}`, 'true', 'EX', 15 * 60);
-      }
-    });
+      };
+    }
+
+    await fastify.register(rateLimit, rateLimitOpts);
     await fastify.register(fastifyJwt, {
       secret: env.JWT_SECRET
     });
