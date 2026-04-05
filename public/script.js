@@ -130,10 +130,12 @@ function initNativeScrollReveal() {
 function scrollToId(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  // ARCHITECT-PRIME: block: 'center' pour que l'input ne soit pas masqué par le clavier virtuel
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Offset pour la nav fixe (4rem ≈ 64px)
+  const navHeight = document.querySelector('.nav-glass')?.offsetHeight || 64;
+  const top = el.getBoundingClientRect().top + window.scrollY - navHeight - 16;
+  window.scrollTo({ top, behavior: 'smooth' });
   const focusable = el.querySelector('input, button, select, textarea');
-  if (focusable) window.setTimeout(() => focusable.focus(), 400);
+  if (focusable) window.setTimeout(() => focusable.focus(), 500);
 }
 
 function showToast(root, message, variant) {

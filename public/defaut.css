@@ -101,10 +101,15 @@
   html {
     scroll-behavior: smooth;
     overscroll-behavior: none;
-    overscroll-behavior-y: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Scroll smooth sur tous les conteneurs scrollables */
+  *, *::before, *::after {
+    scroll-behavior: smooth;
   }
 
   /* ARCHITECT-PRIME v3: reduced-motion master reset dans @layer reset
