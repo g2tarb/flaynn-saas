@@ -130,7 +130,8 @@ function initNativeScrollReveal() {
 function scrollToId(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // ARCHITECT-PRIME: block: 'center' pour que l'input ne soit pas masqué par le clavier virtuel
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   const focusable = el.querySelector('input, button, select, textarea');
   if (focusable) window.setTimeout(() => focusable.focus(), 400);
 }

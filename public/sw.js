@@ -50,21 +50,30 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // ARCHITECT-PRIME: cache-first avec fallback offline (jamais de page d'erreur navigateur)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
 
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
-        }
+      return fetch(event.request)
+        .then((networkResponse) => {
+          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+            return networkResponse;
+          }
 
-        const responseClone = networkResponse.clone();
-        void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-        return networkResponse;
-      });
+          const responseClone = networkResponse.clone();
+          void caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          return networkResponse;
+        })
+        .catch(() => {
+          // Offline : servir la page d'accueil cachée pour les navigations HTML
+          if (event.request.headers.get('accept')?.includes('text/html')) {
+            return caches.match('/');
+          }
+          return new Response('', { status: 503, statusText: 'Offline' });
+        });
     })
   );
 });
