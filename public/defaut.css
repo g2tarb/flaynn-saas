@@ -349,6 +349,11 @@
     color: var(--text-secondary);
   }
 
+  @media (max-width: 639px) {
+    .hero-badge { display: none; }
+    .hero-scroll-indicator { display: none; }
+  }
+
   .pulse-dot {
     width: 6px;
     height: 6px;

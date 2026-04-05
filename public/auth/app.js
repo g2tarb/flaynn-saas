@@ -43,9 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('auth-form');
   const nameField = document.getElementById('field-name');
   const nameInput = document.getElementById('name');
-  const confirmField = document.getElementById('field-confirm');
-  const confirmInput = document.getElementById('password-confirm');
-  const confirmError = document.getElementById('confirm-error');
   const submitBtn = document.getElementById('submit-btn');
   const submitText = submitBtn.querySelector('.btn__text');
   const errorEl = document.getElementById('auth-error');
@@ -84,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
       currentMode = e.target.dataset.tab;
       errorEl.textContent = '';
       errorEl.className = 'field__error';
-      if (confirmError) confirmError.textContent = '';
 
       // Cacher le panneau mot de passe oublie
       if (forgotPanel) forgotPanel.hidden = true;
@@ -93,8 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (currentMode === 'register') {
         nameField.hidden = false;
         nameInput.required = true;
-        confirmField.hidden = false;
-        confirmInput.required = true;
         if (strengthContainer) strengthContainer.hidden = false;
         if (generatePwBtn) generatePwBtn.hidden = false;
         if (forgotLink) forgotLink.hidden = true;
@@ -103,8 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         nameField.hidden = true;
         nameInput.required = false;
-        confirmField.hidden = true;
-        confirmInput.required = false;
         if (strengthContainer) strengthContainer.hidden = true;
         if (generatePwBtn) generatePwBtn.hidden = true;
         if (forgotLink) forgotLink.hidden = false;
@@ -119,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     pwToggle.addEventListener('click', () => {
       const isPassword = pwInput.type === 'password';
       pwInput.type = isPassword ? 'text' : 'password';
-      if (confirmInput) confirmInput.type = pwInput.type;
       pwToggle.setAttribute('aria-label', isPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
       pwToggle.style.color = isPassword ? 'var(--text-primary)' : 'var(--text-tertiary)';
     });
@@ -135,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const password = Array.from(array, (v) => chars[v & 63]).join('');
       pwInput.value = password;
       pwInput.type = 'text';
-      if (confirmInput) { confirmInput.value = password; confirmInput.type = 'text'; }
       pwInput.dispatchEvent(new Event('input', { bubbles: true }));
       if (typeof navigator.vibrate === 'function') navigator.vibrate(15);
 
@@ -169,26 +159,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ── Confirm password validation ──
-  if (confirmInput) {
-    confirmInput.addEventListener('input', () => {
-      if (currentMode !== 'register') return;
-      if (confirmInput.value && confirmInput.value !== pwInput.value) {
-        confirmError.textContent = 'Les mots de passe ne correspondent pas.';
-        confirmInput.closest('.field').classList.add('field--error');
-      } else {
-        confirmError.textContent = '';
-        confirmInput.closest('.field').classList.remove('field--error');
-        if (confirmInput.value) confirmInput.closest('.field').classList.add('field--valid');
-      }
-    });
-  }
-
   // ── Forgot password ──
+  const authTabs = document.querySelector('.auth-tabs');
+
   if (forgotBtn && forgotPanel) {
     forgotBtn.addEventListener('click', () => {
       form.hidden = true;
       forgotPanel.hidden = false;
+      if (authTabs) authTabs.hidden = true;
       forgotMessage.textContent = '';
       forgotMessage.className = 'field__error';
       document.getElementById('forgot-email').focus();
@@ -198,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     forgotBackBtn.addEventListener('click', () => {
       forgotPanel.hidden = true;
       form.hidden = false;
+      if (authTabs) authTabs.hidden = false;
     });
   }
   if (forgotForm) {
@@ -227,15 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
     errorEl.className = 'field__error';
     submitBtn.disabled = true;
     submitText.textContent = 'Authentification...';
-
-    // Validation confirmation mot de passe
-    if (currentMode === 'register' && confirmInput.value !== pwInput.value) {
-      confirmError.textContent = 'Les mots de passe ne correspondent pas.';
-      confirmInput.closest('.field').classList.add('field--error');
-      submitBtn.disabled = false;
-      submitText.textContent = 'Créer mon compte';
-      return;
-    }
 
     const payload = {
       email: form.email.value.trim(),
