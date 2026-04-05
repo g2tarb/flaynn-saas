@@ -101,11 +101,9 @@ export const start = async () => {
   try {
     fastify.log.info(`[ARCHITECT-PRIME] Initialisation de la sécurité...`);
     
-    if (env.DATABASE_URL) {
-      await initDB(fastify.log);
-    } else {
-      fastify.log.warn(`[ARCHITECT-PRIME] AVERTISSEMENT: DATABASE_URL manquant. Connectez PostgreSQL.`);
-    }
+    // ARCHITECT-PRIME: DATABASE_URL est requis par le schéma Zod — ce bloc ne peut échouer
+    // que si la connexion PG elle-même échoue (géré par initDB qui throw)
+    await initDB(fastify.log);
     
     // Redis : optionnel — fallback in-memory si non configuré
     if (env.REDIS_URL) {
@@ -178,23 +176,23 @@ export const start = async () => {
     fastify.get('/dashboard', async (_request, reply) => reply.code(302).redirect('/dashboard/'));
     fastify.get('/auth', async (_request, reply) => reply.code(302).redirect('/auth/'));
 
+    // ARCHITECT-PRIME: cache les HTML SPA en mémoire au boot (pas de readFile à chaque requête)
+    const dashboardHtml = await readFile(join(siteRoot, 'dashboard/index.html'), 'utf-8');
+    const authHtml = await readFile(join(siteRoot, 'auth/index.html'), 'utf-8');
+
     fastify.setNotFoundHandler(async (request, reply) => {
       if (request.method !== 'GET') return reply.code(404).send({ error: 'Not Found' });
-      
+
       const url = request.url.split('?')[0];
       if (url === '/dashboard' || url.startsWith('/dashboard/')) {
         const rest = url === '/dashboard' ? '' : url.slice('/dashboard/'.length);
         if (rest && rest.includes('.')) return reply.code(404).send('Not Found');
-        
-        const html = await readFile(join(siteRoot, 'dashboard/index.html'), 'utf-8');
-        return reply.type('text/html').send(html);
+        return reply.type('text/html').send(dashboardHtml);
       }
       if (url === '/auth' || url.startsWith('/auth/')) {
         const rest = url === '/auth' ? '' : url.slice('/auth/'.length);
         if (rest && rest.includes('.')) return reply.code(404).send('Not Found');
-
-        const html = await readFile(join(siteRoot, 'auth/index.html'), 'utf-8');
-        return reply.type('text/html').send(html);
+        return reply.type('text/html').send(authHtml);
       }
       return reply.code(404).send({ error: 'Not Found' });
     });

@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Session check — redirect si deja connecte ──
   const syncSession = async () => {
     try {
-      const res = await fetch('/api/auth/session', { credentials: 'same-origin' });
+      const res = await fetch('/api/auth/session', { credentials: 'same-origin', signal: AbortSignal.timeout(8000) });
       if (!res.ok) { localStorage.removeItem('flaynn_auth'); return null; }
       const data = await res.json();
       localStorage.setItem('flaynn_auth', JSON.stringify(data.user));
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (regTab) regTab.click();
   }
   if (params.get('expired') === '1') {
-    errorEl.textContent = 'Votre session a expire. Veuillez vous reconnecter.';
+    errorEl.textContent = 'Votre session a expiré. Veuillez vous reconnecter.';
     window.history.replaceState(null, '', '/auth/');
   }
 
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (strengthContainer) strengthContainer.hidden = false;
         if (generatePwBtn) generatePwBtn.hidden = false;
         if (forgotLink) forgotLink.hidden = true;
-        submitText.textContent = 'Creer mon compte';
+        submitText.textContent = 'Créer mon compte';
         pwInput.autocomplete = 'new-password';
       } else {
         nameField.hidden = true;
@@ -128,10 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Generate strong password ──
   if (generatePwBtn && pwInput) {
     generatePwBtn.addEventListener('click', () => {
-      const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&*';
-      const array = new Uint32Array(16);
+      // ARCHITECT-PRIME: charset 64 chars (puissance de 2) pour éliminer le biais modulo
+      const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&';
+      const array = new Uint8Array(16);
       crypto.getRandomValues(array);
-      const password = Array.from(array, (v) => chars[v % chars.length]).join('');
+      const password = Array.from(array, (v) => chars[v & 63]).join('');
       pwInput.value = password;
       pwInput.type = 'text';
       if (confirmInput) { confirmInput.value = password; confirmInput.type = 'text'; }
@@ -159,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (/[^a-zA-Z0-9]/.test(val)) score++;
 
       const levels = ['', 'weak', 'medium', 'strong', 'strong'];
-      const labels = ['', 'Faible', 'Moyen', 'Fort', 'Tres fort'];
+      const labels = ['', 'Faible', 'Moyen', 'Fort', 'Très fort'];
 
       strengthFill.className = `auth-pw-strength__fill auth-pw-strength__fill--${levels[score] || 'weak'}`;
       strengthLabel.textContent = val.length
@@ -213,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await new Promise(r => setTimeout(r, Math.random() * 500 + 500));
 
       forgotMessage.className = 'field__error field__error--success';
-      forgotMessage.textContent = 'Si un compte est associe a cet email, un lien de reinitialisation a ete envoye.';
+      forgotMessage.textContent = 'Si un compte est associé à cet email, un lien de réinitialisation a été envoyé.';
       btn.disabled = false;
       btnText.textContent = 'Envoyer le lien';
     });
@@ -232,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
       confirmError.textContent = 'Les mots de passe ne correspondent pas.';
       confirmInput.closest('.field').classList.add('field--error');
       submitBtn.disabled = false;
-      submitText.textContent = 'Creer mon compte';
+      submitText.textContent = 'Créer mon compte';
       return;
     }
 
@@ -249,16 +250,17 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000)
       });
 
       const data = await res.json();
 
       if (res.status === 429) {
-        throw new Error('Trop de tentatives. Patientez quelques minutes.');
+        throw new Error('Trop de tentatives. Veuillez patienter quelques minutes.');
       }
       if (res.status === 401 && data.message && data.message.includes('bloque')) {
-        throw new Error('Compte temporairement verrouille (15 min). Trop de tentatives echouees.');
+        throw new Error('Compte temporairement verrouillé (15 min). Trop de tentatives échouées.');
       }
       if (!res.ok) throw new Error(data.message || 'Erreur lors de l\'authentification');
 
@@ -267,10 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!sessionCheck.ok) {
         errorEl.className = 'field__error field__error--success';
         errorEl.textContent = currentMode === 'register'
-          ? 'Si cet email n\'etait pas deja enregistre, votre compte a ete cree. Connectez-vous.'
-          : 'Verifiez vos identifiants et reessayez.';
+          ? 'Si cet email n\'était pas déjà enregistré, votre compte a été créé. Connectez-vous.'
+          : 'Vérifiez vos identifiants et réessayez.';
         submitBtn.disabled = false;
-        submitText.textContent = currentMode === 'register' ? 'Creer mon compte' : 'Se connecter';
+        submitText.textContent = currentMode === 'register' ? 'Créer mon compte' : 'Se connecter';
         return;
       }
 
@@ -280,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       errorEl.textContent = err.message;
       submitBtn.disabled = false;
-      submitText.textContent = currentMode === 'register' ? 'Creer mon compte' : 'Se connecter';
+      submitText.textContent = currentMode === 'register' ? 'Créer mon compte' : 'Se connecter';
     }
   });
 

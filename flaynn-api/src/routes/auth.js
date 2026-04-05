@@ -32,8 +32,14 @@ export default async function authRoutes(fastify) {
       const parsed = LoginSchema.parse(request.body);
       
       // 1. On cherche l'utilisateur dans la base de données
-      const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [parsed.email]);
+      // ARCHITECT-PRIME: projection explicite — jamais SELECT * sur une table avec password_hash
+      const { rows } = await pool.query(
+        'SELECT id, name, email, password_hash, failed_login_attempts, locked_until FROM users WHERE email = $1',
+        [parsed.email]
+      );
       if (rows.length === 0) {
+        // ARCHITECT-PRIME: dummy Argon2 verify pour neutraliser le timing oracle (email inexistant vs existant)
+        await argon2.verify('$argon2id$v=19$m=65536,t=3,p=4$dW5rbm93bg$dW5rbm93bg', parsed.password).catch(() => {});
         return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Email ou mot de passe incorrect.' });
       }
       const user = rows[0];

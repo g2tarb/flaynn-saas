@@ -24,9 +24,10 @@ function initMorph(el) {
     // Phase 1 : fade out les lettres actuelles
     const currentLetters = el.querySelectorAll('.morph-letter');
     if (currentLetters.length) {
+      // ARCHITECT-PRIME: un seul reflow pour toutes les lettres (pas dans la boucle)
+      currentLetters.forEach((l) => { l.style.animation = 'none'; });
+      void el.offsetHeight; // un seul reflow batché
       currentLetters.forEach((l, idx) => {
-        l.style.animation = 'none';
-        l.offsetHeight; // force reflow
         l.style.transition = `opacity 0.15s ease ${idx * 15}ms, transform 0.15s ease ${idx * 15}ms, filter 0.15s ease ${idx * 15}ms`;
         l.style.opacity = '0';
         l.style.transform = 'translateY(-8px) scale(0.7)';
@@ -546,11 +547,6 @@ async function bootDeferred() {
   const morphEl = document.querySelector('.js-morph-text');
   const counterEl = document.querySelector('[data-score]');
 
-  // CSS scroll reveal fonctionne sur TOUS les tiers (pas besoin de GSAP)
-  if (!reduced) {
-    initNativeScrollReveal();
-  }
-
   if (reduced) {
     if (counterEl) {
       const t = Number.parseInt(counterEl.dataset.score || counterEl.textContent, 10);
@@ -563,26 +559,25 @@ async function bootDeferred() {
     }
   } else if (tier >= 2) {
     try {
-      const { loadGsapBundle, initMorphGsap, initScrollReveal, initGsapScoreCounters } = await import(
+      const { loadGsapBundle, initScrollReveal, initGsapScoreCounters } = await import(
         './js/landing-motion.js'
       );
       await loadGsapBundle();
       const gsap = window.gsap;
-      if (morphEl) initMorph(morphEl); // Effet lettre par lettre + particules (meilleur que GSAP fade)
+      if (morphEl) initMorph(morphEl);
       initScrollReveal(gsap);
       initGsapScoreCounters(gsap);
     } catch {
+      // GSAP échoué : fallback natif
       if (morphEl) initMorph(morphEl);
       if (counterEl) initScoreCounter(counterEl);
-      initNativeScrollReveal(); // Fallback si GSAP échoue
+      initNativeScrollReveal();
     }
   } else {
-    // Tier 1 : animations legeres CSS-only (pas de GSAP, pas de Three.js)
+    // Tier 1 : animations legeres CSS-only
     if (morphEl) initMorph(morphEl);
     if (counterEl) initScoreCounter(counterEl);
-    if (!reduced) {
-      initNativeScrollReveal(); // Appareil bas de gamme (Tier 1) mais sans reduced-motion
-    }
+    initNativeScrollReveal();
   }
 
   const debugThree = new URLSearchParams(window.location.search).get('debug_three') === '1';
@@ -678,32 +673,28 @@ document.addEventListener('click', (e) => {
 
 document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
 document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
-document.getElementById('btn-sticky-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
-document.getElementById('btn-mobile-cta')?.addEventListener('click', () => {
-  closeMobileMenu();
-  scrollToId('scoring-form');
-});
 
 // ── Collapsing header on scroll ──────────────────────────────────────────────
 const navGlass = document.querySelector('.nav-glass');
 if (navGlass) {
-  let lastScroll = 0;
   const onScroll = () => {
-    const y = window.scrollY;
-    navGlass.classList.toggle('is-scrolled', y > 60);
-    lastScroll = y;
+    navGlass.classList.toggle('is-scrolled', window.scrollY > 60);
   };
   window.addEventListener('scroll', onScroll, { passive: true });
   onScroll();
 }
 
 // ── View Transition API — smooth page transitions ──────────────────────────
+// ARCHITECT-PRIME: exclure les liens /dashboard/ (gérés par warpNavigate)
 document.addEventListener('click', (e) => {
+  if (e.defaultPrevented) return; // déjà intercepté par warpNavigate
   const link = e.target.closest('a[href]');
   if (!link || !link.href) return;
+  const href = link.getAttribute('href');
+  if (!href || href.startsWith('#')) return;
+  if (href.startsWith('/dashboard')) return; // géré par warpNavigate
   const url = new URL(link.href, location.origin);
   if (url.origin !== location.origin || url.pathname === location.pathname) return;
-  if (link.getAttribute('href').startsWith('#')) return;
   if (!document.startViewTransition) return;
   e.preventDefault();
   document.startViewTransition(() => {
@@ -851,7 +842,12 @@ function initLiquidUX() {
     });
   };
   applyGlow();
-  const observer = new MutationObserver(() => applyGlow());
+  // ARCHITECT-PRIME: debounced MutationObserver pour éviter le DOM thrashing
+  let glowTimer = null;
+  const observer = new MutationObserver(() => {
+    if (glowTimer) return;
+    glowTimer = setTimeout(() => { applyGlow(); glowTimer = null; }, 200);
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 
   // 2. Spring scale (0.97) pour JS dynamically injected elements

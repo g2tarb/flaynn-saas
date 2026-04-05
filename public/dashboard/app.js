@@ -897,7 +897,11 @@ function initLiquidUX() {
     });
   };
   applyGlow();
-  new MutationObserver(() => applyGlow()).observe(document.body, { childList: true, subtree: true });
+  let glowTimer = null;
+  new MutationObserver(() => {
+    if (glowTimer) return;
+    glowTimer = setTimeout(() => { applyGlow(); glowTimer = null; }, 200);
+  }).observe(document.body, { childList: true, subtree: true });
 
   const interactives = 'button, a, .dashboard-nav-side__link, .dashboard-nav-mobile__item';
   document.addEventListener('pointerdown', (e) => {
@@ -957,7 +961,7 @@ async function main() {
       const id = new URLSearchParams(window.location.search).get('id');
       
       if (id && id !== 'demo') {
-        const res = await fetch(`/api/dashboard/${encodeURIComponent(id)}`, { credentials: 'same-origin' });
+        const res = await fetch(`/api/dashboard/${encodeURIComponent(id)}`, { credentials: 'same-origin', signal: AbortSignal.timeout(15000) });
         if (res.status === 401 || res.status === 403) {
           clearAuth();
           window.location.replace('/auth/?expired=1');
@@ -967,7 +971,7 @@ async function main() {
         const apiData = await res.json();
         data = { ...apiData, isDemo: false, isList: false };
       } else {
-        const res = await fetch(`/api/dashboard/list`, { credentials: 'same-origin' });
+        const res = await fetch(`/api/dashboard/list`, { credentials: 'same-origin', signal: AbortSignal.timeout(15000) });
         if (res.status === 401 || res.status === 403) {
           clearAuth();
           window.location.replace('/auth/?expired=1');

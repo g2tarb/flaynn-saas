@@ -2806,7 +2806,10 @@
 
 /* ─────────────────────────────────────────
    PHASE 3 — Mobile-first & app-like shell (320px+)
+   ARCHITECT-PRIME: tout ce bloc est dans @layer utilities
+   pour respecter la cascade @layer du projet
 ───────────────────────────────────────── */
+@layer utilities {
 @media (max-width: 639px) {
   /* Scrollbar masquée — app native */
   ::-webkit-scrollbar { display: none; }
@@ -3097,3 +3100,4 @@
   .inv-metric__value { animation: none; }
   .bento-pillar-score { animation: none; }
 }
+} /* end @layer utilities */

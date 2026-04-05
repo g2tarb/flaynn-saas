@@ -1,12 +1,17 @@
-const CACHE_NAME = 'flaynn-cache-v3';
+const CACHE_NAME = 'flaynn-cache-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
   '/favicon.svg',
   '/defaut.css',
   '/script.js',
+  '/auth/',
   '/auth/app.js',
-  '/dashboard/app.js'
+  '/auth/auth.css',
+  '/dashboard/',
+  '/dashboard/app.js',
+  '/dashboard/dashboard.css',
+  '/register-sw.js'
 ];
 
 self.addEventListener('install', (event) => {

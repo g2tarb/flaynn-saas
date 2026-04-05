@@ -13,5 +13,5 @@ services:
         value: production
       - key: CORS_ORIGIN
         sync: false
-      - key: N8N_SCORE_WEBHOOK_URL
+      - key: N8N_WEBHOOK_URL
         sync: false

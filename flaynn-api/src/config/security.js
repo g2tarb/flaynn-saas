@@ -1,5 +1,6 @@
 function n8nConnectOrigin() {
-  const u = process.env.N8N_SCORE_WEBHOOK_URL;
+  // ARCHITECT-PRIME: aligné avec le nom dans envSchema (server.js) et render.yaml
+  const u = process.env.N8N_WEBHOOK_URL;
   if (!u) return [];
   try {
     return [new URL(u).origin];
