@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
-import { claudeScoringService } from '../services/claude-scoring.js';
-import { sheetsSyncService } from '../services/sheets-sync.js';
+import { n8nBridge } from '../services/n8n-bridge.js';
 import { pool } from '../config/db.js';
 
 // Schéma Zod strict - Red Team Policy
@@ -59,26 +58,16 @@ export default async function scoringRoutes(fastify) {
         [reference, userEmail, payload.startup_name, JSON.stringify(initialData)]
       );
 
-      // Traitement IA asynchrone (Fire-and-forget) pour ne pas bloquer le client
-      claudeScoringService.evaluateStartup(payload)
-        .then(async (aiResult) => {
-          await pool.query(
-            'UPDATE scores SET data = $1 WHERE reference_id = $2',
-            [JSON.stringify(aiResult), reference]
-          );
-        })
+      // ARCHITECT-PRIME: n8n orchestre tout (Claude IA + Google Sheets + callback webhook)
+      // Fire-and-forget — n8n rappellera POST /api/webhooks/n8n/score avec le résultat
+      n8nBridge.submitScore({ ...payload, reference }, request.id)
         .catch(async (err) => {
-          request.log.error(err, `Échec de l'analyse IA (Claude) pour la référence ${reference}`);
-          // ARCHITECT-PRIME : On met à jour le statut en "error" dans PostgreSQL
+          request.log.error(err, `Échec de l'envoi à n8n pour la référence ${reference}`);
           await pool.query(
             `UPDATE scores SET data = jsonb_set(data, '{status}', '"error"') WHERE reference_id = $1`,
             [reference]
           ).catch(dbErr => request.log.error(dbErr, 'Échec de la sauvegarde du statut d\'erreur'));
         });
-
-      // Synchronisation CRM (Google Sheets) en arrière-plan
-      sheetsSyncService.appendRow(payload, reference)
-        .catch(err => request.log.error(err, `Échec de la synchro Sheets pour ${reference}`));
 
       return reply.code(200).send({ success: true, reference });
     } catch (err) {
