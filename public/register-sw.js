@@ -3,7 +3,7 @@
  */
 const SW_URL = '/sw.js';
 const SW_SCOPE = '/';
-const SW_CACHE_VERSION = 'flaynn-cache-v4';
+const SW_CACHE_VERSION = 'flaynn-cache-v5';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
