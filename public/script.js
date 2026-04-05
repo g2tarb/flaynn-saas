@@ -5,16 +5,90 @@
 const MORPH_PHRASES = [
   'avant la diligence.',
   'avec des données.',
-  'sans storytelling creux.'
+  'sans storytelling creux.',
+  'en toute objectivité.',
+  'avec un vrai benchmark.',
+  'sans lever le doute.',
+  'pour convaincre.',
 ];
 
 function initMorph(el) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   let i = 0;
-  window.setInterval(() => {
+  let running = false;
+
+  function morphTo(text) {
+    if (running) return;
+    running = true;
+
+    // Phase 1 : fade out les lettres actuelles
+    const currentLetters = el.querySelectorAll('.morph-letter');
+    if (currentLetters.length) {
+      currentLetters.forEach((l, idx) => {
+        l.style.animation = 'none';
+        l.offsetHeight; // force reflow
+        l.style.transition = `opacity 0.15s ease ${idx * 15}ms, transform 0.15s ease ${idx * 15}ms, filter 0.15s ease ${idx * 15}ms`;
+        l.style.opacity = '0';
+        l.style.transform = 'translateY(-8px) scale(0.7)';
+        l.style.filter = 'blur(3px)';
+      });
+    }
+
+    const fadeOutTime = currentLetters.length ? Math.min(currentLetters.length * 15 + 150, 350) : 0;
+
+    setTimeout(() => {
+      // Vider le conteneur
+      el.replaceChildren();
+
+      // Phase 2 : créer les nouvelles lettres + particules
+      for (let c = 0; c < text.length; c++) {
+        const ch = text[c];
+        const span = document.createElement('span');
+        span.className = 'morph-letter';
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        span.style.animationDelay = `${c * 30}ms`;
+        el.appendChild(span);
+
+        // Particules (2-3 par lettre, sauf espaces)
+        if (ch !== ' ' && ch !== '.') {
+          const count = Math.floor(Math.random() * 2) + 2;
+          for (let p = 0; p < count; p++) {
+            const particle = document.createElement('span');
+            particle.className = 'morph-particle';
+            // Position de départ aléatoire autour de la lettre
+            const px = (Math.random() - 0.5) * 60;
+            const py = (Math.random() - 0.5) * 40 - 10;
+            particle.style.setProperty('--px', `${px}px`);
+            particle.style.setProperty('--py', `${py}px`);
+            particle.style.left = `${(c / text.length) * 100}%`;
+            particle.style.top = '50%';
+            particle.style.animationDelay = `${c * 25 + p * 40}ms`;
+            // Couleur aléatoire parmi les accents
+            const colors = ['var(--accent-violet)', 'var(--accent-blue)', 'rgba(255,255,255,0.7)'];
+            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+            particle.style.boxShadow = `0 0 6px ${colors[Math.floor(Math.random() * colors.length)]}`;
+            el.appendChild(particle);
+          }
+        }
+      }
+
+      // Nettoyage particules après animation
+      setTimeout(() => {
+        el.querySelectorAll('.morph-particle').forEach(p => p.remove());
+        running = false;
+      }, text.length * 30 + 600);
+
+    }, fadeOutTime);
+  }
+
+  // Init : afficher la première phrase
+  morphTo(MORPH_PHRASES[0]);
+
+  // Cycle toutes les 3.2s (20% plus rapide que 4s)
+  setInterval(() => {
     i = (i + 1) % MORPH_PHRASES.length;
-    el.textContent = MORPH_PHRASES[i];
-  }, 4000);
+    morphTo(MORPH_PHRASES[i]);
+  }, 3200);
 }
 
 function initScoreCounter(el) {
@@ -494,7 +568,7 @@ async function bootDeferred() {
       );
       await loadGsapBundle();
       const gsap = window.gsap;
-      if (morphEl) initMorphGsap(gsap, morphEl, MORPH_PHRASES);
+      if (morphEl) initMorph(morphEl); // Effet lettre par lettre + particules (meilleur que GSAP fade)
       initScrollReveal(gsap);
       initGsapScoreCounters(gsap);
     } catch {

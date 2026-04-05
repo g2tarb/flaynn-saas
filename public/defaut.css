@@ -206,6 +206,71 @@
     background-clip: text;
   }
 
+  /* Morph text — dimensions fixes pour ne pas faire bouger le layout */
+  .js-morph-text {
+    display: inline-block;
+    min-height: 1.15em;
+    min-width: 12ch;
+    vertical-align: bottom;
+    position: relative;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 639px) {
+    .js-morph-text {
+      white-space: normal;
+      min-width: auto;
+      min-height: 2.3em;
+    }
+  }
+
+  /* Lettres individuelles animées */
+  .morph-letter {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(12px) scale(0.6);
+    filter: blur(4px);
+    animation: morph-letter-in 0.45s var(--ease-out-back) forwards;
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Particule étoile qui converge vers la lettre */
+  .morph-particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--accent-violet);
+    pointer-events: none;
+    animation: morph-particle-in 0.5s var(--ease-out-expo) forwards;
+    box-shadow: 0 0 6px rgba(139, 92, 246, 0.6);
+  }
+
+  @keyframes morph-letter-in {
+    0% { opacity: 0; transform: translateY(12px) scale(0.6); filter: blur(4px); }
+    60% { opacity: 1; transform: translateY(-2px) scale(1.04); filter: blur(0); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+
+  @keyframes morph-particle-in {
+    0% { opacity: 1; transform: translate(var(--px, 0), var(--py, 0)) scale(1.5); }
+    70% { opacity: 0.6; }
+    100% { opacity: 0; transform: translate(0, 0) scale(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .morph-letter {
+      opacity: 1;
+      transform: none;
+      filter: none;
+      animation: none;
+    }
+    .morph-particle { display: none; }
+  }
+
   .gradient-text-inline {
     background: var(--gradient-hero);
     -webkit-background-clip: text;
