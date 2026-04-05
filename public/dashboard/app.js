@@ -796,8 +796,23 @@ class FlaynnRouter {
     stopForceSimulation();
     this.root.setAttribute('aria-busy', 'true');
     clearEl(this.root);
-    try { await match.handler(this.root, path); }
-    finally { this.root.setAttribute('aria-busy', 'false'); }
+
+    // ARCHITECT-PRIME: skeleton inline pendant le handler async (zéro écran vide)
+    const skel = el('div', 'dashboard-skeleton');
+    for (let i = 0; i < 2; i++) {
+      const c = el('div', 'card-glass skeleton-card');
+      c.style.cssText = 'padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-3)';
+      c.appendChild(el('div', 'skeleton skeleton-title'));
+      c.appendChild(el('div', 'skeleton skeleton-text'));
+      c.appendChild(el('div', 'skeleton skeleton-bar'));
+      skel.appendChild(c);
+    }
+    this.root.appendChild(skel);
+
+    try {
+      clearEl(this.root);
+      await match.handler(this.root, path);
+    } finally { this.root.setAttribute('aria-busy', 'false'); }
     this.#syncNav(path);
     initDashboardReveal(this.root);
     this.root.focus();

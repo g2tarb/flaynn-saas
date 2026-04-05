@@ -497,12 +497,12 @@
                             <div class="field field--inline">
                                 <div class="field" data-validate="numopt">
                                     <label for="revenue_monthly" class="field__label">MRR approx. (€)</label>
-                                    <input type="number" id="revenue_monthly" name="revenue_monthly" class="field__input" min="0" max="100000000" step="1000" placeholder="0">
+                                    <input type="text" inputmode="decimal" id="revenue_monthly" name="revenue_monthly" class="field__input" placeholder="0" pattern="[0-9]*">
                                     <span class="field__error" role="alert"></span>
                                 </div>
                                 <div class="field" data-validate="numopt">
                                     <label for="team_size" class="field__label">Taille équipe</label>
-                                    <input type="number" id="team_size" name="team_size" class="field__input" min="1" max="10000" step="1" placeholder="0">
+                                    <input type="text" inputmode="numeric" id="team_size" name="team_size" class="field__input" placeholder="0" pattern="[0-9]*">
                                     <span class="field__error" role="alert"></span>
                                 </div>
                             </div>
@@ -526,7 +526,7 @@
                             <legend class="fieldset-legend">Contact</legend>
                             <div class="field" data-validate="required|email">
                                 <label for="email" class="field__label">Email professionnel</label>
-                                <input type="email" id="email" name="email" class="field__input" autocomplete="email" required placeholder="vous@startup.com">
+                                <input type="email" id="email" name="email" class="field__input" inputmode="email" autocomplete="email" required placeholder="vous@startup.com">
                                 <span class="field__error" role="alert"></span>
                             </div>
                             <div class="form-legal-block">

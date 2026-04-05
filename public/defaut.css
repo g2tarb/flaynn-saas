@@ -107,8 +107,15 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* ARCHITECT-PRIME v3: reduced-motion master reset dans @layer reset
+     Le seul usage autorisé de !important dans tout le repo */
   @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
+    html { scroll-behavior: auto !important; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   body {
@@ -123,11 +130,9 @@
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    padding:
-      env(safe-area-inset-top)
-      env(safe-area-inset-right)
-      env(safe-area-inset-bottom)
-      env(safe-area-inset-left);
+    /* ARCHITECT-PRIME: safe areas gérées individuellement par nav-glass (top)
+       et landing-bnav/dashboard-nav-mobile (bottom) — pas sur body sinon double-padding */
+    padding: 0;
   }
 
   :focus-visible {
@@ -136,9 +141,24 @@
     border-radius: 4px;
   }
 
-  button, a, input, select, [role="button"] {
+  /* ARCHITECT-PRIME: touch targets 44px sur les éléments interactifs standalone
+     Les liens inline dans les paragraphes héritent du contexte parent */
+  button, input, select, [role="button"] {
     min-height: 44px;
-    min-width: 44px;
+  }
+
+  a {
+    min-height: 44px;
+  }
+
+  /* ARCHITECT-PRIME: éléments UI non-sélectionnables (app-native feel) */
+  button, a, nav, [role="button"], [role="radio"],
+  .chip, .card-glass, .nav-glass, .process-step,
+  .hero-badge, .hero-stats, .hero-proof,
+  .landing-bnav, .form-progress, .pillar-icon,
+  .auth-tab, .dashboard-nav-mobile {
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),
