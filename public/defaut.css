@@ -17,7 +17,7 @@
     --border-subtle: rgba(255, 255, 255, 0.04);
     --border-default: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.12);
-    --border-focus: rgba(139, 92, 246, 0.5);
+    --border-focus: rgba(123, 45, 142, 0.5);
 
     /* Texte */
     --text-primary: #f0f0f3;
@@ -26,28 +26,28 @@
     --text-inverse: #030407;
 
     /* Accents */
-    --accent-violet: #8b5cf6;
-    --accent-rose: #f43f5e;
+    --accent-violet: #7B2D8E;
+    --accent-rose: #E8651A;
     --accent-amber: #f59e0b;
     --accent-emerald: #10b981;
     --accent-blue: #3b82f6;
 
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, #8b5cf6 0%, #6366f1 40%, #3b82f6 100%);
-    --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
-    --gradient-violet-rose: linear-gradient(135deg, #8b5cf6, #f43f5e);
+    --gradient-hero: linear-gradient(135deg, #7B2D8E 0%, #C13584 40%, #E8651A 100%);
+    --gradient-glow: radial-gradient(ellipse at 50% 0%, rgba(123, 45, 142, 0.15) 0%, transparent 70%);
+    --gradient-violet-rose: linear-gradient(135deg, #7B2D8E, #E8651A);
     --gradient-emerald: linear-gradient(135deg, #10b981, #3b82f6);
 
     /* Effets */
     --blur-glass: blur(24px) saturate(1.4);
     --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
-    --shadow-glow: 0 0 40px rgba(139, 92, 246, 0.12);
-    --shadow-glow-strong: 0 0 60px rgba(139, 92, 246, 0.2);
+    --shadow-glow: 0 0 40px rgba(123, 45, 142, 0.12);
+    --shadow-glow-strong: 0 0 60px rgba(123, 45, 142, 0.2);
     --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.3), 0 1px 4px rgba(0, 0, 0, 0.15);
 
     /* Typographie */
-    --font-display: 'Satoshi', system-ui, sans-serif;
-    --font-body: 'General Sans', system-ui, sans-serif;
+    --font-display: 'IBM Plex Sans', system-ui, sans-serif;
+    --font-body: 'IBM Plex Sans', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
     /* Motion — spring-first (2026) */
