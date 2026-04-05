@@ -219,77 +219,24 @@ class ScoringFormController {
     this.stepLabel = document.getElementById('step-current');
     this.#bind();
     this.#initChips();
-    this.#restoreDraft();
     this.#updateProgress();
     this.#updateStepButtons();
   }
 
-  // ── Sauvegarde brouillon localStorage ──
-  #saveDraft() {
-    const data = {};
-    const formData = new FormData(this.form);
-    for (const [k, v] of formData.entries()) {
-      if (typeof v === 'string' && v.trim()) data[k] = v.trim();
-    }
-    data._step = this.currentStep;
-    try { localStorage.setItem('flaynn_draft', JSON.stringify(data)); } catch {}
-  }
-
-  #restoreDraft() {
-    try {
-      const raw = localStorage.getItem('flaynn_draft');
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      for (const [k, v] of Object.entries(data)) {
-        if (k === '_step') continue;
-        const input = this.form.querySelector(`[name="${k}"]`);
-        if (!input) continue;
-        if (input.type === 'hidden') {
-          input.value = v;
-          // Activer le chip correspondant
-          const group = input.closest('.field')?.querySelector('.field__chips');
-          if (group) {
-            group.querySelectorAll('.chip').forEach(c => {
-              c.setAttribute('aria-checked', c.dataset.value === v ? 'true' : 'false');
-            });
-          }
-        } else if (input.tagName === 'SELECT') {
-          input.value = v;
-        } else {
-          input.value = v;
-        }
-      }
-      // Restaurer l'étape
-      const step = Number(data._step);
-      if (step > 0 && step <= this.totalSteps) {
-        this.#swapStepDom(step,
-          this.form.querySelector('.form-step.is-active'),
-          this.form.querySelector(`.form-step[data-step="${step}"]`)
-        );
-      }
-      // Toggle revenus si nécessaire
-      const rev = this.form.querySelector('#revenus');
-      const details = this.form.querySelector('#revenus-details');
-      if (rev && details) details.hidden = rev.value !== 'oui';
-    } catch {}
-  }
-
-  #clearDraft() {
-    try { localStorage.removeItem('flaynn_draft'); } catch {}
-  }
-
   #bind() {
     this.form.querySelectorAll('.field__input').forEach((input) => {
-      input.addEventListener('input', () => { this.#validateField(input, false); this.#saveDraft(); });
+      input.addEventListener('input', () => this.#validateField(input, false));
       input.addEventListener('blur', () => this.#validateField(input, true));
     });
 
+    // Tous les hidden inputs (chips) déclenchent la validation au changement
     this.form.querySelectorAll('input[type="hidden"]').forEach((h) => {
-      h.addEventListener('input', () => { this.#validateField(h, false); this.#saveDraft(); });
+      h.addEventListener('input', () => this.#validateField(h, false));
     });
 
+    // Tous les selects déclenchent la validation au changement
     this.form.querySelectorAll('select').forEach((s) => {
-      s.addEventListener('change', () => { this.#validateField(s, false); this.#saveDraft(); });
+      s.addEventListener('change', () => this.#validateField(s, false));
     });
 
     // Toggle revenus oui/non → affiche/masque MRR + clients payants
@@ -320,6 +267,44 @@ class ScoringFormController {
       e.preventDefault();
       this.#submit();
     });
+
+    // Pitch deck file upload → base64 conversion
+    const fileInput = this.form.querySelector('#pitch_deck_file');
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        const b64Input = this.form.querySelector('#pitch_deck_base64');
+        const nameInput = this.form.querySelector('#pitch_deck_filename');
+        const errEl = fileInput.closest('.field')?.querySelector('.field__error');
+
+        if (!file) {
+          if (b64Input) b64Input.value = '';
+          if (nameInput) nameInput.value = '';
+          return;
+        }
+
+        if (file.type !== 'application/pdf') {
+          if (errEl) errEl.textContent = 'Format PDF uniquement.';
+          fileInput.value = '';
+          return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+          if (errEl) errEl.textContent = 'Fichier trop volumineux (max 10 MB).';
+          fileInput.value = '';
+          return;
+        }
+
+        if (errEl) errEl.textContent = '';
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          if (b64Input) b64Input.value = base64;
+          if (nameInput) nameInput.value = file.name;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
   }
 
   #initChips() {
@@ -512,20 +497,12 @@ class ScoringFormController {
     if (this.stepLabel) {
       this.stepLabel.textContent = String(this.currentStep);
     }
-    const dots = this.form.closest('.scoring-form-wrap')?.querySelectorAll('.progress-dot');
-    if (dots) dots.forEach((dot, i) => dot.classList.toggle('progress-dot--active', i < this.currentStep));
-
-    // Labels de progression
-    const labels = this.form.closest('.scoring-form-wrap')?.querySelectorAll('.progress-label');
-    if (labels) {
-      labels.forEach((label) => {
-        const s = Number(label.dataset.step);
-        label.classList.toggle('progress-label--active', s === this.currentStep);
-        label.classList.toggle('progress-label--done', s < this.currentStep);
+    const dots = this.form.closest('.scoring-form-wrap')
+      ?.querySelectorAll('.progress-dot');
+    if (dots) {
+      dots.forEach((dot, i) => {
+        dot.classList.toggle('progress-dot--active', i < this.currentStep);
       });
-      // Scroll le label actif en vue
-      const active = this.form.closest('.scoring-form-wrap')?.querySelector('.progress-label--active');
-      if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
   }
 
@@ -546,7 +523,7 @@ class ScoringFormController {
       priorite_6_mois: 'Priorité 6 mois', montant_leve: 'Montant levée',
       jalons_18_mois: 'Jalons 18 mois', utilisation_fonds: 'Utilisation fonds',
       vision_5_ans: 'Vision 5 ans',
-      pitch_deck_url: 'Pitch deck', doc_supplementaire_url: 'Document supp.'
+      pitch_deck_filename: 'Pitch deck', doc_supplementaire_url: 'Document supp.'
     };
 
     const formData = new FormData(this.form);
@@ -583,6 +560,8 @@ class ScoringFormController {
     const formData = new FormData(this.form);
     const payload = {};
     for (const [key, value] of formData.entries()) {
+      // Skip le file input, on utilise le hidden base64
+      if (key === 'pitch_deck_file') continue;
       const trimmed = typeof value === 'string' ? value.trim() : value;
       if (trimmed !== '') payload[key] = trimmed;
     }
@@ -630,7 +609,6 @@ class ScoringFormController {
         this.successEl.hidden = false;
         this.successEl.classList.remove('is-hidden');
         this.successEl.focus();
-        this.#clearDraft();
       }
     } catch (err) {
       showToast(this.toastRoot, err.message || 'Erreur réseau.', 'error');
