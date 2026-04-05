@@ -256,7 +256,7 @@ CREATE TABLE refresh_tokens (
 | Accents | `--accent-violet`, `--accent-rose`, `--accent-amber`, `--accent-emerald`, `--accent-blue` |
 | Gradients | `--gradient-hero`, `--gradient-glow`, `--gradient-violet-rose`, `--gradient-emerald` |
 | Effets | `--blur-glass`, `--shadow-elevated`, `--shadow-glow`, `--shadow-glow-strong`, `--shadow-card` |
-| Typo | `--font-display` (Satoshi), `--font-body` (General Sans), `--font-mono` (JetBrains Mono) |
+| Typo | `--font-display` (IBM Plex Sans), `--font-body` (IBM Plex Sans), `--font-mono` (JetBrains Mono) |
 | Motion | `--ease-out-expo`, `--ease-out-back`, `--ease-spring`, `--duration-fast/normal/slow` |
 | Spacing | `--space-1` à `--space-20` (base 8px) |
 | Radius | `--radius-sm/md/lg/xl/full` |
@@ -378,11 +378,11 @@ Surfaces sombres à profondeur variable. Lumière contrôlée par accents chirur
 
 | Rôle | Font | Weight | Size | Line-Height |
 |------|------|--------|------|-------------|
-| H1 Hero | Satoshi | 900 | `clamp(2.25rem, 5vw + 1rem, 4.5rem)` | 1.05 |
-| H2 Section | Satoshi | 700 | `clamp(1.75rem, 3vw + 0.5rem, 3rem)` | 1.15 |
-| H3 Card | General Sans | 600 | `clamp(1.25rem, 2vw + 0.25rem, 1.75rem)` | 1.25 |
-| Body | General Sans | 400 | `clamp(0.9375rem, 1vw + 0.5rem, 1.125rem)` | 1.65 |
-| Caption | General Sans | 500 | `0.8125rem` | 1.5 |
+| H1 Hero | IBM Plex Sans | 700 | `clamp(2.25rem, 5vw + 1rem, 4.5rem)` | 1.05 |
+| H2 Section | IBM Plex Sans | 700 | `clamp(1.75rem, 3vw + 0.5rem, 3rem)` | 1.15 |
+| H3 Card | IBM Plex Sans | 600 | `clamp(1.25rem, 2vw + 0.25rem, 1.75rem)` | 1.25 |
+| Body | IBM Plex Sans | 400 | `clamp(0.9375rem, 1vw + 0.5rem, 1.125rem)` | 1.65 |
+| Caption | IBM Plex Sans | 500 | `0.8125rem` | 1.5 |
 | Data/Score | JetBrains Mono | 700 | `clamp(2rem, 4vw, 3.5rem)` | 1 |
 
 ### Composants glass (déjà implémentés)
@@ -510,10 +510,10 @@ const siteRoot = join(__dirname, '..', '..', 'public');  // flaynn-api/src → f
 scriptSrc: ["'self'", "https://cdn.jsdelivr.net"]
 
 // Styles : self + Google Fonts + Fontshare
-styleSrc: ["'self'", "https://fonts.googleapis.com", "https://api.fontshare.com"]
+styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"]
 
 // Fonts : self + Google Fonts + Fontshare CDN
-fontSrc: ["'self'", "https://fonts.gstatic.com", "https://api.fontshare.com"]
+fontSrc: ["'self'", "https://fonts.gstatic.com"]
 
 // Connect : self + CDN + n8n dynamique
 connectSrc: ["'self'", "https://cdn.jsdelivr.net", ...n8nOrigin()]

@@ -14,20 +14,15 @@ export const helmetConfig = {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://api.fontshare.com"],
-
-      // Ajout de cdn.fontshare.com pour autoriser le chargement des fichiers .woff2 et .ttf
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "https://api.fontshare.com", "https://cdn.fontshare.com"],
+      // ARCHITECT-PRIME: Fontshare supprimé — migration IBM Plex Sans (Google Fonts uniquement)
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
-
-      // Ajout de cdn.fontshare.com pour autoriser le fetch() du Service Worker
       connectSrc: [
         "'self'",
         'https://cdn.jsdelivr.net',
         'https://fonts.googleapis.com',
         'https://fonts.gstatic.com',
-        'https://api.fontshare.com',
-        'https://cdn.fontshare.com',
         ...n8nConnectOrigin()
       ],
       baseUri: ["'self'"],
