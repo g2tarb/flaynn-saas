@@ -1,49 +1,519 @@
 <!DOCTYPE html>
-<html lang="fr" dir="ltr">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flaynn · Paiement validé</title>
-    <link rel="stylesheet" href="/defaut.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Scoring confirmé — Flaynn</title>
+  <link rel="icon" href="/icons/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --void:        #030407;
+      --surface:     #0A0D14;
+      --overlay:     #0F1219;
+      --border:      rgba(255,255,255,0.08);
+      --violet:      #7B2D8E;
+      --orange:      #E8651A;
+      --rose:        #C13584;
+      --emerald:     #10B981;
+      --text-1:      #F0F0F3;
+      --text-2:      #8B8FA3;
+      --text-3:      #4A4E5A;
+      --gradient:    linear-gradient(135deg, #7B2D8E 0%, #C13584 40%, #E8651A 100%);
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--void);
+      color: var(--text-1);
+      font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Starfield ── */
+    .starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .starfield svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Layout ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      padding-top: calc(48px + env(safe-area-inset-top));
+      padding-bottom: calc(48px + env(safe-area-inset-bottom));
+    }
+
+    /* ── Logo ── */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 48px;
+      text-decoration: none;
+    }
+    .logo img {
+      height: 28px;
+      width: auto;
+    }
+    .logo-text {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-1);
+      letter-spacing: -0.02em;
+    }
+
+    /* ── Card principale ── */
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: rgba(15,18,25,0.72);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      text-align: center;
+    }
+
+    /* ── Icone succes ── */
+    .success-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+    }
+    .success-icon svg {
+      width: 32px;
+      height: 32px;
+      stroke: #10B981;
+    }
+
+    /* ── Reference ── */
+    .ref-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(123,45,142,0.10);
+      border: 1px solid rgba(123,45,142,0.20);
+      border-radius: 100px;
+      padding: 6px 16px;
+      margin-bottom: 24px;
+    }
+    .ref-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--emerald);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.8); }
+    }
+    .ref-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-2);
+      letter-spacing: 0.05em;
+    }
+    .ref-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-1);
+    }
+
+    /* ── Titre ── */
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-1);
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-2);
+      line-height: 1.65;
+      margin-bottom: 40px;
+    }
+
+    /* ── Steps timeline ── */
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 40px;
+      text-align: left;
+    }
+    .timeline-item {
+      display: flex;
+      gap: 16px;
+      position: relative;
+    }
+    .timeline-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 40px;
+      bottom: 0;
+      width: 1px;
+      background: var(--border);
+    }
+    .timeline-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .timeline-icon.done {
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.25);
+    }
+    .timeline-icon.active {
+      background: rgba(123,45,142,0.12);
+      border: 1px solid rgba(123,45,142,0.25);
+    }
+    .timeline-icon.pending {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .timeline-body {
+      padding: 10px 0 28px;
+    }
+    .timeline-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-1);
+      margin-bottom: 4px;
+    }
+    .timeline-desc {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+
+    /* ── Info email ── */
+    .email-banner {
+      background: rgba(123,45,142,0.08);
+      border: 1px solid rgba(123,45,142,0.18);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      text-align: left;
+      margin-bottom: 32px;
+    }
+    .email-banner svg {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      stroke: var(--violet);
+      margin-top: 1px;
+    }
+    .email-banner-text {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.55;
+    }
+    .email-banner-text strong {
+      color: var(--text-1);
+      font-weight: 600;
+    }
+
+    /* ── CTA ── */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      background: var(--gradient);
+      color: #fff;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+      width: 100%;
+      justify-content: center;
+      margin-bottom: 12px;
+      min-height: 44px;
+    }
+    .btn-primary:hover { opacity: 0.92; transform: scale(1.01); }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 24px;
+      background: transparent;
+      color: var(--text-2);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+      width: 100%;
+      justify-content: center;
+      min-height: 44px;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.15); color: var(--text-1); }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 32px;
+      font-size: 12px;
+      color: var(--text-3);
+      text-align: center;
+    }
+    .footer a { color: var(--text-3); text-decoration: underline; }
+
+    /* ── Reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      .ref-dot { animation: none; }
+    }
+
+    @media (max-width: 600px) {
+      .page { padding: 32px 16px; padding-top: calc(32px + env(safe-area-inset-top)); }
+      .card { padding: 32px 24px; }
+      h1 { font-size: 22px; }
+      .logo { margin-bottom: 32px; }
+      .subtitle { margin-bottom: 32px; }
+      .timeline { margin-bottom: 32px; }
+    }
+  </style>
 </head>
 <body>
-    <main id="main-content" role="main" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;">
-        <div class="card-glass" style="text-align: center; padding: 3rem; max-width: 500px; width: 100%;">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style="margin-bottom: 1.5rem;">
-                <path d="M5 13l4 4L19 7" stroke="var(--accent-emerald, #10b981)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <h1 class="heading-section" style="font-size: 1.75rem; margin-bottom: 1rem;">Paiement validé</h1>
-            <p style="color: var(--text-secondary, #a1a1aa); margin-bottom: 2rem; line-height: 1.6;">
-                Votre paiement a bien été traité. Nous analysons votre dossier et vous recevrez une synthèse sous 24h ouvrées.
-            </p>
-            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
-                <p style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; margin: 0;">
-                    Référence : <strong id="ref-display" style="color: var(--accent-violet, #8b5cf6);">...</strong>
-                </p>
-            </div>
-            <a href="/dashboard/" class="btn-primary btn-gradient" style="display: inline-flex; text-decoration: none;">
-                Accéder à mon espace
-            </a>
-        </div>
-    </main>
-    <script>
-        const params = new URLSearchParams(window.location.search);
-        const sessionId = params.get('session_id');
 
-        if (sessionId) {
-            fetch(`/api/checkout/session/${sessionId}`)
-                .then(r => r.json())
-                .then(data => {
-                    const ref = data.reference || '';
-                    const email = data.email || '';
-                    document.querySelectorAll('#ref-display, #ref-inline').forEach(el => el.textContent = ref);
-                    document.title = `${ref} — Scoring confirmé · Flaynn`;
-                    const emailEl = document.getElementById('email-display');
-                    if (emailEl && email) emailEl.textContent = email;
-                    const ctaBtn = document.querySelector('.btn-primary');
-                    if (ctaBtn && ref) ctaBtn.href = `/auth/?email=${encodeURIComponent(email)}&ref=${encodeURIComponent(ref)}`;
-                });
-        }
-    </script>
+  <!-- Fond etoile Flaynn -->
+  <div class="starfield" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <radialGradient id="gv" cx="15%" cy="85%" r="50%">
+          <stop offset="0%" stop-color="#7B2D8E" stop-opacity="0.12"/>
+          <stop offset="100%" stop-color="#7B2D8E" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="go" cx="85%" cy="15%" r="40%">
+          <stop offset="0%" stop-color="#E8651A" stop-opacity="0.06"/>
+          <stop offset="100%" stop-color="#E8651A" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="1440" height="900" fill="#030407"/>
+      <rect width="1440" height="900" fill="url(#gv)"/>
+      <rect width="1440" height="900" fill="url(#go)"/>
+      <circle cx="216" cy="765" r="8" fill="white" opacity="0.04"/><circle cx="216" cy="765" r="3" fill="white" opacity="0.08"/><circle cx="216" cy="765" r="1.5" fill="white" opacity="0.7"/>
+      <circle cx="1224" cy="135" r="8" fill="white" opacity="0.04"/><circle cx="1224" cy="135" r="3" fill="white" opacity="0.08"/><circle cx="1224" cy="135" r="1.5" fill="white" opacity="0.7"/>
+      <circle cx="720" cy="180" r="8" fill="white" opacity="0.04"/><circle cx="720" cy="180" r="3" fill="white" opacity="0.08"/><circle cx="720" cy="180" r="1.5" fill="white" opacity="0.7"/>
+      <circle cx="1008" cy="675" r="8" fill="white" opacity="0.04"/><circle cx="1008" cy="675" r="3" fill="white" opacity="0.08"/><circle cx="1008" cy="675" r="1.5" fill="white" opacity="0.7"/>
+      <circle cx="432" cy="270" r="8" fill="white" opacity="0.04"/><circle cx="432" cy="270" r="3" fill="white" opacity="0.08"/><circle cx="432" cy="270" r="1.5" fill="white" opacity="0.7"/>
+      <circle cx="86" cy="148" r="1.1" fill="white" opacity="0.30"/>
+      <circle cx="194" cy="612" r="0.9" fill="white" opacity="0.26"/>
+      <circle cx="388" cy="234" r="1.2" fill="white" opacity="0.36"/>
+      <circle cx="562" cy="81" r="1.0" fill="white" opacity="0.29"/>
+      <circle cx="720" cy="504" r="1.3" fill="white" opacity="0.40"/>
+      <circle cx="864" cy="162" r="0.9" fill="white" opacity="0.25"/>
+      <circle cx="1008" cy="378" r="1.1" fill="white" opacity="0.33"/>
+      <circle cx="1152" cy="693" r="1.0" fill="white" opacity="0.28"/>
+      <circle cx="1296" cy="45" r="1.2" fill="white" opacity="0.37"/>
+      <circle cx="130" cy="756" r="0.9" fill="white" opacity="0.27"/>
+      <circle cx="302" cy="414" r="1.1" fill="white" opacity="0.31"/>
+      <circle cx="476" cy="567" r="1.3" fill="white" opacity="0.42"/>
+      <circle cx="648" cy="315" r="1.0" fill="white" opacity="0.29"/>
+      <circle cx="820" cy="738" r="1.2" fill="white" opacity="0.38"/>
+      <circle cx="978" cy="126" r="0.9" fill="white" opacity="0.26"/>
+      <circle cx="1138" cy="486" r="1.1" fill="white" opacity="0.34"/>
+      <circle cx="1310" cy="621" r="1.0" fill="white" opacity="0.30"/>
+      <circle cx="52" cy="342" r="1.3" fill="white" opacity="0.41"/>
+      <circle cx="234" cy="189" r="0.9" fill="white" opacity="0.27"/>
+      <circle cx="410" cy="819" r="1.2" fill="white" opacity="0.36"/>
+      <circle cx="144" cy="549" r="0.6" fill="white" opacity="0.20"/>
+      <circle cx="324" cy="72" r="0.7" fill="white" opacity="0.23"/>
+      <circle cx="504" cy="441" r="0.5" fill="white" opacity="0.16"/>
+      <circle cx="684" cy="693" r="0.8" fill="white" opacity="0.26"/>
+      <circle cx="864" cy="36" r="0.6" fill="white" opacity="0.19"/>
+      <circle cx="1044" cy="522" r="0.7" fill="white" opacity="0.22"/>
+      <circle cx="1224" cy="279" r="0.5" fill="white" opacity="0.17"/>
+      <circle cx="72" cy="810" r="0.8" fill="white" opacity="0.25"/>
+      <circle cx="252" cy="306" r="0.6" fill="white" opacity="0.18"/>
+      <circle cx="432" cy="639" r="0.7" fill="white" opacity="0.21"/>
+      <circle cx="612" cy="162" r="0.5" fill="white" opacity="0.15"/>
+      <circle cx="792" cy="855" r="0.8" fill="white" opacity="0.28"/>
+      <circle cx="972" cy="432" r="0.6" fill="white" opacity="0.20"/>
+      <circle cx="1152" cy="108" r="0.7" fill="white" opacity="0.23"/>
+      <circle cx="1332" cy="756" r="0.5" fill="white" opacity="0.16"/>
+      <circle cx="468" cy="126" r="1.8" fill="white" opacity="0.60"/>
+      <circle cx="936" cy="441" r="2.1" fill="white" opacity="0.56"/>
+      <circle cx="198" cy="567" r="1.6" fill="white" opacity="0.51"/>
+      <circle cx="738" cy="225" r="2.3" fill="white" opacity="0.65"/>
+      <circle cx="1116" cy="648" r="1.9" fill="white" opacity="0.58"/>
+      <circle cx="54" cy="333" r="2.0" fill="white" opacity="0.55"/>
+      <circle cx="882" cy="801" r="1.7" fill="white" opacity="0.53"/>
+    </svg>
+  </div>
+
+  <main class="page">
+
+    <a href="/" class="logo">
+      <img src="/icons/logo.png" alt="Flaynn">
+      <span class="logo-text">Flaynn</span>
+    </a>
+
+    <div class="card">
+
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+
+      <div class="ref-badge">
+        <span class="ref-dot"></span>
+        <span class="ref-text">Ref.</span>
+        <span class="ref-value" id="ref-display">...</span>
+      </div>
+
+      <h1>Votre dossier est entre nos mains.</h1>
+      <p class="subtitle">
+        Paiement confirme. Votre startup est maintenant en file d'analyse.
+        Notre comite vous rendra un verdict complet dans les 24 heures.
+      </p>
+
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-icon done" aria-hidden="true">&#x2713;</div>
+          <div class="timeline-body">
+            <div class="timeline-title">Dossier soumis &amp; paiement confirme</div>
+            <div class="timeline-desc">Votre dossier a ete recu et securise. Reference : <span id="ref-inline" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#F0F0F3;">...</span></div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-icon active" aria-hidden="true">&#x26A1;</div>
+          <div class="timeline-body">
+            <div class="timeline-title">Analyse en cours — Flaynn Intelligence</div>
+            <div class="timeline-desc">Notre IA analyse votre dossier sur les 5 piliers : Market, Product, Traction, Team, Execution. Un analyste valide la synthese.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-icon pending" aria-hidden="true">&#x1F4EC;</div>
+          <div class="timeline-body">
+            <div class="timeline-title">Email de resultat sous 24h</div>
+            <div class="timeline-desc">Vous recevrez votre scoring complet + une invitation a creer votre espace fondateur pour acceder au rapport PDF et suivre votre progression.</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-icon pending" aria-hidden="true">&#x1F3AF;</div>
+          <div class="timeline-body">
+            <div class="timeline-title">Mise en relation investisseurs (si qualifie)</div>
+            <div class="timeline-desc">Si votre score atteint le seuil, votre dossier est presente aux investisseurs de notre reseau dont le profil correspond au votre.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="email-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <polyline points="2,4 12,13 22,4"/>
+        </svg>
+        <div class="email-banner-text">
+          Un email vous sera envoye a <strong id="email-display">votre adresse</strong>
+          avec votre scoring detaille et un lien pour creer votre espace fondateur.
+          Pensez a verifier vos spams.
+        </div>
+      </div>
+
+      <a href="/auth/" class="btn-primary" id="cta-primary">
+        Creer mon espace fondateur &#x2192;
+      </a>
+      <a href="/" class="btn-ghost">
+        Retour a l'accueil
+      </a>
+
+    </div>
+
+    <div class="footer">
+      <p>Une question ? <a href="mailto:contact@flaynn.fr">contact@flaynn.fr</a></p>
+    </div>
+
+  </main>
+
+  <script>
+    // ARCHITECT-PRIME: deux sources possibles — session_id (depuis Stripe) ou ref/email directs (depuis email)
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const directRef = params.get('ref');
+    const directEmail = params.get('email');
+
+    function applyData(ref, email) {
+      if (ref) {
+        document.getElementById('ref-display').textContent = ref;
+        document.getElementById('ref-inline').textContent = ref;
+        document.title = ref + ' \u2014 Scoring confirme \u00b7 Flaynn';
+      }
+      if (email) {
+        document.getElementById('email-display').textContent = decodeURIComponent(email);
+      }
+      // CTA dynamique : redirige vers /auth/ avec email + ref pre-remplis
+      var cta = document.getElementById('cta-primary');
+      if (cta && (ref || email)) {
+        var qs = [];
+        if (email) qs.push('email=' + encodeURIComponent(email));
+        if (ref) qs.push('ref=' + encodeURIComponent(ref));
+        cta.href = '/auth/?' + qs.join('&');
+      }
+    }
+
+    if (sessionId) {
+      // Flow Stripe : on recupere ref + email depuis la session
+      fetch('/api/checkout/session/' + encodeURIComponent(sessionId))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          applyData(data.reference || '', data.email || '');
+        })
+        .catch(function() {
+          // Fallback silencieux — la page reste lisible sans les donnees
+        });
+    } else if (directRef || directEmail) {
+      // Flow direct (lien email, debug)
+      applyData(directRef || '', directEmail || '');
+    }
+  </script>
+
 </body>
 </html>

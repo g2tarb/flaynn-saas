@@ -50,6 +50,9 @@
 
 .auth-wrap .logo-container a:hover { opacity: 0.85; }
 
+/* ARCHITECT-PRIME: logo plus grand en contexte branding auth (pas dans la nav) */
+.auth-wrap .logo-img { width: 56px; }
+
 /* ── Card ── */
 .auth-card {
   padding: var(--space-6) var(--space-5);

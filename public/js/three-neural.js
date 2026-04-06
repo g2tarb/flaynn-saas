@@ -1,269 +1,367 @@
 /**
- * Fond Aurore / Nébuleuse gazeuse — Three.js (plein écran, GPU)
+ * Flaynn Starfield — Canvas 2D cinematic background
  *
- * - Bruit FBM 2D + coordonnées déformées (flux organique), palette Flaynn (violet, émeraude,
- *   ambre, cyan) en fusion additive.
- * - Idle : uTime + parallaxe souris (uniform uMouse) dans le fragment.
- * - Warp : uTransitionProgress 0→1 — étirement radial, accélération du flux, explosion
- *   d’intensité (effet « hyperspace gazeux »).
+ * Replaces the Three.js FBM aurora shader with a multi-layer starfield
+ * + organic nebula glows. Pure Canvas 2D — no external dependency.
  *
- * triggerWarpTransition(targetUrl, duration) — inchangé côté API (GSAP ou fallback RAF).
+ * - 3 depth layers (far / mid / near) with seeded star placement
+ * - Z-parallax on scroll via GSAP ScrollTrigger (fallback: passive scroll)
+ * - Organic nebula glows with breathing animation + inverse mouse tracking
+ * - Warp transition (hyperspace streaks) for navigation — same API
+ *
+ * Exported class: FlaynnNeuralBackground (same name for drop-in compat)
+ * Used by: script.js → bootDeferred() → window.globalBg
  */
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 
-/* ─── GLSL — utilitaires bruit (compact, sans boucles dynamiques) ───────── */
-const noiseCommon = `
-  float hash21(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-  }
+/* ── Seeded PRNG (mulberry32) — deterministic starfield across sessions ── */
+function mulberry32(seed) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
-  float noise2(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x),
-      mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x),
-      u.y
-    );
-  }
+/* ── Star layer definitions ─────────────────────────────────────────────── */
+const LAYER_DEFS = [
+  // Layer 0 — Far (background dust)
+  { count: 140, rMin: 0.3, rMax: 0.7, aMin: 0.10, aMax: 0.28,
+    twinkleMin: 0.2, twinkleMax: 0.7, speedZ: 0.12, mousePx: 0.006, halos: 0 },
+  // Layer 1 — Mid
+  { count: 80,  rMin: 0.6, rMax: 1.2, aMin: 0.18, aMax: 0.40,
+    twinkleMin: 0.3, twinkleMax: 1.0, speedZ: 0.30, mousePx: 0.018, halos: 0 },
+  // Layer 2 — Near (foreground, includes 5 halo stars)
+  { count: 30,  rMin: 1.0, rMax: 2.2, aMin: 0.40, aMax: 0.75,
+    twinkleMin: 0.5, twinkleMax: 1.5, speedZ: 0.55, mousePx: 0.035, halos: 5 },
+];
 
-  float fbm(vec2 p) {
-    float v = 0.0;
-    float a = 0.5;
-    mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-    v += a * noise2(p); p = m * p;
-    a *= 0.5;
-    v += a * noise2(p); p = m * p;
-    a *= 0.5;
-    v += a * noise2(p); p = m * p;
-    a *= 0.5;
-    v += a * noise2(p);
-    return v;
-  }
-`;
+function generateLayers(seed) {
+  const rand = mulberry32(seed);
+  return LAYER_DEFS.map((def) => {
+    const stars = [];
+    for (let i = 0; i < def.count; i++) {
+      stars.push({
+        x: rand(),
+        y: rand(),
+        r: def.rMin + rand() * (def.rMax - def.rMin),
+        a: def.aMin + rand() * (def.aMax - def.aMin),
+        tw: def.twinkleMin + rand() * (def.twinkleMax - def.twinkleMin),
+        tp: rand() * Math.PI * 2,
+        halo: i < def.halos,
+      });
+    }
+    return { stars, speedZ: def.speedZ, mousePx: def.mousePx };
+  });
+}
 
-const vertexShader = `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const fragmentShader = `
-  ${noiseCommon}
-
-  varying vec2 vUv;
-
-  uniform float uTime;
-  uniform float uTransitionProgress;
-  uniform vec2  uMouse;
-  uniform vec2  uResolution;
-
-  /* Ramps palette (sRGB-friendly, mélangées en linéaire approximatif) */
-  vec3 colViolet  = vec3(0.545, 0.361, 0.965);
-  vec3 colEmerald = vec3(0.063, 0.725, 0.506);
-  vec3 colAmber   = vec3(0.961, 0.620, 0.043);
-  vec3 colCyan    = vec3(0.231, 0.510, 0.965);
-  vec3 colVoid    = vec3(0.012, 0.016, 0.027);
-
-  void main() {
-    float w = clamp(uTransitionProgress, 0.0, 1.0);
-    float t = uTime;
-
-    /* Aspect ratio — bruit isotrope à l’écran */
-    vec2 uv = vUv;
-    vec2 aspect = vec2(uResolution.x / max(uResolution.y, 1.0), 1.0);
-    vec2 p = (uv - 0.5) * aspect * 2.8;
-
-    /* Parallaxe souris (léger décalage du champ de bruit) */
-    vec2 mouse = uMouse * 0.22;
-    p += mouse;
-
-    /* ── Warp : aspiration / tunnel gazeux ───────────────────────────── */
-    vec2 center = uv - 0.5;
-    float rad = length(center);
-    vec2 dir = rad > 1e-4 ? center / rad : vec2(0.0, 1.0);
-    float tunnel = w * w * (3.0 - 2.0 * w);
-    /* Étire le champ vers l’extérieur + renforce le centre = rush vers la caméra */
-    p += dir * tunnel * (0.85 + rad * 2.4);
-    p *= 1.0 + tunnel * 1.35;
-
-    /* Temps accéléré en warp = flux hyperespace */
-    float tFlow = t * (0.11 + tunnel * 0.95);
-
-    /* Couches FBM décalées (domaine warped — type domain repetition organique) */
-    vec2 q = vec2(
-      fbm(p + vec2(tFlow * 0.7, tFlow * 0.5)),
-      fbm(p + vec2(-tFlow * 0.4, tFlow * 0.8))
-    );
-    vec2 r = p + (q - 0.5) * 2.1;
-
-    float n1 = fbm(r + vec2(tFlow * 1.2, -tFlow * 0.6));
-    float n2 = fbm(r * 1.65 + vec2(tFlow * 2.0, tFlow * 1.1));
-    float n3 = fbm(r * 2.4 + vec2(-tFlow * 1.5, tFlow * 2.2));
-
-    /* Voiles aurore : bandes minces = pow + mix */
-    float veil = smoothstep(0.28, 0.92, n1 * 0.55 + n2 * 0.35 + n3 * 0.18);
-    float wisp = smoothstep(0.45, 0.98, n2 * n3);
-
-    /* Couleur organique : poids selon les couches */
-    vec3 col = mix(colVoid, colViolet, n1 * 0.55);
-    col = mix(col, colEmerald, n2 * veil * 0.65);
-    col = mix(col, colCyan, wisp * 0.45 + n3 * 0.25);
-    col = mix(col, colAmber, smoothstep(0.5, 1.0, n2 * n1) * 0.35);
-
-    /* Courbure type curtain (vertical bias — aurore) */
-    float curtain = smoothstep(0.0, 0.85, 1.0 - abs(uv.y - 0.45) * 1.8);
-    col *= 0.35 + curtain * 0.65;
-
-    /* Intensité de base + explosion warp */
-    float intensity = 0.15 + veil * 0.55 + wisp * 0.35;
-    intensity *= 0.55 + curtain * 0.45;
-    float warpGlow = 1.0 + tunnel * 14.0 + w * w * 8.0;
-    intensity *= warpGlow;
-
-    /* Saturation boost warp */
-    col = mix(col, col * vec3(1.15, 1.08, 1.2), tunnel * 0.85);
-
-    vec3 rgb = col * intensity;
-
-    /* Alpha : additive — contrôle la densité du voile */
-    float alpha = length(rgb) * (0.45 + (1.0 - w) * 0.25);
-    alpha = min(alpha * (1.0 + tunnel * 0.5), 1.0);
-
-    gl_FragColor = vec4(rgb, alpha);
-  }
-`;
+/* ── Main class ─────────────────────────────────────────────────────────── */
 
 export class FlaynnNeuralBackground {
   /**
    * @param {HTMLCanvasElement} canvas
-   * @param {{ particles?: number }} [config] — `particles` ignoré (rétrocompatibilité API)
+   * @param {{ particles?: number }} [_config] — kept for API compat, ignored
    */
-  constructor(canvas, config) {
-    void config;
+  constructor(canvas, _config) {
+    void _config;
 
-    this.clock = new THREE.Clock();
-    this.mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
-    this.rafId = 0;
-    this._transitioning = false;
-
-    this._onMouseMove = (e) => {
-      this.mouse.targetX = e.clientX / window.innerWidth - 0.5;
-      this.mouse.targetY = e.clientY / window.innerHeight - 0.5;
-    };
-    this._onOrient = (e) => {
-      if (e.gamma == null) return;
-      this.mouse.targetX = e.gamma / 45;
-      this.mouse.targetY = (e.beta - 45) / 45;
-    };
-    this._onResize = () => this.#syncSize();
-
-    let renderer;
-    try {
-      renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: false,
-        alpha: true,
-        powerPreference: 'low-power',
-        stencil: false,
-        depth: false
-      });
-    } catch {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
       canvas.classList.add('three-canvas--fallback');
       return;
     }
 
-    this.renderer = renderer;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.canvas = canvas;
+    this.ctx = ctx;
+    this.w = 0;
+    this.h = 0;
+    this.dpr = Math.min(window.devicePixelRatio, 2);
+    this.time = 0;
+    this.rafId = 0;
+    this._transitioning = false;
+    this.warpProgress = 0;
+    this.scrollProgress = 0;
+    this._gsapConnected = false;
 
-    this.scene = new THREE.Scene();
+    // Mouse (lerped)
+    this.mx = 0;
+    this.my = 0;
+    this._mtx = 0;
+    this._mty = 0;
 
-    this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
-    this.camera.position.set(0, 0, 40);
-    this.camera.lookAt(0, 0, 0);
+    // Stars
+    this.layers = generateLayers(7734991);
 
-    this.material = new THREE.ShaderMaterial({
-      vertexShader,
-      fragmentShader,
-      uniforms: {
-        uTime: { value: 0 },
-        uTransitionProgress: { value: 0 },
-        uMouse: { value: new THREE.Vector2(0, 0) },
-        uResolution: { value: new THREE.Vector2(1, 1) }
-      },
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      depthTest: false
-    });
+    // ── Events ──
+    this._onMM = (e) => {
+      this._mtx = (e.clientX / window.innerWidth - 0.5) * 2;
+      this._mty = (e.clientY / window.innerHeight - 0.5) * 2;
+    };
+    this._onOr = (e) => {
+      if (e.gamma == null) return;
+      this._mtx = (e.gamma / 45) * 2;
+      this._mty = ((e.beta - 45) / 45) * 2;
+    };
+    this._onScroll = () => {
+      if (this._gsapConnected) return; // GSAP drives scrollProgress
+      const top = window.scrollY;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      this.scrollProgress = max > 0 ? Math.min(top / max, 1) : 0;
+    };
+    this._onResize = () => this._syncSize();
 
-    const geo = new THREE.PlaneGeometry(1, 1, 1, 1);
-    this.mesh = new THREE.Mesh(geo, this.material);
-    this.mesh.position.set(0, 0, 0);
-    this.scene.add(this.mesh);
-
-    window.addEventListener('mousemove', this._onMouseMove, { passive: true });
-    window.addEventListener('deviceorientation', this._onOrient, { passive: true });
+    window.addEventListener('mousemove', this._onMM, { passive: true });
+    window.addEventListener('deviceorientation', this._onOr, { passive: true });
+    window.addEventListener('scroll', this._onScroll, { passive: true });
     window.addEventListener('resize', this._onResize, { passive: true });
 
-    this.#syncSize();
+    this._syncSize();
     document.documentElement.classList.add('has-three-bg');
 
+    // ── GSAP ScrollTrigger (async — may load after us) ──
+    this._tryGsap();
+
+    // ── Reduced motion: single frame then stop ──
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      this.material.uniforms.uTime.value = 0;
-      this.renderer.render(this.scene, this.camera);
+      this._frame(0);
       return;
     }
 
-    const loop = () => {
+    // ── Render loop ──
+    let prev = performance.now();
+    const loop = (now) => {
       this.rafId = requestAnimationFrame(loop);
-      if (!document.hidden) this.#frame();
+      if (document.hidden) return;
+      const dt = Math.min((now - prev) / 1000, 0.1);
+      prev = now;
+      this.time += dt;
+      this._frame(dt);
     };
-    loop();
+    this.rafId = requestAnimationFrame(loop);
   }
 
-  #syncSize() {
+  /* ── Resize ──────────────────────────────────────────────────────────── */
+
+  _syncSize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h, false);
-
-    this.material.uniforms.uResolution.value.set(w, h);
-
-    /* Plan calé au champ de vue : remplit l’écran sans sur-échantillonnage inutile */
-    const dist = this.camera.position.z;
-    const vFov = (this.camera.fov * Math.PI) / 180;
-    const hh = Math.tan(vFov / 2) * dist;
-    const hw = hh * this.camera.aspect;
-    const margin = 1.15;
-    this.mesh.scale.set(hw * 2 * margin, hh * 2 * margin, 1);
+    this.w = w;
+    this.h = h;
+    this.canvas.width = w * this.dpr;
+    this.canvas.height = h * this.dpr;
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
   }
 
-  #frame() {
-    const t = this.clock.getElapsedTime();
-    this.material.uniforms.uTime.value = t;
+  /* ── GSAP ScrollTrigger integration ──────────────────────────────────── */
 
-    const w = this.material.uniforms.uTransitionProgress.value;
-    /* Lissage souris — réduit en warp pour l’effet « tunnel » */
-    const smooth = w > 0.05 ? 0.02 : 0.06;
-    this.mouse.x += (this.mouse.targetX - this.mouse.x) * smooth;
-    this.mouse.y += (this.mouse.targetY - this.mouse.y) * smooth;
-    this.material.uniforms.uMouse.value.set(this.mouse.x * 2, -this.mouse.y * 2);
+  _tryGsap() {
+    const connect = () => {
+      const gsap = window.gsap;
+      const ST = window.ScrollTrigger;
+      if (!gsap || !ST) return false;
+      gsap.registerPlugin(ST);
+      gsap.to(this, {
+        scrollProgress: 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: document.documentElement,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 1.5,
+        },
+      });
+      this._gsapConnected = true;
+      return true;
+    };
+    if (connect()) return;
+    // Poll until GSAP loads (max 8s)
+    let tries = 0;
+    const id = setInterval(() => {
+      if (connect() || ++tries > 16) clearInterval(id);
+    }, 500);
+  }
 
-    /* Léger roll de la caméra au repos seulement */
-    if (w < 0.05) {
-      this.camera.rotation.z = Math.sin(t * 0.08) * 0.02;
-    } else {
-      this.camera.rotation.z *= 0.92;
+  /* ── Render pipeline ─────────────────────────────────────────────────── */
+
+  _frame(dt) {
+    const { ctx, w, h } = this;
+    if (!w || !h) return;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Lerp mouse
+    const lr = Math.min(dt * 2.5, 1) || 0.04;
+    this.mx += (this._mtx - this.mx) * lr;
+    this.my += (this._mty - this.my) * lr;
+
+    const scroll = this.scrollProgress;
+    const warp = this.warpProgress;
+
+    this._drawNebulas(ctx, w, h, warp);
+    this._drawStars(ctx, w, h, scroll, warp);
+
+    // Warp white-out veil (last 30% of transition)
+    if (warp > 0.7) {
+      const veil = (warp - 0.7) / 0.3; // 0 → 1
+      ctx.globalAlpha = veil * veil * 0.95;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /* ── Nebula glows ────────────────────────────────────────────────────── */
+
+  _drawNebulas(ctx, w, h, warp) {
+    const t = this.time;
+    const mx = this.mx;
+    const my = this.my;
+
+    // Breathing oscillators (very slow, out-of-phase)
+    const b1 = Math.sin(t * 0.12) * 0.5 + 0.5;
+    const b2 = Math.sin(t * 0.09 + 1.8) * 0.5 + 0.5;
+    const b3 = Math.sin(t * 0.15 + 3.2) * 0.5 + 0.5;
+
+    const dim = Math.max(w, h);
+
+    // 1 — Violet glow (bottom-left)
+    const vx = w * 0.15 - mx * 25;
+    const vy = h * 0.82 + my * 25;
+    const vr = dim * (0.52 + b1 * 0.06 + warp * 0.35);
+    const va = 0.10 + b1 * 0.04 + warp * 0.18;
+    const gv = ctx.createRadialGradient(vx, vy, 0, vx, vy, vr);
+    gv.addColorStop(0, `rgba(123,45,142,${va})`);
+    gv.addColorStop(0.55, `rgba(123,45,142,${va * 0.25})`);
+    gv.addColorStop(1, 'rgba(123,45,142,0)');
+    ctx.fillStyle = gv;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2 — Orange glow (top-right)
+    const ox = w * 0.85 + mx * 18;
+    const oy = h * 0.15 - my * 18;
+    const or2 = dim * (0.38 + b2 * 0.05 + warp * 0.28);
+    const oa = 0.05 + b2 * 0.02 + warp * 0.12;
+    const go = ctx.createRadialGradient(ox, oy, 0, ox, oy, or2);
+    go.addColorStop(0, `rgba(232,101,26,${oa})`);
+    go.addColorStop(0.5, `rgba(232,101,26,${oa * 0.22})`);
+    go.addColorStop(1, 'rgba(232,101,26,0)');
+    ctx.fillStyle = go;
+    ctx.fillRect(0, 0, w, h);
+
+    // 3 — Rose glow (center-bottom, very subtle depth layer)
+    const rx = w * 0.5 - mx * 12;
+    const ry = h * 0.65 + my * 12;
+    const rr = dim * (0.30 + b3 * 0.04 + warp * 0.2);
+    const ra = 0.03 + b3 * 0.015 + warp * 0.08;
+    const gr = ctx.createRadialGradient(rx, ry, 0, rx, ry, rr);
+    gr.addColorStop(0, `rgba(193,53,132,${ra})`);
+    gr.addColorStop(0.6, `rgba(193,53,132,${ra * 0.18})`);
+    gr.addColorStop(1, 'rgba(193,53,132,0)');
+    ctx.fillStyle = gr;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  /* ── Starfield ───────────────────────────────────────────────────────── */
+
+  _drawStars(ctx, w, h, scroll, warp) {
+    const t = this.time;
+    const mx = this.mx;
+    const my = this.my;
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+
+    for (const layer of this.layers) {
+      const { stars, speedZ, mousePx } = layer;
+
+      // Z-parallax: scale outward from center on scroll
+      const zScale = 1 + scroll * speedZ;
+      // Warp: explosive zoom
+      const wScale = 1 + warp * warp * speedZ * 14;
+      const totalScale = zScale * wScale;
+
+      // Mouse parallax offset
+      const px = -mx * mousePx * w;
+      const py = -my * mousePx * h;
+
+      // Subtle vertical drift on scroll (near layers drift more)
+      const yDrift = -scroll * speedZ * h * 0.04;
+
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+
+        // Position: expand from center
+        let sx = (s.x * w - cx) * totalScale + cx + px;
+        let sy = (s.y * h - cy) * totalScale + cy + py + yDrift;
+
+        // Wrap during normal scroll (not during warp — let them fly out)
+        if (warp < 0.05) {
+          sx = ((sx % w) + w) % w;
+          sy = ((sy % h) + h) % h;
+        }
+
+        // Twinkle
+        const twinkle = 0.7 + 0.3 * Math.sin(t * s.tw + s.tp);
+
+        // Radius + alpha
+        let r = s.r * totalScale;
+        let alpha = s.a * twinkle;
+
+        // Warp intensity
+        alpha = Math.min(alpha + warp * 0.5, 1);
+        r = Math.min(r + warp * speedZ * 4, 10);
+
+        if (r < 0.1 || alpha < 0.01) continue;
+
+        // Warp streak direction (from center outward)
+        const dx = sx - cx;
+        const dy = sy - cy;
+        const warpStretch = warp * warp * speedZ * 3;
+
+        ctx.globalAlpha = alpha;
+
+        if (warpStretch > 0.08) {
+          // ── Hyperspace streaks ──
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const ndx = dx / dist;
+          const ndy = dy / dist;
+          const len = warpStretch * 20 * (0.5 + r);
+
+          ctx.beginPath();
+          ctx.moveTo(sx - ndx * len * 0.3, sy - ndy * len * 0.3);
+          ctx.lineTo(sx + ndx * len, sy + ndy * len);
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = Math.max(r * 0.7, 0.5);
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        } else {
+          // ── Halo stars ──
+          if (s.halo) {
+            const hr = r * 5;
+            const hg = ctx.createRadialGradient(sx, sy, 0, sx, sy, hr);
+            hg.addColorStop(0, `rgba(255,255,255,${alpha * 0.6})`);
+            hg.addColorStop(0.12, `rgba(255,255,255,${alpha * 0.12})`);
+            hg.addColorStop(0.35, `rgba(255,255,255,${alpha * 0.03})`);
+            hg.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = hg;
+            ctx.beginPath();
+            ctx.arc(sx, sy, hr, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // ── Core dot ──
+          ctx.beginPath();
+          ctx.arc(sx, sy, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#fff';
+          ctx.fill();
+        }
+      }
     }
 
-    this.renderer.render(this.scene, this.camera);
+    ctx.globalAlpha = 1;
   }
+
+  /* ── Warp transition (same API as old Three.js version) ──────────────── */
 
   /**
    * @param {string} targetUrl
@@ -273,26 +371,26 @@ export class FlaynnNeuralBackground {
     if (this._transitioning) return;
     this._transitioning = true;
 
-    const uniform = this.material.uniforms.uTransitionProgress;
     const onComplete = () => {
       window.location.href = targetUrl;
     };
 
     if (typeof window.gsap !== 'undefined') {
-      window.gsap.to(uniform, {
-        value: 1,
+      window.gsap.to(this, {
+        warpProgress: 1,
         duration,
         ease: 'power3.in',
-        onComplete
+        onComplete,
       });
       return;
     }
 
-    const startTime = performance.now();
-    const durationMs = duration * 1000;
+    // RAF fallback
+    const start = performance.now();
+    const ms = duration * 1000;
     const tick = (now) => {
-      const raw = Math.min((now - startTime) / durationMs, 1);
-      uniform.value = raw * raw * raw;
+      const raw = Math.min((now - start) / ms, 1);
+      this.warpProgress = raw * raw * raw; // power3.in approx
       if (raw < 1) {
         requestAnimationFrame(tick);
       } else {
@@ -302,14 +400,14 @@ export class FlaynnNeuralBackground {
     requestAnimationFrame(tick);
   }
 
+  /* ── Cleanup ─────────────────────────────────────────────────────────── */
+
   destroy() {
-    window.removeEventListener('mousemove', this._onMouseMove);
-    window.removeEventListener('deviceorientation', this._onOrient);
+    window.removeEventListener('mousemove', this._onMM);
+    window.removeEventListener('deviceorientation', this._onOr);
+    window.removeEventListener('scroll', this._onScroll);
     window.removeEventListener('resize', this._onResize);
     cancelAnimationFrame(this.rafId);
-    this.mesh?.geometry.dispose();
-    this.material?.dispose();
-    this.renderer?.dispose();
     document.documentElement.classList.remove('has-three-bg');
   }
 }

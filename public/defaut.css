@@ -423,7 +423,7 @@
     height: 100%;
     display: block;
     pointer-events: none;
-    opacity: 0.72;
+    opacity: 0.88;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1016,6 +1016,16 @@
   .logo-container:hover { opacity: 0.85; }
 
   .logo-text { letter-spacing: -0.02em; }
+
+  /* ARCHITECT-PRIME: contraint le logo PNG dans la nav — l'attribut HTML width/height
+     sert de ratio hint, le CSS pilote la taille réelle */
+  .logo-img {
+    width: 38px;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    transition: width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo);
+  }
 
   .nav-links-desktop {
     display: none;
@@ -2459,6 +2469,7 @@
     padding: 0;
     margin: 0;
   }
+  .footer-logo .logo-img { width: 32px; }
 
   .footer-tagline {
     font-size: 0.875rem;
@@ -2847,6 +2858,9 @@
   .nav-glass.is-scrolled .logo-container svg {
     width: 22px; height: 22px;
     transition: all 0.3s var(--ease-out-expo);
+  }
+  .nav-glass.is-scrolled .logo-img {
+    width: 28px;
   }
   .nav-glass.is-scrolled .logo-text {
     font-size: 0.95rem;
