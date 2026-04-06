@@ -5,8 +5,8 @@ import { FlaynnError } from '../utils/errors.js';
 
 const WebhookPayloadSchema = z.object({
   reference: z.string(),
-  data: z.record(z.any())
-}).strict();
+  data: z.record(z.string(), z.any())
+});
 
 const PdfPayloadSchema = z.object({
   reference: z.string(),
