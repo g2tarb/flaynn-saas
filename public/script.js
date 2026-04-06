@@ -571,7 +571,7 @@ class ScoringFormController {
     if (payload.clients_payants) payload.clients_payants = Number(payload.clients_payants);
 
     try {
-      const res = await fetch('/api/score', {
+      const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Flaynn-Source': 'web-form' },
         credentials: 'same-origin',
@@ -600,15 +600,10 @@ class ScoringFormController {
         throw new Error(data.message || 'Service temporairement indisponible.');
       }
 
-      const ref = data.reference || '—';
-      this.form.classList.add('is-hidden');
-      this.form.hidden = true;
-      if (this.successEl) {
-        this.successEl.replaceChildren();
-        this.successEl.appendChild(buildSuccessView(ref));
-        this.successEl.hidden = false;
-        this.successEl.classList.remove('is-hidden');
-        this.successEl.focus();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        window.location.href = `/scoring/succes?ref=${data.reference}`;
       }
     } catch (err) {
       showToast(this.toastRoot, err.message || 'Erreur réseau.', 'error');

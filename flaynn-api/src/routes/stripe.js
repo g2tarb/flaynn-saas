@@ -112,7 +112,7 @@ export default async function stripeRoutes(fastify) {
           },
         ],
         mode: 'payment',
-        success_url: `${baseUrl}/scoring/succes?ref=${reference}`, // Redirection après succès
+        success_url: `${baseUrl}/scoring/succes?ref=${reference}&email=${encodeURIComponent(parsed.email)}`, // Redirection après succès
         cancel_url: `${baseUrl}/#scoring-form`, // Redirection si annulation
         customer_email: parsed.email,
         metadata: {

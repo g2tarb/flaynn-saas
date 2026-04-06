@@ -18,7 +18,8 @@ import dashboardApiRoutes from './routes/dashboard-api.js';
 import authRoutes from './routes/auth.js';
 import webhookRoutes from './routes/webhooks.js';
 // 👇 AJOUT STRIPE ÉTAPE 3 👇
-import stripeRoutes from './routes/stripe.js'; 
+import stripeRoutes from './routes/stripe.js';
+import deckRoutes from './routes/decks.js';
 // 👆 FIN AJOUT 👆
 import { initDB, pool } from './config/db.js';
 import authPlugin from './plugins/auth.js';
@@ -190,7 +191,8 @@ export const start = async () => {
     await fastify.register(authRoutes);
     await fastify.register(webhookRoutes);
     // 👇 AJOUT STRIPE ÉTAPE 3 👇
-    await fastify.register(stripeRoutes); 
+    await fastify.register(stripeRoutes);
+    await fastify.register(deckRoutes);
     // 👆 FIN AJOUT 👆
 
     fastify.log.info(`[ARCHITECT-PRIME] Montage du dossier statique : ${siteRoot}`);
