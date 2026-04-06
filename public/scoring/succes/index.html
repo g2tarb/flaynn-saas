@@ -27,10 +27,21 @@
         </div>
     </main>
     <script>
-        // Récupère la référence depuis l'URL (?ref=FLY-XXXXX) et l'affiche
         const params = new URLSearchParams(window.location.search);
-        const ref = params.get('ref');
+        const ref = params.get('ref') || localStorage.getItem('flaynn_pending_ref') || '';
+        const email = params.get('email') || localStorage.getItem('flaynn_pending_email') || '';
+        if (ref) localStorage.removeItem('flaynn_pending_ref');
+        if (email) localStorage.removeItem('flaynn_pending_email');
+
         document.getElementById('ref-display').textContent = ref ? ref : 'Non spécifiée';
+
+        const emailEl = document.getElementById('email-display');
+        if (emailEl && email) emailEl.textContent = decodeURIComponent(email);
+
+        const ctaBtn = document.querySelector('.btn-primary');
+        if (ctaBtn && ref) {
+            ctaBtn.href = `/auth/?email=${encodeURIComponent(email)}&ref=${encodeURIComponent(ref)}`;
+        }
     </script>
 </body>
 </html>

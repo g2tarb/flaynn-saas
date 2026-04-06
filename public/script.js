@@ -601,6 +601,9 @@ class ScoringFormController {
       }
 
       if (data.checkout_url) {
+        localStorage.setItem('flaynn_pending_ref', data.reference || '');
+        const emailVal = this.form.email?.value || '';
+        localStorage.setItem('flaynn_pending_email', emailVal);
         window.location.href = data.checkout_url;
       } else {
         window.location.href = `/scoring/succes?ref=${data.reference}`;
