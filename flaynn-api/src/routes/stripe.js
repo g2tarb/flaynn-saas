@@ -4,11 +4,6 @@ import Stripe from 'stripe';
 import { n8nBridge } from '../services/n8n-bridge.js';
 import { pool } from '../config/db.js';
 
-// Initialisation de Stripe avec la clé secrète de l'environnement
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16', // Garde une version API stable
-});
-
 // On réutilise le même schéma de validation que pour le scoring initial
 const ScoreSubmissionSchema = z.object({
   previous_ref: z.string().trim().max(50).optional(),
@@ -48,6 +43,11 @@ const ScoreSubmissionSchema = z.object({
 }).strip();
 
 export default async function stripeRoutes(fastify) {
+
+  // Initialisation de Stripe DOIT être dans la fonction pour garantir que dotenv a chargé les variables
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2023-10-16', // Garde une version API stable
+  });
 
   // 1. ENDPOINT DE CHECKOUT : Reçoit le formulaire, enregistre en base, redirige vers Stripe
   fastify.post('/api/checkout', {
@@ -142,13 +142,18 @@ export default async function stripeRoutes(fastify) {
     let event;
 
     try {
-      // Vérification cryptographique que la requête vient bien de Stripe
-      // request.rawBody a été configuré dans server.js à l'étape 3
+      // 👇 MODIFICATION DU PARSER RAWBODY ICI 👇
+      const rawBodyBuffer = Buffer.isBuffer(request.rawBody)
+        ? request.rawBody
+        : Buffer.from(JSON.stringify(request.body));
+
       event = stripe.webhooks.constructEvent(
-        request.rawBody, 
+        rawBodyBuffer, 
         sig, 
         process.env.STRIPE_WEBHOOK_SECRET
       );
+      // 👆 FIN DE LA MODIFICATION 👆
+
     } catch (err) {
       request.log.warn({ err: err.message }, 'Webhook Stripe : Signature invalide');
       return reply.code(400).send(`Webhook Error: ${err.message}`);
