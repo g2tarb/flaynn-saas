@@ -197,7 +197,17 @@ export const start = async () => {
     await fastify.register(fastifyStatic, {
       root: siteRoot,
       prefix: '/',
-      index: ['index.html']
+      index: ['index.html'],
+      // ARCHITECT-PRIME: Cache-Control strict pour forcer la revalidation.
+      // Sans cet en-tête, le cache HTTP navigateur empêche le SW de détecter
+      // les nouvelles versions des fichiers CSS/JS (pas de content-hashing sans bundler).
+      setHeaders(res, pathName) {
+        if (pathName.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        } else if (/\.(js|css|json)$/.test(pathName)) {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      }
     });
 
     // Gestion du Dashboard SPA + pages statiques
@@ -221,17 +231,17 @@ export const start = async () => {
       if (url === '/dashboard' || url.startsWith('/dashboard/')) {
         const rest = url === '/dashboard' ? '' : url.slice('/dashboard/'.length);
         if (rest && rest.includes('.')) return reply.code(404).send('Not Found');
-        return reply.type('text/html').send(dashboardHtml);
+        return reply.header('Cache-Control', 'no-cache, no-store, must-revalidate').type('text/html').send(dashboardHtml);
       }
       if (url === '/auth' || url.startsWith('/auth/')) {
         const rest = url === '/auth' ? '' : url.slice('/auth/'.length);
         if (rest && rest.includes('.')) return reply.code(404).send('Not Found');
-        return reply.type('text/html').send(authHtml);
+        return reply.header('Cache-Control', 'no-cache, no-store, must-revalidate').type('text/html').send(authHtml);
       }
       if (url === '/scoring/succes' || url.startsWith('/scoring/succes/')) {
         const rest = url === '/scoring/succes' ? '' : url.slice('/scoring/succes/'.length);
         if (rest && rest.includes('.')) return reply.code(404).send('Not Found');
-        return reply.type('text/html').send(scoringSuccesHtml);
+        return reply.header('Cache-Control', 'no-cache, no-store, must-revalidate').type('text/html').send(scoringSuccesHtml);
       }
       return reply.code(404).send({ error: 'Not Found' });
     });
