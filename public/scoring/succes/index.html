@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flaynn · Paiement validé</title>
+    <link rel="stylesheet" href="/defaut.css">
+</head>
+<body>
+    <main id="main-content" role="main" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+        <div class="card-glass" style="text-align: center; padding: 3rem; max-width: 500px; width: 100%;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style="margin-bottom: 1.5rem;">
+                <path d="M5 13l4 4L19 7" stroke="var(--accent-emerald, #10b981)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h1 class="heading-section" style="font-size: 1.75rem; margin-bottom: 1rem;">Paiement validé</h1>
+            <p style="color: var(--text-secondary, #a1a1aa); margin-bottom: 2rem; line-height: 1.6;">
+                Votre paiement a bien été traité. Nous analysons votre dossier et vous recevrez une synthèse sous 24h ouvrées.
+            </p>
+            <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 1rem; margin-bottom: 2rem;">
+                <p style="font-family: 'JetBrains Mono', monospace; font-size: 1rem; margin: 0;">
+                    Référence : <strong id="ref-display" style="color: var(--accent-violet, #8b5cf6);">...</strong>
+                </p>
+            </div>
+            <a href="/dashboard/" class="btn-primary btn-gradient" style="display: inline-flex; text-decoration: none;">
+                Accéder à mon espace
+            </a>
+        </div>
+    </main>
+    <script>
+        // Récupère la référence depuis l'URL (?ref=FLY-XXXXX) et l'affiche
+        const params = new URLSearchParams(window.location.search);
+        const ref = params.get('ref');
+        document.getElementById('ref-display').textContent = ref ? ref : 'Non spécifiée';
+    </script>
+</body>
+</html>
