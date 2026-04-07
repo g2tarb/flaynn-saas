@@ -725,38 +725,7 @@ document.getElementById('footer-year').textContent = String(new Date().getFullYe
   }
 })();
 
-/* ── Warp navigation : intercepte les liens vers /dashboard/ ───────────── */
-/**
- * Affiche l'overlay glassmorphism + déclenche le warp Three.js.
- * Si globalBg n'est pas disponible (WebGL absent / tier 1),
- * la navigation se fait normalement sans effet.
- * @param {string} targetUrl
- * @param {Event}  e
- */
-function warpNavigate(targetUrl, e) {
-  e.preventDefault();
-
-  const overlay = document.getElementById('page-transition-overlay');
-  if (overlay) overlay.classList.add('is-active');
-
-  const bg = /** @type {any} */ (window).globalBg;
-  if (bg && typeof bg.triggerWarpTransition === 'function') {
-    bg.triggerWarpTransition(targetUrl);
-  } else {
-    /* Fallback : redirection directe après l'apparition de l'overlay */
-    window.setTimeout(() => { window.location.href = targetUrl; }, 300);
-  }
-}
-
-/* Sélecteur large : capture tous les liens pointant vers /dashboard/ */
-document.addEventListener('click', (e) => {
-  const link = e.target.closest('a[href]');
-  if (!link) return;
-  const href = link.getAttribute('href');
-  if (href && (href.startsWith('/dashboard') || href === '/dashboard/')) {
-    warpNavigate(href, e);
-  }
-});
+/* ARCHITECT-PRIME: warpNavigate removed — global transition handled by js/transition.js */
 
 document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
 document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
@@ -771,23 +740,7 @@ if (navGlass) {
   onScroll();
 }
 
-// ── View Transition API — smooth page transitions ──────────────────────────
-// ARCHITECT-PRIME: exclure les liens /dashboard/ (gérés par warpNavigate)
-document.addEventListener('click', (e) => {
-  if (e.defaultPrevented) return; // déjà intercepté par warpNavigate
-  const link = e.target.closest('a[href]');
-  if (!link || !link.href) return;
-  const href = link.getAttribute('href');
-  if (!href || href.startsWith('#')) return;
-  if (href.startsWith('/dashboard')) return; // géré par warpNavigate
-  const url = new URL(link.href, location.origin);
-  if (url.origin !== location.origin || url.pathname === location.pathname) return;
-  if (!document.startViewTransition) return;
-  e.preventDefault();
-  document.startViewTransition(() => {
-    window.location.href = link.href;
-  });
-});
+// ARCHITECT-PRIME: View Transition API removed — global transition handled by js/transition.js
 
 // ── Nav mobile ──────────────────────────────────────────────────────────────
 function openMobileMenu() {
@@ -963,6 +916,35 @@ function initLiquidUX() {
       );
     }
   });
+
+  // 4. ARCHITECT-PRIME: Magnetic buttons — attire le bouton vers le curseur
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !('ontouchstart' in window)) {
+    const STRENGTH = 0.3;  // pourcentage de déplacement max
+    const EASE = 'power3.out';
+
+    document.querySelectorAll('.btn-primary, .btn-gradient, .nav-cta').forEach((btn) => {
+      btn.addEventListener('mousemove', (e) => {
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+
+        if (window.gsap) {
+          window.gsap.to(btn, { x: x * STRENGTH, y: y * STRENGTH, duration: 0.4, ease: EASE });
+        } else {
+          btn.style.transform = `translate(${x * STRENGTH}px, ${y * STRENGTH}px)`;
+        }
+      });
+
+      btn.addEventListener('mouseleave', () => {
+        if (window.gsap) {
+          window.gsap.to(btn, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
+        } else {
+          btn.style.transform = '';
+          btn.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        }
+      });
+    });
+  }
 }
 
 function initBarReveal() {

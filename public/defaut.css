@@ -453,7 +453,10 @@
   }
 
   /* Sections */
-  .section { padding: var(--space-12) 0; }
+  .section {
+    padding: var(--space-12) 0;
+    scroll-margin-top: 5rem;
+  }
   .section--tight { padding-top: var(--space-8); }
   .section--form { padding-bottom: var(--space-12); }
   .section--process { padding: var(--space-8) 0; background: linear-gradient(180deg, transparent, rgba(139,92,246,0.03) 50%, transparent); }
@@ -534,6 +537,7 @@
     background:
       radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.08), transparent 60%),
       radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.08), transparent 45%);
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     animation: orbit-rotate 30s linear infinite reverse;
   }
@@ -585,6 +589,7 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.06),
       0 30px 80px rgba(0, 0, 0, 0.32);
+    -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
   }
 
@@ -836,18 +841,22 @@
   }
 
   /* ── FAQ ── */
+  /* ARCHITECT-PRIME: FAQ minimaliste — séparateurs subtils, + → × rotation */
   .faq-list {
     max-width: 680px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
   }
 
   .faq-item {
     padding: 0;
     cursor: pointer;
     overflow: hidden;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .faq-item:first-child {
+    border-top: 1px solid var(--border-subtle);
   }
 
   .faq-item__question {
@@ -855,7 +864,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-4) 0;
     font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.9375rem;
@@ -863,7 +872,7 @@
     cursor: pointer;
     list-style: none;
     min-height: 52px;
-    transition: color var(--duration-fast) ease;
+    transition: color 0.3s ease;
   }
 
   .faq-item__question::-webkit-details-marker { display: none; }
@@ -872,45 +881,57 @@
     flex: 1;
   }
 
-  .faq-item__chevron {
+  .faq-item__icon {
     flex-shrink: 0;
     color: var(--text-tertiary);
-    transition: transform 0.3s var(--ease-out-expo), color 0.3s ease;
+    transition: transform 0.5s var(--ease-out-expo), color 0.3s ease;
+  }
+  .faq-icon-v {
+    transition: transform 0.5s var(--ease-out-expo);
+    transform-origin: center;
   }
 
-  .faq-item[open] .faq-item__chevron {
-    transform: rotate(180deg);
+  .faq-item[open] .faq-item__icon {
+    transform: rotate(45deg);
     color: var(--accent-violet);
   }
 
   .faq-item[open] .faq-item__question {
-    color: var(--accent-violet);
+    color: var(--text-primary);
   }
 
   .faq-item__answer {
-    padding: 0 var(--space-5) var(--space-5);
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
     font-size: 0.9375rem;
     line-height: 1.65;
     color: var(--text-secondary);
-    animation: faq-open 0.3s var(--ease-out-expo);
+    transition:
+      max-height 0.5s var(--ease-out-expo),
+      opacity 0.4s var(--ease-out-expo),
+      padding 0.5s var(--ease-out-expo);
   }
 
-  @keyframes faq-open {
-    from { opacity: 0; transform: translateY(-8px); }
-    to { opacity: 1; transform: translateY(0); }
+  .faq-item[open] .faq-item__answer {
+    max-height: 20rem;
+    opacity: 1;
+    padding: 0 0 var(--space-5);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .faq-item__answer { animation: none; }
+    .faq-item__answer { transition: none; }
+    .faq-item__icon { transition: none; }
   }
 
   @media (max-width: 639px) {
     .faq-item__question {
-      padding: var(--space-3) var(--space-4);
+      padding: var(--space-3) 0;
       font-size: 0.875rem;
     }
-    .faq-item__answer {
-      padding: 0 var(--space-4) var(--space-4);
+    .faq-item[open] .faq-item__answer {
+      padding: 0 0 var(--space-4);
       font-size: 0.875rem;
     }
   }
@@ -2014,21 +2035,27 @@
 
   .field__input:focus {
     outline: none;
-    border-color: var(--accent-violet);
+    border-color: rgba(139, 92, 246, 0.6);
     box-shadow:
-      0 0 0 4px rgba(139, 92, 246, 0.16),
-      0 0 32px rgba(139, 92, 246, 0.1),
+      0 0 0 4px rgba(139, 92, 246, 0.12),
+      0 0 24px rgba(139, 92, 246, 0.08),
+      0 0 48px rgba(123, 45, 142, 0.06),
       0 20px 48px rgba(0, 0, 0, 0.22);
     background:
       linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015)),
       var(--surface-overlay);
+    transition:
+      border-color 0.4s var(--ease-out-expo),
+      box-shadow 0.4s var(--ease-out-expo),
+      background 0.3s ease;
   }
 
   .field__input:focus-visible {
-    border-color: var(--accent-violet);
+    border-color: rgba(139, 92, 246, 0.7);
     box-shadow:
-      0 0 0 3px rgba(139, 92, 246, 0.35),
-      0 0 36px rgba(139, 92, 246, 0.14),
+      0 0 0 3px rgba(139, 92, 246, 0.25),
+      0 0 28px rgba(139, 92, 246, 0.12),
+      0 0 56px rgba(232, 101, 26, 0.04),
       0 20px 48px rgba(0, 0, 0, 0.22);
   }
 
@@ -2526,26 +2553,30 @@
     border: 1px solid var(--border-subtle);
   }
 
-  /* ── Page transition overlay ── */
+  /* ── ARCHITECT-PRIME: "The Void Shutter" page transition ── */
   #page-transition-overlay {
     position: fixed;
     inset: 0;
-    z-index: 500;          /* au-dessus du canvas (-1) et du contenu, sous la nav (200) */
+    z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    visibility: hidden;
+    background: var(--surface-void, #030407);
+    clip-path: circle(0% at 50% 50%);
     pointer-events: none;
-    transition:
-      opacity var(--duration-slow) var(--ease-out-expo),
-      visibility var(--duration-slow) var(--ease-out-expo);
+    will-change: clip-path;
   }
 
   #page-transition-overlay.is-active {
-    opacity: 1;
-    visibility: visible;
     pointer-events: auto;
+  }
+
+  /* ARCHITECT-PRIME: Flaynn wing SVG — invisible par défaut, animée par JS */
+  .transition-wing {
+    opacity: 0;
+    transform: scale(0.7);
+    filter: drop-shadow(0 0 0px rgba(232, 101, 26, 0));
+    will-change: opacity, transform, filter;
   }
 
   /* ── Modales (Glassmorphism) ── */
@@ -2594,37 +2625,7 @@
     cursor: pointer;
   }
 
-  .transition-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-8) var(--space-10);
-    border-radius: var(--radius-xl);
-    text-align: center;
-  }
-
-  .transition-spinner {
-    width: 36px;
-    height: 36px;
-    border: 2px solid var(--border-default);
-    border-top-color: var(--accent-violet);
-    border-radius: 50%;
-    animation: spinner-rotate 0.7s linear infinite;
-  }
-
-  @keyframes spinner-rotate {
-    to { transform: rotate(360deg); }
-  }
-
-  .transition-label {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-tertiary);
-  }
+  /* ARCHITECT-PRIME: old transition-panel removed — replaced by Void Shutter */
 
   /* Toast */
   .toast-root {

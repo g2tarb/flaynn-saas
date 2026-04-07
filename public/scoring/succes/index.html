@@ -28,6 +28,7 @@
 
     html, body {
       min-height: 100vh;
+      min-height: 100dvh;
       background: var(--void);
       color: var(--text-1);
       font-family: 'IBM Plex Sans', system-ui, sans-serif;
@@ -52,6 +53,7 @@
       position: relative;
       z-index: 1;
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -417,28 +419,28 @@
 
       <div class="timeline">
         <div class="timeline-item">
-          <div class="timeline-icon done" aria-hidden="true">&#x2713;</div>
+          <div class="timeline-icon done" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
           <div class="timeline-body">
             <div class="timeline-title">Dossier soumis &amp; paiement confirme</div>
             <div class="timeline-desc">Votre dossier a ete recu et securise. Reference : <span id="ref-inline" style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#F0F0F3;">...</span></div>
           </div>
         </div>
         <div class="timeline-item">
-          <div class="timeline-icon active" aria-hidden="true">&#x26A1;</div>
+          <div class="timeline-icon active" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
           <div class="timeline-body">
             <div class="timeline-title">Analyse en cours — Flaynn Intelligence</div>
             <div class="timeline-desc">Notre IA analyse votre dossier sur les 5 piliers : Market, Product, Traction, Team, Execution. Un analyste valide la synthese.</div>
           </div>
         </div>
         <div class="timeline-item">
-          <div class="timeline-icon pending" aria-hidden="true">&#x1F4EC;</div>
+          <div class="timeline-icon pending" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg></div>
           <div class="timeline-body">
             <div class="timeline-title">Email de resultat sous 24h</div>
             <div class="timeline-desc">Vous recevrez votre scoring complet + une invitation a creer votre espace fondateur pour acceder au rapport PDF et suivre votre progression.</div>
           </div>
         </div>
         <div class="timeline-item">
-          <div class="timeline-icon pending" aria-hidden="true">&#x1F3AF;</div>
+          <div class="timeline-icon pending" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
           <div class="timeline-body">
             <div class="timeline-title">Mise en relation investisseurs (si qualifie)</div>
             <div class="timeline-desc">Si votre score atteint le seuil, votre dossier est presente aux investisseurs de notre reseau dont le profil correspond au votre.</div>
@@ -459,7 +461,7 @@
       </div>
 
       <a href="/auth/" class="btn-primary" id="cta-primary">
-        Creer mon espace fondateur &#x2192;
+        Creer mon espace fondateur <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:4px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
       <a href="/" class="btn-ghost">
         Retour a l'accueil
