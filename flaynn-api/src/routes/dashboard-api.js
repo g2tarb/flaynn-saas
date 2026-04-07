@@ -3,6 +3,138 @@ import { pool } from '../config/db.js';
 
 const idSchema = z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/);
 
+/**
+ * Transforme le cardPayload n8n V2 en format dashboard frontend.
+ *
+ * Exploite : pillar_analysis (insights), score_breakdown (raw),
+ *            payload (concurrents, TAM, form data), previousScore (trend chips)
+ */
+function adaptN8nToDashboard(raw, startupName, referenceId, createdAt, previousData) {
+  if (Array.isArray(raw.pillars)) return raw;
+
+  if (raw.status === 'pending_analysis' || raw.status === 'pending_webhook' || raw.status === 'error') {
+    return raw;
+  }
+
+  const score = Number(raw.overall_score) || 0;
+  const prev = previousData || {};
+  const prevScore = Number(prev.overall_score) || score;
+  const pa = raw.pillar_analysis || {};
+
+  // Insight par pilier depuis pillar_analysis.strengths[0] + improvements[0]
+  function pillarInsight(key) {
+    const p = pa[key];
+    if (!p) return '';
+    const s = (p.strengths && p.strengths[0]) || '';
+    const i = (p.improvements && p.improvements[0]) || '';
+    if (s && i) return `${s}. ${i}`;
+    return s || i || '';
+  }
+
+  const pillars = [
+    { name: 'Market',    score: Number(raw.market_score) || 0,          prev: Number(prev.market_score || raw.market_score) || 0,          color: 'var(--accent-violet)',  insight: pillarInsight('market') },
+    { name: 'Product',   score: Number(raw.venture_score) || 0,         prev: Number(prev.venture_score || raw.venture_score) || 0,         color: 'var(--accent-blue)',    insight: pillarInsight('solution_product') },
+    { name: 'Traction',  score: Number(raw.traction_signal_score) || 0, prev: Number(prev.traction_signal_score || raw.traction_signal_score) || 0, color: 'var(--accent-emerald)', insight: pillarInsight('traction') },
+    { name: 'Team',      score: Number(raw.team_score) || 0,            prev: Number(prev.team_score || raw.team_score) || 0,              color: 'var(--accent-violet)',  insight: pillarInsight('team') },
+    { name: 'Execution', score: Number(raw.execution_score) || 0,       prev: Number(prev.execution_score || raw.execution_score) || 0,    color: 'var(--accent-amber)',   insight: pillarInsight('execution_ask') },
+  ];
+
+  // Verdict → level
+  const verdictLabels = {
+    'Ready':   'Investissable',
+    'Almost':  'Potentiel Élevé',
+    'Not yet': 'Prématuré',
+  };
+  const actionLabels = {
+    high_priority: 'Priorité Haute',
+    meeting:       'Meeting Programmé',
+    monitor:       'À Suivre',
+    soft_pass:     'Pass Conditionnel',
+    pass:          'Pass',
+  };
+  const level = verdictLabels[raw.verdict] || actionLabels[raw.recommended_action] || 'Non évalué';
+
+  // Recommendations
+  const priorities = raw.next_submission_priorities || [];
+  const recommendations = priorities.map((p, i) => ({
+    priority: i < 2 ? 'high' : 'medium',
+    pillar: 'Priorité',
+    title: p.title || `Priorité ${i + 1}`,
+    desc: p.text || '',
+  }));
+
+  // Investor readiness
+  const strengths = raw.top_3_strengths || [];
+  const risks = raw.top_3_risks || [];
+  const investorReadiness = [
+    ...strengths.map(s => ({ status: 'ok', label: s })),
+    ...risks.map(r => ({ status: 'warn', label: r })),
+  ];
+
+  // Graphe concurrentiel depuis payload.concurrents
+  const payload = raw.payload || {};
+  const graphNodes = [{ id: 'you', label: startupName || 'Vous', type: 'user' }];
+  const graphLinks = [];
+  const concurrentsRaw = payload.concurrents || '';
+  if (concurrentsRaw) {
+    const parts = concurrentsRaw.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean).slice(0, 5);
+    parts.forEach((name, i) => {
+      const id = `c${i}`;
+      graphNodes.push({ id, label: name, type: 'competitor' });
+      graphLinks.push({ source: 'you', target: id, strength: 1.2 - i * 0.15 });
+    });
+  }
+
+  // Historique (audit actuel + précédent si existe)
+  const history = [];
+  if (previousData) {
+    history.push({
+      label: 'Audit précédent',
+      date: new Date(prev.generated_at || createdAt).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+      score: prevScore,
+    });
+  }
+  history.push({
+    label: previousData ? 'Audit actuel' : 'Audit #1',
+    date: new Date(raw.generated_at || createdAt || Date.now()).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }),
+    score,
+  });
+
+  // TAM
+  const tamRaw = payload.tam_usd || payload.tam || '';
+  const tam = tamRaw ? (typeof tamRaw === 'number' ? `$${(tamRaw / 1e6).toFixed(0)}M` : String(tamRaw)) : '—';
+
+  return {
+    status: raw.status || 'completed',
+    score,
+    scorePrev: prevScore,
+    level,
+    verdict: raw.verdict || '',
+    track: raw.track || '',
+    track_reason: raw.track_reason || '',
+    stage: raw.stage_estimate || payload.stade || 'Pre-seed',
+    sector: raw.sector || payload.secteur || 'Startup',
+    updatedAt: raw.generated_at || createdAt || new Date().toISOString(),
+    pillars,
+    resume_executif: raw.resume_executif || raw.one_liner || '',
+    score_context: raw.score_context || '',
+    confidence_level: raw.confidence_level || '',
+    resubmission_intro: raw.resubmission_intro || '',
+    resubmission_condition: raw.resubmission_condition || '',
+    recommended_resubmission_date: raw.recommended_resubmission_date || '',
+    recommended_resubmission_window: raw.recommended_resubmission_window || '',
+    progression_goal: raw.progression_goal || '',
+    next_action_founder_title: raw.next_action_founder_title || '',
+    next_action_founder_why: raw.next_action_founder_why || '',
+    questions_for_founder_call: raw.questions_for_founder_call || [],
+    history,
+    recommendations,
+    investorReadiness,
+    market: { tam, sam: '—', som: '—' },
+    graph: { nodes: graphNodes, links: graphLinks },
+  };
+}
+
 export default async function dashboardApiRoutes(fastify) {
   // Route 1 : Récupérer la liste des analyses d'un utilisateur
   fastify.get('/api/dashboard/list', {
@@ -36,7 +168,7 @@ export default async function dashboardApiRoutes(fastify) {
     try {
       const userEmail = request.user.email;
       const { rows } = await pool.query(
-        'SELECT data, startup_name FROM scores WHERE reference_id = $1 AND user_email = $2',
+        'SELECT data, startup_name, created_at FROM scores WHERE reference_id = $1 AND user_email = $2',
         [parsed.data, userEmail]
       );
 
@@ -45,11 +177,28 @@ export default async function dashboardApiRoutes(fastify) {
       }
 
       const { pdf_base64, ...dataWithoutPdf } = rows[0].data || {};
+
+      // Chercher le scoring précédent pour la même startup (trend chips)
+      let previousData = null;
+      if (rows[0].startup_name) {
+        const prevResult = await pool.query(
+          `SELECT data FROM scores
+           WHERE user_email = $1 AND startup_name = $2 AND reference_id != $3
+             AND data->>'status' = 'completed'
+           ORDER BY created_at DESC LIMIT 1`,
+          [userEmail, rows[0].startup_name, parsed.data]
+        );
+        if (prevResult.rows.length > 0) {
+          previousData = prevResult.rows[0].data;
+        }
+      }
+
+      const adapted = adaptN8nToDashboard(dataWithoutPdf, rows[0].startup_name, parsed.data, rows[0].created_at, previousData);
       return reply.code(200).send({
         id: parsed.data,
         startupName: rows[0].startup_name,
         has_pdf: !!pdf_base64,
-        ...dataWithoutPdf
+        ...adapted
       });
     } catch (err) {
       request.log.error(err);
