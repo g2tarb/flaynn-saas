@@ -569,7 +569,6 @@ function buildRoutes(data) {
 
         const radialCard = el('article', 'card-glass score-summary-card score-radial-wrap');
         const radialViz  = el('div', 'dashboard-viz');
-        radialViz.style.minHeight = '200px';
         radialCard.appendChild(radialViz);
         summaryRow.appendChild(radialCard);
 
@@ -729,6 +728,7 @@ function buildRoutes(data) {
           return;
         }
         if (data.status === 'pending_analysis' || data.status === 'pending_webhook' || data.status === 'error') {
+          section.style.color = 'var(--text-primary)';
           section.appendChild(el('p', 'dashboard-meta', { textContent: 'Données indisponibles. Consultez l\'onglet Overview pour voir le statut de l\'analyse.' }));
           root.appendChild(section);
           return;
@@ -745,7 +745,6 @@ function buildRoutes(data) {
         const radarCard = el('article', 'card-glass');
         radarCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Radar des piliers' }));
         const radarViz = el('div', 'dashboard-viz dashboard-viz--wide');
-        radarViz.style.minHeight = '320px';
         radarCard.appendChild(radarViz);
         section.appendChild(radarCard);
 
@@ -801,6 +800,7 @@ function buildRoutes(data) {
           return;
         }
         if (data.status === 'pending_analysis' || data.status === 'pending_webhook' || data.status === 'error') {
+          section.style.color = 'var(--text-primary)';
           section.appendChild(el('p', 'dashboard-meta', { textContent: 'Données indisponibles. Consultez l\'onglet Overview pour voir le statut de l\'analyse.' }));
           root.appendChild(section);
           return;
@@ -835,7 +835,6 @@ function buildRoutes(data) {
         const graphCard = el('article', 'card-glass');
         graphCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Carte concurrentielle' }));
         const graphViz = el('div', 'dashboard-viz dashboard-viz--wide');
-        graphViz.style.minHeight = '440px';
         graphCard.appendChild(graphViz);
         section.appendChild(graphCard);
 

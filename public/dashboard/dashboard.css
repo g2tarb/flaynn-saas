@@ -9,12 +9,17 @@
   }
 }
 
+.dashboard-topbar .logo-container {
+  flex: 0 0 auto;
+}
+
 .dashboard-topbar__title {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-secondary);
   margin: 0;
-  max-width: 12rem;
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -157,7 +162,7 @@
 }
 
 .dashboard-viz--wide {
-  min-height: 340px;
+  min-height: 380px;
 }
 
 .dashboard-viz svg {
@@ -363,6 +368,10 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
+}
+
+.score-radial-wrap .dashboard-viz {
+  min-height: 200px;
 }
 
 /* ── Trend chip ── */
@@ -843,17 +852,23 @@
   .dashboard-body { -webkit-overflow-scrolling: touch; }
 
   .dashboard-shell {
-    padding: 0 var(--space-4);
+    padding: 0 var(--space-5);
     padding-top: calc(4rem + env(safe-area-inset-top));
     gap: var(--space-5);
   }
 
   .dashboard-app__section { gap: var(--space-5); }
 
-  /* Cards : même radius que desktop */
+  /* Cards : même radius que desktop, padding réduit */
   .dashboard-app__section .card-glass {
     border-radius: var(--radius-lg);
     padding: var(--space-5);
+  }
+
+  /* Topbar : laisser les éléments flex respirer en mode démo */
+  .dashboard-topbar__title {
+    overflow: visible;
+    white-space: normal;
   }
 
   /* Score summary : grille 2 colonnes (comme desktop 4 cols mais adapté) */
@@ -864,6 +879,20 @@
   }
 
   .score-radial-wrap { grid-column: span 2; }
+
+  /* Viz : réduire les hauteurs sur mobile */
+  .score-radial-wrap .dashboard-viz {
+    min-height: 160px;
+  }
+
+  .dashboard-viz--wide {
+    min-height: 240px;
+  }
+
+  /* Score summary cards : padding compact */
+  .score-summary-card {
+    padding: var(--space-4);
+  }
 
   /* Pillar detail : grille 1 colonne */
   .pillar-detail-grid {
@@ -896,7 +925,7 @@
   .score-summary-row { grid-template-columns: 1fr; }
   .score-radial-wrap { grid-column: span 1; }
   .market-stats-grid { grid-template-columns: 1fr; }
-  .dashboard-shell { padding: 0 var(--space-3); }
+  .dashboard-shell { padding: 0 var(--space-4); }
 }
 
 /* ── Verdict Banner ── */
