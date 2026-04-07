@@ -153,7 +153,6 @@
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
   border: 1px solid var(--border-subtle);
-  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 
@@ -898,4 +897,125 @@
   .score-radial-wrap { grid-column: span 1; }
   .market-stats-grid { grid-template-columns: 1fr; }
   .dashboard-shell { padding: 0 var(--space-3); }
+}
+
+/* ── Verdict Banner ── */
+.verdict-banner {
+  padding: var(--space-4) var(--space-5);
+}
+.verdict-banner__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+.verdict-banner__badge {
+  display: inline-flex;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.04);
+}
+.verdict-banner__track {
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+.verdict-banner__reason {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* ── Résumé exécutif ── */
+.resume-card {
+  padding: var(--space-5);
+}
+.resume-card__context {
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+  line-height: 1.6;
+}
+.resume-card__text {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.85;
+}
+
+/* ── Prochaine étape ── */
+.next-action-card {
+  padding: var(--space-5);
+}
+.next-action-card__title {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.next-action-card__why {
+  margin: 0 0 var(--space-4);
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.next-action-card__resub {
+  background: var(--surface-raised);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.next-action-card__resub-intro {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+}
+.next-action-card__resub-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.next-action-card__resub-label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--accent-violet);
+  min-width: 5.5rem;
+  flex-shrink: 0;
+}
+
+/* ── Questions investisseur ── */
+.questions-card {
+  padding: var(--space-5);
+}
+.questions-card__list {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.questions-card__item {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.questions-card__item::marker {
+  color: var(--accent-violet);
+  font-weight: 700;
 }

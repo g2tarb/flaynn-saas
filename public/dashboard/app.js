@@ -583,11 +583,50 @@ function buildRoutes(data) {
 
         section.appendChild(summaryRow);
 
+        /* Verdict banner */
+        if (data.verdict) {
+          const verdictCard = el('article', 'card-glass verdict-banner');
+          const verdictColors = { 'Ready': 'var(--accent-emerald)', 'Almost': 'var(--accent-amber)', 'Not yet': 'var(--accent-rose)' };
+          const verdictColor = verdictColors[data.verdict] || 'var(--accent-violet)';
+          verdictCard.style.borderLeft = `4px solid ${verdictColor}`;
+
+          const verdictHeader = el('div', 'verdict-banner__header');
+          const verdictBadge = el('span', 'verdict-banner__badge');
+          verdictBadge.textContent = data.verdict;
+          verdictBadge.style.color = verdictColor;
+          verdictBadge.style.border = `1px solid ${verdictColor}`;
+          verdictHeader.appendChild(verdictBadge);
+          if (data.track) {
+            const trackBadge = el('span', 'verdict-banner__track');
+            trackBadge.textContent = `Track : ${data.track}`;
+            verdictHeader.appendChild(trackBadge);
+          }
+          verdictCard.appendChild(verdictHeader);
+
+          if (data.track_reason) {
+            verdictCard.appendChild(el('p', 'verdict-banner__reason', { textContent: data.track_reason }));
+          }
+          section.appendChild(verdictCard);
+        }
+
         /* Pillar rows */
         const pillarCard = el('article', 'card-glass');
         pillarCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Cinq piliers — synthèse' }));
         pillarCard.appendChild(buildPillarRows(data.pillars));
         section.appendChild(pillarCard);
+
+        /* Résumé exécutif */
+        if (data.resume_executif && data.resume_executif.length > 20) {
+          const resumeCard = el('article', 'card-glass resume-card');
+          resumeCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Résumé exécutif' }));
+          if (data.score_context) {
+            const ctx = el('p', 'resume-card__context', { textContent: data.score_context });
+            resumeCard.appendChild(ctx);
+          }
+          const resumeText = el('p', 'resume-card__text', { textContent: data.resume_executif });
+          resumeCard.appendChild(resumeText);
+          section.appendChild(resumeCard);
+        }
 
         /* 2-col: historique + investor readiness */
         const grid = el('div', 'dashboard-grid-2');
@@ -606,6 +645,55 @@ function buildRoutes(data) {
         recoCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Recommandations prioritaires' }));
         recoCard.appendChild(buildRecommendations(data.recommendations));
         section.appendChild(recoCard);
+
+        /* Prochaine étape fondateur */
+        if (data.next_action_founder_title) {
+          const actionCard = el('article', 'card-glass next-action-card');
+          actionCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Prochaine étape' }));
+          actionCard.appendChild(el('p', 'next-action-card__title', { textContent: data.next_action_founder_title }));
+          if (data.next_action_founder_why) {
+            actionCard.appendChild(el('p', 'next-action-card__why', { textContent: data.next_action_founder_why }));
+          }
+          /* Bloc resubmission */
+          if (data.recommended_resubmission_date || data.resubmission_condition) {
+            const resubBlock = el('div', 'next-action-card__resub');
+            if (data.resubmission_intro) {
+              resubBlock.appendChild(el('p', 'next-action-card__resub-intro', { textContent: data.resubmission_intro }));
+            }
+            if (data.resubmission_condition) {
+              const condRow = el('div', 'next-action-card__resub-row');
+              condRow.appendChild(el('span', 'next-action-card__resub-label', { textContent: 'Condition' }));
+              condRow.appendChild(el('span', '', { textContent: data.resubmission_condition }));
+              resubBlock.appendChild(condRow);
+            }
+            if (data.recommended_resubmission_date) {
+              const dateRow = el('div', 'next-action-card__resub-row');
+              dateRow.appendChild(el('span', 'next-action-card__resub-label', { textContent: 'Fenêtre' }));
+              dateRow.appendChild(el('span', '', { textContent: data.recommended_resubmission_window || data.recommended_resubmission_date }));
+              resubBlock.appendChild(dateRow);
+            }
+            if (data.progression_goal) {
+              const goalRow = el('div', 'next-action-card__resub-row');
+              goalRow.appendChild(el('span', 'next-action-card__resub-label', { textContent: 'Objectif' }));
+              goalRow.appendChild(el('span', '', { textContent: data.progression_goal }));
+              resubBlock.appendChild(goalRow);
+            }
+            actionCard.appendChild(resubBlock);
+          }
+          section.appendChild(actionCard);
+        }
+
+        /* Questions qu'un investisseur poserait */
+        if (data.questions_for_founder_call && data.questions_for_founder_call.length > 0) {
+          const qCard = el('article', 'card-glass questions-card');
+          qCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Questions qu\'un investisseur vous poserait' }));
+          const qList = el('ol', 'questions-card__list');
+          data.questions_for_founder_call.forEach(q => {
+            qList.appendChild(el('li', 'questions-card__item', { textContent: q }));
+          });
+          qCard.appendChild(qList);
+          section.appendChild(qCard);
+        }
 
         /* Bouton téléchargement PDF */
         if (data.has_pdf) {
