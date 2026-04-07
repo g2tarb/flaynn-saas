@@ -70,6 +70,14 @@ export default async function authRoutes(fastify) {
         await pool.query('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = $1', [user.id]);
       }
 
+      // Réconciliation des scores orphelins (comptes créés avant le patch, ou paiement avant inscription)
+      await pool.query(
+        `UPDATE scores SET user_email = $1
+         WHERE user_email IS NULL
+         AND data->'payload'->>'email' = $1`,
+        [user.email]
+      ).catch(err => request.log.warn(err, 'Rattachement scores orphelins au login échoué (non bloquant)'));
+
       // 3. Génération du JWT sécurisé
       const tokens = await fastify.createSessionTokens(user);
       reply.setAuthCookies(tokens);
