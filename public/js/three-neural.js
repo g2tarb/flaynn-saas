@@ -84,6 +84,11 @@ export class FlaynnNeuralBackground {
     this.scrollProgress = 0;
     this._gsapConnected = false;
 
+    // ARCHITECT-PRIME: Scroll velocity + inertie pour warp luxueux
+    this.scrollVelocity = 0;
+    this._lastScrollY = 0;
+    this._scrollWarp = 0; // 0..1, driven by velocity with friction
+
     // Mouse (lerped)
     this.mx = 0;
     this.my = 0;
@@ -104,8 +109,15 @@ export class FlaynnNeuralBackground {
       this._mty = ((e.beta - 45) / 45) * 2;
     };
     this._onScroll = () => {
-      if (this._gsapConnected) return; // GSAP drives scrollProgress
       const top = window.scrollY;
+
+      // ARCHITECT-PRIME: Mesure la velocite de scroll pour l'effet warp inertiel
+      const delta = Math.abs(top - this._lastScrollY);
+      this._lastScrollY = top;
+      // Accumule la velocite (clamped) — sera lissee dans _frame via friction
+      this.scrollVelocity = Math.min(delta / 12, 1);
+
+      if (this._gsapConnected) return; // GSAP drives scrollProgress
       const max = document.documentElement.scrollHeight - window.innerHeight;
       this.scrollProgress = max > 0 ? Math.min(top / max, 1) : 0;
     };
@@ -195,11 +207,21 @@ export class FlaynnNeuralBackground {
     this.mx += (this._mtx - this.mx) * lr;
     this.my += (this._mty - this.my) * lr;
 
+    // ARCHITECT-PRIME: Scroll warp avec friction (inertie luxueuse)
+    // _scrollWarp lerp vers scrollVelocity, puis decay naturel (friction)
+    const targetWarp = this.scrollVelocity;
+    const friction = targetWarp > this._scrollWarp ? 0.12 : 0.04; // Monte vite, redescend lentement
+    this._scrollWarp += (targetWarp - this._scrollWarp) * Math.min(dt * (1 / friction), 1);
+    if (this._scrollWarp < 0.001) this._scrollWarp = 0;
+    // Decay la velocite source pour l'inertie
+    this.scrollVelocity *= Math.max(1 - dt * 3.5, 0);
+
     const scroll = this.scrollProgress;
     const warp = this.warpProgress;
+    const scrollWarp = this._scrollWarp;
 
-    this._drawNebulas(ctx, w, h, warp);
-    this._drawStars(ctx, w, h, scroll, warp);
+    this._drawNebulas(ctx, w, h, warp, scrollWarp);
+    this._drawStars(ctx, w, h, scroll, warp, scrollWarp);
 
     // Warp white-out veil (last 30% of transition)
     if (warp > 0.7) {
@@ -213,7 +235,7 @@ export class FlaynnNeuralBackground {
 
   /* ── Nebula glows ────────────────────────────────────────────────────── */
 
-  _drawNebulas(ctx, w, h, warp) {
+  _drawNebulas(ctx, w, h, warp, scrollWarp = 0) {
     const t = this.time;
     const mx = this.mx;
     const my = this.my;
@@ -225,11 +247,14 @@ export class FlaynnNeuralBackground {
 
     const dim = Math.max(w, h);
 
+    // ARCHITECT-PRIME: scrollWarp amplifie subtilement les nebuleuses
+    const sw = scrollWarp * 0.15;
+
     // 1 — Violet glow (bottom-left)
     const vx = w * 0.15 - mx * 25;
     const vy = h * 0.82 + my * 25;
-    const vr = dim * (0.52 + b1 * 0.06 + warp * 0.35);
-    const va = 0.10 + b1 * 0.04 + warp * 0.18;
+    const vr = dim * (0.52 + b1 * 0.06 + warp * 0.35 + sw);
+    const va = 0.10 + b1 * 0.04 + warp * 0.18 + sw * 0.3;
     const gv = ctx.createRadialGradient(vx, vy, 0, vx, vy, vr);
     gv.addColorStop(0, `rgba(123,45,142,${va})`);
     gv.addColorStop(0.55, `rgba(123,45,142,${va * 0.25})`);
@@ -264,7 +289,7 @@ export class FlaynnNeuralBackground {
 
   /* ── Starfield ───────────────────────────────────────────────────────── */
 
-  _drawStars(ctx, w, h, scroll, warp) {
+  _drawStars(ctx, w, h, scroll, warp, scrollWarp = 0) {
     const t = this.time;
     const mx = this.mx;
     const my = this.my;
@@ -278,7 +303,9 @@ export class FlaynnNeuralBackground {
       const zScale = 1 + scroll * speedZ;
       // Warp: explosive zoom
       const wScale = 1 + warp * warp * speedZ * 14;
-      const totalScale = zScale * wScale;
+      // ARCHITECT-PRIME: scrollWarp — boost subtil au scroll rapide (inertie)
+      const sWarpScale = 1 + scrollWarp * speedZ * 1.8;
+      const totalScale = zScale * wScale * sWarpScale;
 
       // Mouse parallax offset
       const px = -mx * mousePx * w;
@@ -307,9 +334,9 @@ export class FlaynnNeuralBackground {
         let r = s.r * totalScale;
         let alpha = s.a * twinkle;
 
-        // Warp intensity
-        alpha = Math.min(alpha + warp * 0.5, 1);
-        r = Math.min(r + warp * speedZ * 4, 10);
+        // Warp intensity + scroll warp glow
+        alpha = Math.min(alpha + warp * 0.5 + scrollWarp * 0.15, 1);
+        r = Math.min(r + warp * speedZ * 4 + scrollWarp * speedZ * 0.8, 10);
 
         if (r < 0.1 || alpha < 0.01) continue;
 

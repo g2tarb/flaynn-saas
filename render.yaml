@@ -3,15 +3,41 @@
 services:
   - type: web
     name: flaynn-api
-    env: node
-    buildCommand: cd flaynn-api && npm install
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: cd flaynn-api && npm ci --omit=dev
     startCommand: cd flaynn-api && npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
-        value: 22.0.0
+        value: "22"
       - key: NODE_ENV
         value: production
-      - key: CORS_ORIGIN
+      # ARCHITECT-PRIME: secrets geres via le dashboard Render (sync: false)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: flaynn-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: STRIPE_SECRET_KEY
         sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: APP_URL
+        value: https://flaynn.tech
+      - key: CORS_ORIGIN
+        value: https://flaynn.tech
       - key: N8N_WEBHOOK_URL
         sync: false
+      - key: N8N_SECRET_TOKEN
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+databases:
+  - name: flaynn-db
+    plan: starter
+    region: frankfurt
+    postgresMajorVersion: "16"

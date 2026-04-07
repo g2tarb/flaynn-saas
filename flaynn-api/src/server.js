@@ -167,23 +167,6 @@ export const start = async () => {
       return { status: 'ok', db: dbStatus, version: '1.0.0' };
     });
 
-    // 👇 AJOUT STRIPE ÉTAPE 3 👇
-    // IMPORTANT : Le parser RAW doit être défini avant les routes
-    await fastify.addContentTypeParser(
-      'application/json',
-      { parseAs: 'buffer' },
-      function (req, body, done) {
-        // Stocke le raw body pour la vérification de signature Stripe
-        req.rawBody = body;
-        try {
-          done(null, JSON.parse(body));
-        } catch (err) {
-          done(err);
-        }
-      }
-    );
-    // 👆 FIN AJOUT 👆
-
     fastify.log.info(`[ARCHITECT-PRIME] Enregistrement des routes...`);
     await fastify.register(scoringRoutes);
     await fastify.register(dashboardApiRoutes);

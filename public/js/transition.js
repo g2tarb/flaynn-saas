@@ -3,7 +3,7 @@
  *
  * Intercepte tous les liens internes, joue une animation iris (clip-path circle)
  * avec l'icone Flaynn au centre, puis redirige. Au DOMContentLoaded, l'animation
- * inverse revele la page.
+ * inverse revele la page avec un effet de profondeur Z (scale 1.04 -> 1).
  *
  * Utilise GSAP si disponible (tier 2+), sinon fallback Web Animations API.
  * Ne casse pas le smooth scroll (liens #hash exclus).
@@ -30,12 +30,18 @@ function isInternalLink(link) {
   } catch { return false; }
 }
 
+/** ARCHITECT-PRIME: Cible le <main> ou le premier conteneur de contenu */
+function getPageContent() {
+  return document.querySelector('main') || document.querySelector('.page') || document.body;
+}
+
 // ── Animation OUT (page exit) ────────────────────────────────────────────────
 
 function animateOut(targetUrl) {
   if (!overlay) { window.location.href = targetUrl; return; }
 
   overlay.classList.add('is-active');
+  const content = getPageContent();
 
   // GSAP path (preferred)
   if (window.gsap) {
@@ -43,11 +49,20 @@ function animateOut(targetUrl) {
       onComplete: () => { window.location.href = targetUrl; }
     });
 
-    tl.to(overlay, {
+    // ARCHITECT-PRIME: Le contenu recule dans la profondeur avant l'iris
+    tl.to(content, {
+      scale: 0.96,
+      opacity: 0.4,
+      filter: 'blur(4px)',
+      duration: DURATION_OUT * 0.7,
+      ease: 'power3.in',
+      transformOrigin: '50% 50%'
+    }, 0)
+    .to(overlay, {
       clipPath: 'circle(120% at 50% 50%)',
       duration: DURATION_OUT,
       ease: EASE_OUT
-    })
+    }, 0.05)
     .to(wing, {
       opacity: 1,
       scale: 1,
@@ -68,6 +83,14 @@ function animateOut(targetUrl) {
   }
 
   // Fallback: Web Animations API
+  content.animate(
+    [
+      { transform: 'scale(1)', opacity: 1, filter: 'blur(0px)' },
+      { transform: 'scale(0.96)', opacity: 0.4, filter: 'blur(4px)' }
+    ],
+    { duration: DURATION_OUT * 700, easing: 'cubic-bezier(0.55, 0, 1, 0.45)', fill: 'forwards' }
+  );
+
   overlay.animate(
     [
       { clipPath: 'circle(0% at 50% 50%)' },
@@ -89,7 +112,7 @@ function animateOut(targetUrl) {
   setTimeout(() => { window.location.href = targetUrl; }, DURATION_OUT * 1000 + 50);
 }
 
-// ── Animation IN (page reveal) ──────────────────────────────────────────────
+// ── Animation IN (page reveal — profondeur Z) ─────────────────────────────
 
 function animateIn() {
   if (!overlay) return;
@@ -102,15 +125,23 @@ function animateIn() {
     wing.style.transform = 'scale(1)';
   }
 
+  // ARCHITECT-PRIME: Le contenu commence agrandi (profondeur Z) et atterrit a scale(1)
+  const content = getPageContent();
+  content.style.transform = 'scale(1.04)';
+  content.style.opacity = '0';
+  content.style.willChange = 'transform, opacity';
+
   if (window.gsap) {
     const tl = window.gsap.timeline({
       onComplete: () => {
         overlay.classList.remove('is-active');
         overlay.style.clipPath = 'circle(0% at 50% 50%)';
         if (wing) { wing.style.opacity = '0'; wing.style.transform = 'scale(0.7)'; wing.style.filter = ''; }
+        content.style.willChange = '';
       }
     });
 
+    // Phase 1 : l'iris se retire + le wing disparait
     tl.to(wing, {
       opacity: 0,
       scale: 0.6,
@@ -121,7 +152,15 @@ function animateIn() {
       clipPath: 'circle(0% at 50% 50%)',
       duration: DURATION_IN,
       ease: EASE_IN
-    }, 0.1);
+    }, 0.1)
+    // Phase 2 : le contenu atterrit en douceur (ouverture App iOS)
+    .to(content, {
+      scale: 1,
+      opacity: 1,
+      duration: 0.7,
+      ease: 'power4.out',
+      transformOrigin: '50% 50%'
+    }, 0.15);
 
     return;
   }
@@ -144,6 +183,19 @@ function animateIn() {
     overlay.classList.remove('is-active');
     overlay.style.clipPath = 'circle(0% at 50% 50%)';
     if (wing) { wing.style.opacity = '0'; wing.style.transform = 'scale(0.7)'; }
+  };
+
+  // ARCHITECT-PRIME: Fallback profondeur Z via Web Animations API
+  content.animate(
+    [
+      { transform: 'scale(1.04)', opacity: 0 },
+      { transform: 'scale(1)', opacity: 1 }
+    ],
+    { duration: 700, delay: 150, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+  ).onfinish = () => {
+    content.style.transform = '';
+    content.style.opacity = '';
+    content.style.willChange = '';
   };
 }
 

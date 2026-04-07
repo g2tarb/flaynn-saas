@@ -46,8 +46,23 @@ export default async function stripeRoutes(fastify) {
 
   // Initialisation de Stripe DOIT être dans la fonction pour garantir que dotenv a chargé les variables
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2023-10-16', // Garde une version API stable
+    apiVersion: '2023-10-16',
   });
+
+  // ARCHITECT-PRIME: Capture rawBody UNIQUEMENT pour le webhook Stripe (pas globalement)
+  // Le content type parser scopé au plugin intercepte le JSON brut pour la verification de signature
+  fastify.addContentTypeParser(
+    'application/json',
+    { parseAs: 'buffer' },
+    function (req, body, done) {
+      req.rawBody = body;
+      try {
+        done(null, JSON.parse(body));
+      } catch (err) {
+        done(err);
+      }
+    }
+  );
 
   // 1. ENDPOINT DE CHECKOUT : Reçoit le formulaire, enregistre en base, redirige vers Stripe
   fastify.post('/api/checkout', {

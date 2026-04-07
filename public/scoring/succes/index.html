@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Scoring confirmé — Flaynn</title>
+  <title>Scoring confirme — Flaynn</title>
+  <meta name="theme-color" content="#030407">
+  <meta name="color-scheme" content="dark">
   <link rel="icon" href="/icons/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,6 +28,7 @@
       --gradient:    linear-gradient(135deg, #7B2D8E 0%, #C13584 40%, #E8651A 100%);
     }
 
+    html { background: var(--void); }
     html, body {
       min-height: 100vh;
       min-height: 100dvh;
@@ -35,7 +38,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Starfield ── */
+    /* Starfield */
     .starfield {
       position: fixed;
       inset: 0;
@@ -43,12 +46,9 @@
       pointer-events: none;
       overflow: hidden;
     }
-    .starfield svg {
-      width: 100%;
-      height: 100%;
-    }
+    .starfield svg { width: 100%; height: 100%; }
 
-    /* ── Layout ── */
+    /* Layout */
     .page {
       position: relative;
       z-index: 1;
@@ -63,7 +63,7 @@
       padding-bottom: calc(48px + env(safe-area-inset-bottom));
     }
 
-    /* ── Logo ── */
+    /* Logo */
     .logo {
       display: flex;
       align-items: center;
@@ -71,10 +71,7 @@
       margin-bottom: 48px;
       text-decoration: none;
     }
-    .logo img {
-      height: 28px;
-      width: auto;
-    }
+    .logo img { height: 28px; width: auto; }
     .logo-text {
       font-size: 20px;
       font-weight: 700;
@@ -82,7 +79,7 @@
       letter-spacing: -0.02em;
     }
 
-    /* ── Card principale ── */
+    /* Card */
     .card {
       width: 100%;
       max-width: 560px;
@@ -95,7 +92,7 @@
       text-align: center;
     }
 
-    /* ── Icone succes ── */
+    /* Success icon */
     .success-icon {
       width: 72px;
       height: 72px;
@@ -106,14 +103,19 @@
       align-items: center;
       justify-content: center;
       margin: 0 auto 24px;
+      animation: icon-enter 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
     }
     .success-icon svg {
       width: 32px;
       height: 32px;
       stroke: #10B981;
     }
+    @keyframes icon-enter {
+      0% { opacity: 0; transform: scale(0.5); }
+      100% { opacity: 1; transform: scale(1); }
+    }
 
-    /* ── Reference ── */
+    /* Reference badge */
     .ref-badge {
       display: inline-flex;
       align-items: center;
@@ -148,7 +150,6 @@
       color: var(--text-1);
     }
 
-    /* ── Titre ── */
     h1 {
       font-size: 28px;
       font-weight: 700;
@@ -163,7 +164,7 @@
       margin-bottom: 40px;
     }
 
-    /* ── Steps timeline ── */
+    /* Steps timeline */
     .timeline {
       display: flex;
       flex-direction: column;
@@ -204,14 +205,17 @@
     .timeline-icon.active {
       background: rgba(123,45,142,0.12);
       border: 1px solid rgba(123,45,142,0.25);
+      animation: icon-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes icon-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(123,45,142,0.3); }
+      50% { box-shadow: 0 0 0 8px rgba(123,45,142,0); }
     }
     .timeline-icon.pending {
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
     }
-    .timeline-body {
-      padding: 10px 0 28px;
-    }
+    .timeline-body { padding: 10px 0 28px; }
     .timeline-title {
       font-size: 14px;
       font-weight: 600;
@@ -224,7 +228,7 @@
       line-height: 1.55;
     }
 
-    /* ── Info email ── */
+    /* Email banner */
     .email-banner {
       background: rgba(123,45,142,0.08);
       border: 1px solid rgba(123,45,142,0.18);
@@ -253,30 +257,7 @@
       font-weight: 600;
     }
 
-    /* ── CTA ── */
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      background: var(--gradient);
-      color: #fff;
-      font-family: 'IBM Plex Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      text-decoration: none;
-      transition: opacity 0.2s, transform 0.2s;
-      width: 100%;
-      justify-content: center;
-      margin-bottom: 12px;
-      min-height: 44px;
-    }
-    .btn-primary:hover { opacity: 0.92; transform: scale(1.01); }
-    .btn-primary:active { transform: scale(0.98); }
-
+    /* CTA */
     .btn-ghost {
       display: inline-flex;
       align-items: center;
@@ -286,19 +267,20 @@
       color: var(--text-2);
       font-family: 'IBM Plex Sans', sans-serif;
       font-size: 13px;
-      font-weight: 400;
+      font-weight: 500;
       border: 1px solid var(--border);
       border-radius: 12px;
       cursor: pointer;
       text-decoration: none;
-      transition: border-color 0.2s, color 0.2s;
+      transition: border-color 0.2s, color 0.2s, transform 0.2s;
       width: 100%;
       justify-content: center;
       min-height: 44px;
     }
-    .btn-ghost:hover { border-color: rgba(255,255,255,0.15); color: var(--text-1); }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.15); color: var(--text-1); transform: translateY(-1px); }
+    .btn-ghost:active { transform: scale(0.98); }
 
-    /* ── Footer ── */
+    /* Footer */
     .footer {
       margin-top: 32px;
       font-size: 12px;
@@ -307,9 +289,10 @@
     }
     .footer a { color: var(--text-3); text-decoration: underline; }
 
-    /* ── Reduced motion ── */
+    /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
-      .ref-dot { animation: none; }
+      .ref-dot, .timeline-icon.active { animation: none; }
+      .success-icon { animation: none; }
     }
 
     @media (max-width: 600px) {
@@ -413,8 +396,8 @@
 
       <h1>Votre dossier est entre nos mains.</h1>
       <p class="subtitle">
-        Paiement confirme. Votre startup est maintenant en file d'analyse.
-        Notre comite vous rendra un verdict complet dans les 24 heures.
+        Paiement confirme. Votre startup est maintenant en file d'analyse par
+        Flaynn Intelligence. Vous recevrez votre acces securise par email d'ici 24h.
       </p>
 
       <div class="timeline">
@@ -436,7 +419,7 @@
           <div class="timeline-icon pending" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg></div>
           <div class="timeline-body">
             <div class="timeline-title">Email de resultat sous 24h</div>
-            <div class="timeline-desc">Vous recevrez votre scoring complet + une invitation a creer votre espace fondateur pour acceder au rapport PDF et suivre votre progression.</div>
+            <div class="timeline-desc">Vous recevrez votre scoring complet et un lien securise pour creer votre espace fondateur et acceder a votre rapport detaille.</div>
           </div>
         </div>
         <div class="timeline-item">
@@ -454,16 +437,14 @@
           <polyline points="2,4 12,13 22,4"/>
         </svg>
         <div class="email-banner-text">
-          Un email vous sera envoye a <strong id="email-display">votre adresse</strong>
-          avec votre scoring detaille et un lien pour creer votre espace fondateur.
+          Un email sera envoye a <strong id="email-display">votre adresse</strong>
+          avec votre scoring detaille et un lien securise pour creer votre espace fondateur.
           Pensez a verifier vos spams.
         </div>
       </div>
 
-      <a href="/auth/" class="btn-primary" id="cta-primary">
-        Creer mon espace fondateur <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:4px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-      </a>
       <a href="/" class="btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M13 8H3M7 4l-4 4 4 4"/></svg>
         Retour a l'accueil
       </a>
 
@@ -476,11 +457,11 @@
   </main>
 
   <script>
-    // ARCHITECT-PRIME: deux sources possibles — session_id (depuis Stripe) ou ref/email directs (depuis email)
-    const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get('session_id');
-    const directRef = params.get('ref');
-    const directEmail = params.get('email');
+    // ARCHITECT-PRIME: deux sources possibles — session_id (depuis Stripe) ou ref/email directs
+    var params = new URLSearchParams(window.location.search);
+    var sessionId = params.get('session_id');
+    var directRef = params.get('ref');
+    var directEmail = params.get('email');
 
     function applyData(ref, email) {
       if (ref) {
@@ -491,28 +472,16 @@
       if (email) {
         document.getElementById('email-display').textContent = decodeURIComponent(email);
       }
-      // CTA dynamique : redirige vers /auth/ avec email + ref pre-remplis
-      var cta = document.getElementById('cta-primary');
-      if (cta && (ref || email)) {
-        var qs = [];
-        if (email) qs.push('email=' + encodeURIComponent(email));
-        if (ref) qs.push('ref=' + encodeURIComponent(ref));
-        cta.href = '/auth/?' + qs.join('&');
-      }
     }
 
     if (sessionId) {
-      // Flow Stripe : on recupere ref + email depuis la session
       fetch('/api/checkout/session/' + encodeURIComponent(sessionId))
         .then(function(r) { return r.json(); })
         .then(function(data) {
           applyData(data.reference || '', data.email || '');
         })
-        .catch(function() {
-          // Fallback silencieux — la page reste lisible sans les donnees
-        });
+        .catch(function() { /* Fallback silencieux */ });
     } else if (directRef || directEmail) {
-      // Flow direct (lien email, debug)
       applyData(directRef || '', directEmail || '');
     }
   </script>
