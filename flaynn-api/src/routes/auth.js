@@ -220,6 +220,39 @@ export default async function authRoutes(fastify) {
     });
   });
 
+  // ARCHITECT-PRIME: suppression complète du compte utilisateur + données associées
+  fastify.delete('/api/auth/account', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    try {
+      const email = request.user.email;
+
+      // 1. Supprime les scores liés
+      await pool.query('DELETE FROM scores WHERE user_email = $1', [email]);
+
+      // 2. Révoque tous les refresh tokens
+      await pool.query(
+        'UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_email = $1 AND revoked_at IS NULL',
+        [email]
+      );
+
+      // 3. Supprime l'utilisateur (CASCADE supprimera aussi les refresh_tokens via FK)
+      await pool.query('DELETE FROM users WHERE email = $1', [email]);
+
+      // 4. Clear les cookies de session
+      reply.clearAuthCookies();
+
+      return reply.code(200).send({ success: true, message: 'Compte supprimé.' });
+    } catch (err) {
+      if (isDbUnavailableError(err)) {
+        request.log.error({ err }, 'auth_delete_account_db_unavailable');
+        return reply.code(503).send(SERVICE_UNAVAILABLE_BODY);
+      }
+      request.log.error(err);
+      return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Erreur interne du serveur.' });
+    }
+  });
+
   fastify.post('/api/auth/logout', async (request, reply) => {
     try {
       await fastify.revokeRefreshToken(request.cookies?.flaynn_rt);

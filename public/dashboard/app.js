@@ -816,9 +816,9 @@ function buildRoutes(data) {
         /* TAM / SAM / SOM */
         const statsGrid = el('div', 'market-stats-grid');
         const marketDefs = [
-          { label: 'TAM — Marché total',     value: data.market.tam, sub: 'Marché global adressable' },
-          { label: 'SAM — Marché accessible', value: data.market.sam, sub: 'Votre segment cible réaliste' },
-          { label: 'SOM — Part atteignable',  value: data.market.som, sub: 'Objectif 3 ans (5% SAM)' },
+          { label: 'TAM — Marché total',     value: data.market?.tam || '—', sub: 'Marché global adressable' },
+          { label: 'SAM — Marché accessible', value: data.market?.sam || '—', sub: 'Votre segment cible réaliste' },
+          { label: 'SOM — Part atteignable',  value: data.market?.som || '—', sub: 'Objectif 3 ans (5% SAM)' },
         ];
         marketDefs.forEach((m, idx) => {
           const card = el('article', 'card-glass market-stat-card');
@@ -962,7 +962,24 @@ function initTopbar(auth) {
     userBtn.appendChild(avatar);
     userBtn.appendChild(nameSpan);
     userBtn.appendChild(listBtn);
+    const deleteBtn = el('button', 'dashboard-logout-btn', { type: 'button' });
+    deleteBtn.textContent = 'Supprimer mon compte';
+    deleteBtn.style.background = 'var(--accent-rose)';
+    deleteBtn.addEventListener('click', async () => {
+      if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) return;
+      try {
+        const res = await fetch('/api/auth/account', { method: 'DELETE', credentials: 'same-origin' });
+        if (res.ok) {
+          clearAuth();
+          window.location.replace('/');
+        }
+      } catch {
+        /* Fallback silencieux */
+      }
+    });
+
     userBtn.appendChild(logoutBtn);
+    userBtn.appendChild(deleteBtn);
     topbar.appendChild(userBtn);
   } else {
     const demoTag = el('span', 'hero-badge', { textContent: '● Mode démo' });
