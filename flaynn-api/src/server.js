@@ -17,9 +17,7 @@ import scoringRoutes from './routes/scoring.js';
 import dashboardApiRoutes from './routes/dashboard-api.js';
 import authRoutes from './routes/auth.js';
 import webhookRoutes from './routes/webhooks.js';
-// 👇 AJOUT STRIPE ÉTAPE 3 👇
 import stripeRoutes from './routes/stripe.js';
-// 👆 FIN AJOUT 👆
 import { initDB, pool } from './config/db.js';
 import authPlugin from './plugins/auth.js';
 import deviceDetect from './plugins/device-detect.js';
@@ -43,11 +41,9 @@ const envSchema = z.object({
   LOAD_TEST: z.enum(['true', 'false']).default('false'),
   GOOGLE_SHEETS_WEBHOOK_URL: z.string().url().startsWith('https://script.google.com/').optional(),
   CORS_ORIGIN: z.string().optional(),
-  // 👇 AJOUT STRIPE ÉTAPE 4 👇
-  STRIPE_SECRET_KEY: z.string().startsWith('sk_').min(20),
-  STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(), // optionnel en dev
+  STRIPE_SECRET_KEY: z.string().startsWith('sk_').min(20).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().startsWith('whsec_').optional(),
   APP_URL: z.string().url().default('https://flaynn.tech')
-  // 👆 FIN AJOUT 👆
 });
 
 let env;
@@ -172,9 +168,7 @@ export const start = async () => {
     await fastify.register(dashboardApiRoutes);
     await fastify.register(authRoutes);
     await fastify.register(webhookRoutes);
-    // 👇 AJOUT STRIPE ÉTAPE 3 👇
     await fastify.register(stripeRoutes);
-    // 👆 FIN AJOUT 👆
 
     fastify.log.info(`[ARCHITECT-PRIME] Montage du dossier statique : ${siteRoot}`);
     await fastify.register(fastifyStatic, {

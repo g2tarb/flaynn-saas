@@ -153,7 +153,6 @@ export default async function authRoutes(fastify) {
       );
       const user = insert.rows[0];
 
-      // 👇 AJOUT DE LA RÉCONCILIATION DE COMPTE ICI 👇
       // Rattache les scorings soumis avant la création du compte (user_email = NULL, email dans le payload)
       await pool.query(
         `UPDATE scores SET user_email = $1
@@ -161,7 +160,6 @@ export default async function authRoutes(fastify) {
          AND data->'payload'->>'email' = $1`,
         [user.email]
       ).catch(err => request.log.warn(err, 'Rattachement scores orphelins échoué (non bloquant)'));
-      // 👆 FIN DE L'AJOUT 👆
 
       const tokens = await fastify.createSessionTokens(user);
       reply.setAuthCookies(tokens);
@@ -224,32 +222,40 @@ export default async function authRoutes(fastify) {
   fastify.delete('/api/auth/account', {
     onRequest: [fastify.authenticate]
   }, async (request, reply) => {
+    const client = await pool.connect();
     try {
       const email = request.user.email;
 
+      await client.query('BEGIN');
+
       // 1. Supprime les scores liés
-      await pool.query('DELETE FROM scores WHERE user_email = $1', [email]);
+      await client.query('DELETE FROM scores WHERE user_email = $1', [email]);
 
       // 2. Révoque tous les refresh tokens
-      await pool.query(
+      await client.query(
         'UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_email = $1 AND revoked_at IS NULL',
         [email]
       );
 
       // 3. Supprime l'utilisateur (CASCADE supprimera aussi les refresh_tokens via FK)
-      await pool.query('DELETE FROM users WHERE email = $1', [email]);
+      await client.query('DELETE FROM users WHERE email = $1', [email]);
+
+      await client.query('COMMIT');
 
       // 4. Clear les cookies de session
       reply.clearAuthCookies();
 
       return reply.code(200).send({ success: true, message: 'Compte supprimé.' });
     } catch (err) {
+      try { await client.query('ROLLBACK'); } catch { /* rollback best-effort */ }
       if (isDbUnavailableError(err)) {
         request.log.error({ err }, 'auth_delete_account_db_unavailable');
         return reply.code(503).send(SERVICE_UNAVAILABLE_BODY);
       }
       request.log.error(err);
       return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Erreur interne du serveur.' });
+    } finally {
+      client.release();
     }
   });
 

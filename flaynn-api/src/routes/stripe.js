@@ -3,46 +3,14 @@ import { randomBytes } from 'node:crypto';
 import Stripe from 'stripe';
 import { n8nBridge } from '../services/n8n-bridge.js';
 import { pool } from '../config/db.js';
-
-// On réutilise le même schéma de validation que pour le scoring initial
-const ScoreSubmissionSchema = z.object({
-  previous_ref: z.string().trim().max(50).optional(),
-  nom_fondateur: z.string().trim().min(2).max(100),
-  email: z.string().email().max(254),
-  pays: z.string().trim().min(2).max(100),
-  ville: z.string().trim().min(2).max(100),
-  nom_startup: z.string().trim().min(2).max(100).regex(/^[\p{L}\p{N}\s\-'.&]+$/u),
-  pitch_une_phrase: z.string().trim().min(10).max(300),
-  probleme: z.string().trim().min(30).max(2000),
-  solution: z.string().trim().min(30).max(2000),
-  secteur: z.enum([
-    'fintech', 'healthtech', 'saas', 'marketplace', 'deeptech',
-    'greentech', 'edtech', 'proptech', 'legaltech', 'foodtech', 'other'
-  ]),
-  type_client: z.enum(['b2b', 'b2c', 'b2b2c', 'b2g', 'other']),
-  tam_usd: z.enum(['<1M', '1M-10M', '10M-100M', '100M-1B', '>1B']),
-  estimation_tam: z.string().trim().min(5).max(500),
-  acquisition_clients: z.string().trim().min(20).max(2000),
-  concurrents: z.string().trim().min(20).max(2000),
-  stade: z.enum(['idea', 'mvp', 'seed', 'serieA', 'serieB_plus']),
-  revenus: z.enum(['oui', 'non']),
-  mrr: z.number().nonnegative().max(100_000_000).optional(),
-  clients_payants: z.number().int().nonnegative().max(1_000_000).optional(),
-  pourquoi_vous: z.string().trim().min(20).max(2000),
-  equipe_temps_plein: z.enum(['oui', 'non']),
-  priorite_6_mois: z.enum([
-    'produit', 'croissance', 'recrutement', 'levee', 'rentabilite', 'international', 'other'
-  ]),
-  montant_leve: z.string().trim().min(1).max(100),
-  jalons_18_mois: z.string().trim().min(20).max(2000),
-  utilisation_fonds: z.string().trim().min(20).max(2000),
-  vision_5_ans: z.string().trim().min(20).max(2000),
-  pitch_deck_base64: z.string().max(15_000_000).optional(),
-  pitch_deck_filename: z.string().max(200).optional(),
-  doc_supplementaire_url: z.string().url().max(500).optional(),
-}).strip();
+import { ScoreSubmissionSchema } from '../schemas/scoring.js';
 
 export default async function stripeRoutes(fastify) {
+
+  if (!process.env.STRIPE_SECRET_KEY) {
+    fastify.log.warn('[ARCHITECT-PRIME] STRIPE_SECRET_KEY absent — routes Stripe désactivées.');
+    return;
+  }
 
   // Initialisation de Stripe DOIT être dans la fonction pour garantir que dotenv a chargé les variables
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
@@ -66,7 +34,8 @@ export default async function stripeRoutes(fastify) {
 
   // 1. ENDPOINT DE CHECKOUT : Reçoit le formulaire, enregistre en base, redirige vers Stripe
   fastify.post('/api/checkout', {
-    config: { rateLimit: { max: 5, timeWindow: '1 minute' } }
+    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
+    bodyLimit: 16 * 1024 * 1024
   }, async (request, reply) => {
     try {
       const parsed = ScoreSubmissionSchema.parse(request.body);
@@ -149,11 +118,22 @@ export default async function stripeRoutes(fastify) {
 
 
   // 2. ENDPOINT SESSION : Récupère référence et email depuis une session Stripe
-  fastify.get('/api/checkout/session/:sessionId', async (request, reply) => {
-    const session = await stripe.checkout.sessions.retrieve(request.params.sessionId);
-    const reference = session.metadata?.reference || '';
-    const email = session.customer_email || '';
-    return reply.send({ reference, email });
+  fastify.get('/api/checkout/session/:sessionId', {
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const sessionId = request.params.sessionId;
+    if (!sessionId || sessionId.length > 200 || !/^cs_/.test(sessionId)) {
+      return reply.code(400).send({ error: 'INVALID_SESSION', message: 'Identifiant de session invalide.' });
+    }
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const reference = session.metadata?.reference || '';
+      const email = session.customer_email || '';
+      return reply.send({ reference, email });
+    } catch (err) {
+      request.log.warn({ err: err.message }, 'Erreur récupération session Stripe');
+      return reply.code(404).send({ error: 'NOT_FOUND', message: 'Session introuvable.' });
+    }
   });
 
   // 3. ENDPOINT WEBHOOK : Écoute Stripe en arrière-plan pour valider le paiement

@@ -229,7 +229,8 @@ export default async function dashboardApiRoutes(fastify) {
       }
 
       const pdfBuffer = Buffer.from(JSON.parse(rows[0].pdf), 'base64');
-      const filename = `Flaynn-Scoring-${rows[0].startup_name || parsed.data}.pdf`;
+      const rawName = (rows[0].startup_name || parsed.data).replace(/[^\w\s\-'.]/g, '_');
+      const filename = `Flaynn-Scoring-${rawName}.pdf`;
 
       return reply
         .header('Content-Type', 'application/pdf')

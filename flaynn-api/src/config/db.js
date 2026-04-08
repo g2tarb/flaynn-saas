@@ -39,6 +39,9 @@ export async function initDB(logger) {
 
       CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_email
       ON refresh_tokens(user_email);
+
+      CREATE INDEX IF NOT EXISTS idx_scores_user_email
+      ON scores(user_email);
     `);
     logger.info('[ARCHITECT-PRIME] PostgreSQL : Tables "users", "scores" et "refresh_tokens" synchronisées et prêtes.');
   } catch (err) {

@@ -1036,9 +1036,9 @@ function initLiveScoring() {
   }
 
   function getScoreLabel(score) {
-    if (score >= 85) return 'Tres fort potentiel';
-    if (score >= 70) return 'Potentiel eleve';
-    if (score >= 55) return 'Potentiel confirme';
+    if (score >= 85) return 'Très fort potentiel';
+    if (score >= 70) return 'Potentiel élevé';
+    if (score >= 55) return 'Potentiel confirmé';
     return 'En progression';
   }
 

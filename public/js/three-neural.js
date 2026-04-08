@@ -119,7 +119,7 @@ export class FlaynnNeuralBackground {
       const top = window.scrollY;
       const delta = Math.abs(top - this._lastScrollY);
       this._lastScrollY = top;
-      this.scrollVelocity = Math.min(delta / 10, 1);
+      this.scrollVelocity = Math.min(delta / 15, 0.6);
 
       if (this._gsapConnected) return;
       const max = document.documentElement.scrollHeight - window.innerHeight;
@@ -212,10 +212,10 @@ export class FlaynnNeuralBackground {
 
     // Scroll warp avec friction (inertie luxueuse)
     const targetWarp = this.scrollVelocity;
-    const friction = targetWarp > this._scrollWarp ? 0.10 : 0.03;
+    const friction = targetWarp > this._scrollWarp ? 0.15 : 0.03;
     this._scrollWarp += (targetWarp - this._scrollWarp) * Math.min(dt * (1 / friction), 1);
     if (this._scrollWarp < 0.001) this._scrollWarp = 0;
-    this.scrollVelocity *= Math.max(1 - dt * 2.8, 0);
+    this.scrollVelocity *= Math.max(1 - dt * 5, 0);
 
     const scroll = this.scrollProgress;
     const warp = this.warpProgress;
@@ -322,7 +322,7 @@ export class FlaynnNeuralBackground {
       // Warp: explosive zoom
       const wScale = 1 + warp * warp * speedZ * 18;
       // Scroll velocity warp (inertie)
-      const sWarpScale = 1 + scrollWarp * speedZ * 2.5;
+      const sWarpScale = 1 + scrollWarp * speedZ * 1.5;
       const totalScale = zScale * wScale * sWarpScale;
 
       // ARCHITECT-PRIME: Mouse parallax amplifie (facteur 2.5x)

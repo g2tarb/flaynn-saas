@@ -501,6 +501,27 @@ function buildRoutes(data) {
             grid.appendChild(card);
           });
           section.appendChild(grid);
+
+          /* Zone compte — suppression (deplacee depuis la topbar pour eviter l'encombrement mobile) */
+          const dangerZone = el('div', 'dashboard-danger-zone');
+          dangerZone.style.cssText = 'margin-top:var(--space-10);padding-top:var(--space-6);border-top:1px solid var(--border-subtle)';
+          const dangerTitle = el('p', 'dashboard-meta', { textContent: 'Zone de danger' });
+          dangerTitle.style.marginBottom = 'var(--space-3)';
+          const deleteBtn = el('button', 'dashboard-logout-btn', { type: 'button' });
+          deleteBtn.textContent = 'Supprimer mon compte';
+          deleteBtn.style.color = 'var(--accent-rose)';
+          deleteBtn.style.borderColor = 'rgba(244, 63, 94, 0.3)';
+          deleteBtn.addEventListener('click', async () => {
+            if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) return;
+            try {
+              const res = await fetch('/api/auth/account', { method: 'DELETE', credentials: 'same-origin' });
+              if (res.ok) { clearAuth(); window.location.replace('/'); }
+            } catch { /* silencieux */ }
+          });
+          dangerZone.appendChild(dangerTitle);
+          dangerZone.appendChild(deleteBtn);
+          section.appendChild(dangerZone);
+
           root.appendChild(section);
           return;
         }
@@ -962,24 +983,7 @@ function initTopbar(auth) {
     userBtn.appendChild(avatar);
     userBtn.appendChild(nameSpan);
     userBtn.appendChild(listBtn);
-    const deleteBtn = el('button', 'dashboard-logout-btn', { type: 'button' });
-    deleteBtn.textContent = 'Supprimer mon compte';
-    deleteBtn.style.background = 'var(--accent-rose)';
-    deleteBtn.addEventListener('click', async () => {
-      if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) return;
-      try {
-        const res = await fetch('/api/auth/account', { method: 'DELETE', credentials: 'same-origin' });
-        if (res.ok) {
-          clearAuth();
-          window.location.replace('/');
-        }
-      } catch {
-        /* Fallback silencieux */
-      }
-    });
-
     userBtn.appendChild(logoutBtn);
-    userBtn.appendChild(deleteBtn);
     topbar.appendChild(userBtn);
   } else {
     const demoTag = el('span', 'hero-badge', { textContent: '● Mode démo' });
