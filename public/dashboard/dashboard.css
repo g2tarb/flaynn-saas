@@ -12,6 +12,7 @@
 .dashboard-topbar .nav-content {
   overflow: hidden;
   max-width: 100%;
+  flex-wrap: wrap;
 }
 
 .dashboard-topbar .logo-container {
@@ -29,6 +30,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: calc(100vw - 120px);
+}
+
+/* Conteneur des boutons topbar — empêche le débordement sur mobile */
+.dashboard-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 @media (min-width: 768px) {
@@ -162,6 +173,7 @@
   justify-content: center;
   align-items: center;
   min-height: 260px;
+  width: 100%;
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
   border: 1px solid var(--border-subtle);
