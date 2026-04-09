@@ -2919,19 +2919,35 @@
 ───────────────────────────────────────── */
 @layer components {
   .mini-scoring {
-    max-width: 560px;
+    max-width: 640px;
     margin-top: var(--space-6);
+  }
+
+  .mini-scoring__hint {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #E8651A;
+    margin-bottom: 8px;
   }
 
   .mini-scoring__input-wrap {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px;
+    padding: 8px;
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(123,45,142,0.3);
+    background: rgba(255,255,255,0.05);
     backdrop-filter: blur(8px);
+    box-shadow: 0 0 30px rgba(123,45,142,0.15), 0 0 60px rgba(123,45,142,0.05);
+    animation: scoring-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes scoring-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(123,45,142,0.1); }
+    50% { box-shadow: 0 0 40px rgba(123,45,142,0.2), 0 0 80px rgba(123,45,142,0.05); }
   }
 
   .mini-scoring__input {
@@ -2940,17 +2956,17 @@
     border: none;
     outline: none;
     color: var(--text-primary);
-    font-size: 0.9375rem;
-    padding: 10px 14px;
+    font-size: 1rem;
+    padding: 14px 18px;
     font-family: var(--font-body);
   }
 
   .mini-scoring__input::placeholder { color: rgba(255,255,255,0.25); }
 
   .mini-scoring__btn {
-    padding: 10px 20px;
+    padding: 14px 24px;
     border-radius: 12px;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     font-weight: 600;
     white-space: nowrap;
     display: flex;
