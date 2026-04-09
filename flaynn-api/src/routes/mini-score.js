@@ -39,7 +39,13 @@ export default async function miniScoreRoute(fastify) {
 }
 
 // ── Gemini AI call with model cascade ──────────────────────────
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash-001'];
+// ARCHITECT-PRIME: cascade de modèles + versions API (v1beta puis v1)
+const GEMINI_CANDIDATES = [
+  { model: 'gemini-2.5-flash',      api: 'v1beta' },
+  { model: 'gemini-2.5-flash-lite', api: 'v1beta' },
+  { model: 'gemini-2.5-flash',      api: 'v1' },
+  { model: 'gemini-2.5-flash-lite', api: 'v1' },
+];
 
 async function callAI(idea, request) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -59,10 +65,10 @@ Critères :
 Idée : "${idea.replace(/"/g, '\\"')}"`;
 
   let lastErr;
-  for (const model of GEMINI_MODELS) {
+  for (const { model, api } of GEMINI_CANDIDATES) {
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,16 +86,16 @@ Idée : "${idea.replace(/"/g, '\\"')}"`;
 
       if (!res.ok) {
         const errBody = await res.text();
-        request.log.error({ model, status: res.status, body: errBody }, '[MINI-SCORE] Gemini API error');
-        lastErr = new Error(`Gemini ${res.status} (${model})`);
+        request.log.error({ model, api, status: res.status, body: errBody }, '[MINI-SCORE] Gemini API error');
+        lastErr = new Error(`Gemini ${res.status} (${api}/${model})`);
         continue;
       }
 
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
-        request.log.warn({ model, data }, '[MINI-SCORE] Empty Gemini response');
-        lastErr = new Error(`Empty response from ${model}`);
+        request.log.warn({ model, api, data }, '[MINI-SCORE] Empty Gemini response');
+        lastErr = new Error(`Empty response from ${api}/${model}`);
         continue;
       }
 

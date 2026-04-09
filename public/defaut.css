@@ -1107,19 +1107,10 @@
     white-space: nowrap;
   }
   .btn-ghost:hover {
-    color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.14);
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16);
+    opacity: 0.85;
   }
   .btn-ghost:active {
-    transform: scale(0.97);
-    transition:
-      transform 0.08s cubic-bezier(0.4, 0, 0.2, 1),
-      color var(--duration-fast) ease,
-      border-color var(--duration-fast) ease,
-      background var(--duration-fast) ease,
-      box-shadow var(--duration-fast) ease;
+    opacity: 0.75;
   }
 
   /* Bouton unique Espace membre */
@@ -1148,15 +1139,10 @@
     flex-shrink: 0;
   }
   .btn-nav-member:hover {
-    color: var(--text-primary);
-    border-color: var(--border-focus);
-    background: rgba(139, 92, 246, 0.06);
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.1);
-    transform: translateY(-1px);
+    opacity: 0.85;
   }
   .btn-nav-member:active {
-    transform: translateY(0) scale(0.97);
-    transition: transform 0.08s ease;
+    opacity: 0.75;
   }
   .btn-nav-member[hidden] {
     display: none;
@@ -1169,8 +1155,7 @@
     background: rgba(139, 92, 246, 0.08);
   }
   .btn-nav-member--active:hover {
-    background: rgba(139, 92, 246, 0.12);
-    box-shadow: 0 0 24px rgba(139, 92, 246, 0.15);
+    opacity: 0.85;
   }
 
   .btn-ghost--hero {
@@ -1183,9 +1168,7 @@
     background: rgba(255, 255, 255, 0.04);
   }
   .btn-ghost--hero:hover {
-    border-color: rgba(255, 255, 255, 0.18);
-    color: var(--text-primary);
-    background: rgba(255,255,255,0.08);
+    opacity: 0.85;
   }
 
   /* Hamburger */
@@ -1360,18 +1343,10 @@
       inset 0 1px 0 rgba(255,255,255,0.08);
   }
   .btn-primary:hover {
-    border-color: var(--border-focus);
-    background: var(--surface-overlay);
-    box-shadow: var(--shadow-glow);
-    transform: translateY(-1px);
+    opacity: 0.85;
   }
   .btn-primary:active {
-    transform: translateY(0) scale(0.97);
-    transition:
-      transform 0.08s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow var(--duration-normal) var(--ease-out-expo),
-      border-color var(--duration-fast) ease,
-      background var(--duration-fast) ease;
+    opacity: 0.75;
   }
 
   .btn-large {
@@ -1390,13 +1365,10 @@
       inset 0 1px 0 rgba(255,255,255,0.22);
   }
   .btn-gradient:hover {
-    background: var(--gradient-hero);
-    box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
-    transform: translateY(-1px);
-    border: none;
+    opacity: 0.85;
   }
   .btn-primary.btn-gradient:active {
-    transform: translateY(0) scale(0.97);
+    opacity: 0.75;
   }
 
   .btn-inline {
@@ -1462,11 +1434,6 @@
   }
 
   .card-glass:hover {
-    transform: translateY(-1px);
-    box-shadow:
-      var(--shadow-glow),
-      var(--shadow-card),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
     border-color: var(--border-default);
   }
   .card-glass:hover::before { opacity: 1; }
@@ -1503,8 +1470,6 @@
 
   .process-step:hover {
     border-color: rgba(139, 92, 246, 0.25);
-    transform: translateY(-1px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 20px rgba(139, 92, 246, 0.04);
   }
   .process-step:hover::before {
     transform: scaleX(1);
@@ -2250,16 +2215,11 @@
   }
   .btn-form--next:hover:not(:disabled),
   .btn-form--submit:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 28px rgba(139, 92, 246, 0.4);
+    opacity: 0.85;
   }
   .btn-form--next:active:not(:disabled),
   .btn-form--submit:active:not(:disabled) {
-    transform: translateY(0) scale(0.97);
-    transition:
-      transform 0.08s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow var(--duration-normal) ease,
-      opacity var(--duration-fast) ease;
+    opacity: 0.75;
   }
   .btn-form--next:disabled,
   .btn-form--submit:disabled {
@@ -2275,9 +2235,7 @@
     min-width: auto;
   }
   .btn-form--ghost:hover {
-    border-color: var(--border-strong);
-    color: var(--text-primary);
-    background: rgba(255,255,255,0.03);
+    opacity: 0.85;
   }
   .btn-form--ghost:active:not(:disabled) {
     transform: scale(0.97);
@@ -3449,14 +3407,10 @@
       box-shadow var(--duration-normal) ease;
   }
   .nav-cta:hover {
-    box-shadow: 0 8px 28px rgba(139, 92, 246, 0.4);
-    transform: translateY(-1px);
+    opacity: 0.85;
   }
   .nav-cta:active {
-    transform: translateY(0) scale(0.97);
-    transition:
-      transform 0.08s cubic-bezier(0.4, 0, 0.2, 1),
-      box-shadow var(--duration-normal) ease;
+    opacity: 0.75;
   }
 
   /* Shimmer effect on gradient buttons */
