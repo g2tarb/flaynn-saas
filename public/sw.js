@@ -2,7 +2,7 @@
 // HTML → Network First (toujours chercher la version fraîche, cache = fallback offline).
 // Assets (CSS/JS/images) → Stale-While-Revalidate (réponse instantanée depuis le cache,
 // mise à jour en arrière-plan pour la prochaine visite).
-const CACHE_VERSION = 10;
+const CACHE_VERSION = 11;
 const CACHE_NAME = `flaynn-v${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
@@ -22,7 +22,7 @@ const PRECACHE_URLS = [
   '/dashboard/dashboard.css'
 ];
 
-// ── Install : pré-cache des ressources critiques ─────────────────────
+// —— Install : pré-cache des ressources critiques ———————————————
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
@@ -30,7 +30,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// ── Activate : purge des anciens caches + prise de contrôle immédiate ──
+// —— Activate : purge des anciens caches + prise de contrôle immédiate ——
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
@@ -41,7 +41,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ── Fetch : stratégie par type de contenu ────────────────────────────
+// —— Fetch : stratégie par type de contenu ————————————————————————
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -83,7 +83,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ── Network First (HTML) ─────────────────────────────────────────────
+// —— Network First (HTML) ———————————————————————————————————————
 async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   try {

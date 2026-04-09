@@ -128,7 +128,7 @@ function initNativeScrollReveal() {
 function scrollToId(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  // Offset pour la nav fixe (4rem ≈ 64px)
+  // Offset pour la nav fixe (4rem — 64px)
   const navHeight = document.querySelector('.nav-glass')?.offsetHeight || 64;
   const top = el.getBoundingClientRect().top + window.scrollY - navHeight - 16;
   window.scrollTo({ top, behavior: 'smooth' });
@@ -180,7 +180,7 @@ function buildSuccessView(reference) {
   const text = document.createElement('p');
   text.className = 'form-success__text';
   text.textContent =
-    'Nous analysons votre dossier. Vous recevrez une synthèse sous 24h ouvrées à l’adresse indiquée.';
+    'Nous analysons votre dossier. Vous recevrez une synthèse sous 24h ouvrées à l\u2019adresse indiquée.';
 
   const ref = document.createElement('p');
   ref.className = 'form-success__ref';
@@ -239,7 +239,7 @@ class ScoringFormController {
       s.addEventListener('change', () => this.#validateField(s, false));
     });
 
-    // Toggle revenus oui/non → affiche/masque MRR + clients payants
+    // Toggle revenus oui/non — affiche/masque MRR + clients payants
     const revenusInput = this.form.querySelector('#revenus');
     if (revenusInput) {
       revenusInput.addEventListener('input', () => {
@@ -268,7 +268,7 @@ class ScoringFormController {
       this.#submit();
     });
 
-    // Pitch deck file upload → base64 conversion
+    // Pitch deck file upload — base64 conversion
     const fileInput = this.form.querySelector('#pitch_deck_file');
     if (fileInput) {
       fileInput.addEventListener('change', () => {
@@ -376,9 +376,9 @@ class ScoringFormController {
     field.classList.toggle('field--error', !!error && showError);
     const errEl = field.querySelector('.field__error');
     if (errEl) errEl.textContent = showError ? error : '';
-    
+
     if (!skipButtonUpdate) this.#updateStepButtons();
-    
+
     return !error;
   }
 
@@ -540,7 +540,7 @@ class ScoringFormController {
 
       const valueEl = document.createElement('span');
       valueEl.className = 'recap-row__value';
-      valueEl.textContent = val.length > 120 ? val.slice(0, 120) + '…' : val;
+      valueEl.textContent = val.length > 120 ? val.slice(0, 120) + '\u2026' : val;
 
       row.appendChild(labelEl);
       row.appendChild(valueEl);
@@ -554,7 +554,7 @@ class ScoringFormController {
     const btn = this.form.querySelector('#btn-submit');
     const label = btn?.querySelector('.btn-form__text');
     if (btn) btn.disabled = true;
-    if (label) label.textContent = 'Envoi…';
+    if (label) label.textContent = 'Envoi\u2026';
 
     // Collecte automatique de tous les champs par leur name
     const formData = new FormData(this.form);
@@ -701,13 +701,28 @@ document.documentElement.style.overflow = '';
 document.body.style.overflow = '';
 
 // ARCHITECT-PRIME: Reset overlay si bloqué d'une navigation précédente
-const _overlay = document.getElementById('page-transition-overlay');
-if (_overlay && _overlay.classList.contains('is-active')) {
-  _overlay.classList.remove('is-active');
-  _overlay.style.clipPath = 'circle(0% at 50% 50%)';
-}
+// setTimeout(0) pour s'exécuter APRÈS transition.js (les deux sont type=module,
+// mais transition.js peut appeler animateIn() qui re-set is-active)
+setTimeout(() => {
+  const _overlay = document.getElementById('page-transition-overlay');
+  if (_overlay && _overlay.classList.contains('is-active')) {
+    // Si l'overlay est encore active 50ms après le parse de tous les modules,
+    // c'est qu'une transition est en cours — on laisse le failsafe de transition.js gérer.
+    // Mais on force quand même après 1.5s au cas où.
+    setTimeout(() => {
+      if (_overlay.classList.contains('is-active')) {
+        _overlay.classList.remove('is-active');
+        _overlay.style.clipPath = 'circle(0% at 50% 50%)';
+        const _content = document.querySelector('main') || document.body;
+        _content.style.opacity = '';
+        _content.style.transform = '';
+        _content.style.filter = '';
+      }
+    }, 1500);
+  }
+}, 0);
 
-/* ── Nav auth state : Espace membre (invité) ou Prénom (connecté) ─ */
+/* —— Nav auth state : Espace membre (invité) ou Prénom (connecté) — */
 (function updateNavAuth() {
   const auth = (() => {
     try { return JSON.parse(localStorage.getItem('flaynn_auth') || 'null'); } catch { return null; }
@@ -737,7 +752,7 @@ if (_overlay && _overlay.classList.contains('is-active')) {
   }
 })();
 
-/* ── Warp navigation : intercepte les liens vers /dashboard/ ───────────── */
+/* —— Warp navigation : intercepte les liens vers /dashboard/ ————————— */
 function warpNavigate(targetUrl, e) {
   e.preventDefault();
 
@@ -771,7 +786,7 @@ document.addEventListener('click', (e) => {
 document.getElementById('btn-header-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
 document.getElementById('btn-hero-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
 
-// ── Collapsing header on scroll ──────────────────────────────────────────────
+// —— Collapsing header on scroll ——————————————————————————————————————
 const navGlass = document.querySelector('.nav-glass');
 if (navGlass) {
   const onScroll = () => {
@@ -783,7 +798,7 @@ if (navGlass) {
 
 // ARCHITECT-PRIME: View Transition API removed — global transition handled by js/transition.js
 
-// ── Nav mobile ──────────────────────────────────────────────────────────────
+// —— Nav mobile ——————————————————————————————————————————————————————
 function openMobileMenu() {
   const btn = document.getElementById('nav-hamburger');
   const menu = document.getElementById('nav-mobile-menu');
@@ -817,7 +832,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeMobileMenu();
 });
 
-// ── Bottom nav mobile — active section tracking + CTA ───────────────────────
+// —— Bottom nav mobile — active section tracking + CTA ———————————————
 document.getElementById('btn-bnav-cta')?.addEventListener('click', () => scrollToId('scoring-form'));
 
 // Active link tracking via IntersectionObserver
@@ -861,7 +876,7 @@ document.getElementById('btn-bnav-cta')?.addEventListener('click', () => scrollT
   }
 })();
 
-// ── Gestionnaire de Modales Vanilla JS ──────────────────────────────────────
+// —— Gestionnaire de Modales Vanilla JS ——————————————————————————————
 function initModals() {
   const overlays = document.querySelectorAll('.modal-overlay');
   const triggers = document.querySelectorAll('.js-modal-trigger');
@@ -1033,7 +1048,7 @@ function initLiveScoring() {
     [55, 80],  // Execution
   ];
 
-  const tamValues = ['€1.8B', '€2.1B', '€2.4B', '€2.9B', '€3.2B', '€1.5B', '€4.1B'];
+  const tamValues = ['\u20AC1.8B', '\u20AC2.1B', '\u20AC2.4B', '\u20AC2.9B', '\u20AC3.2B', '\u20AC1.5B', '\u20AC4.1B'];
   const tractionValues = ['+12% MoM', '+15% MoM', '+18% MoM', '+22% MoM', '+9% MoM', '+27% MoM', '+14% MoM'];
 
   function rand(min, max) {
@@ -1047,9 +1062,9 @@ function initLiveScoring() {
   }
 
   function getScoreLabel(score) {
-    if (score >= 85) return 'Très fort potentiel';
-    if (score >= 70) return 'Potentiel élevé';
-    if (score >= 55) return 'Potentiel confirmé';
+    if (score >= 85) return 'Tr\u00E8s fort potentiel';
+    if (score >= 70) return 'Potentiel \u00E9lev\u00E9';
+    if (score >= 55) return 'Potentiel confirm\u00E9';
     return 'En progression';
   }
 

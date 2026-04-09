@@ -17,7 +17,7 @@ const EASE_IN      = 'expo.inOut';
 const overlay = document.getElementById('page-transition-overlay');
 const wing    = overlay?.querySelector('.transition-wing');
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// —— Helpers ————————————————————————————————————————————————————————
 
 function isInternalLink(link) {
   if (!link || !link.href) return false;
@@ -35,7 +35,7 @@ function getPageContent() {
   return document.querySelector('main') || document.querySelector('.page') || document.body;
 }
 
-// ── Animation OUT (page exit) ────────────────────────────────────────────────
+// —— Animation OUT (page exit) ——————————————————————————————————————
 
 function animateOut(targetUrl) {
   if (!overlay) { window.location.href = targetUrl; return; }
@@ -112,10 +112,32 @@ function animateOut(targetUrl) {
   setTimeout(() => { window.location.href = targetUrl; }, DURATION_OUT * 1000 + 50);
 }
 
-// ── Animation IN (page reveal — profondeur Z) ─────────────────────────────
+// —— Animation IN (page reveal — profondeur Z) ———————————————————
+
+function forceCleanState() {
+  if (overlay) {
+    overlay.classList.remove('is-active');
+    overlay.style.clipPath = 'circle(0% at 50% 50%)';
+    if (wing) { wing.style.opacity = '0'; wing.style.transform = 'scale(0.7)'; wing.style.filter = ''; }
+  }
+  const content = getPageContent();
+  if (content) {
+    content.style.transform = '';
+    content.style.opacity = '';
+    content.style.filter = '';
+    content.style.willChange = '';
+  }
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+}
 
 function animateIn() {
   if (!overlay) return;
+
+  // FAILSAFE: quoi qu'il arrive, on force un état propre après 1.5s max.
+  // C'est le filet de sécurité absolu — même si GSAP, Web Animations,
+  // et tous les callbacks échouent, le scroll ne sera JAMAIS bloqué > 1.5s.
+  const failsafeId = setTimeout(forceCleanState, 1500);
 
   // Start fully covered
   overlay.style.clipPath = 'circle(120% at 50% 50%)';
@@ -125,23 +147,19 @@ function animateIn() {
     wing.style.transform = 'scale(1)';
   }
 
-  // ARCHITECT-PRIME: Le contenu commence agrandi (profondeur Z) et atterrit a scale(1)
   const content = getPageContent();
   content.style.transform = 'scale(1.04)';
   content.style.opacity = '0';
   content.style.willChange = 'transform, opacity';
 
-  if (window.gsap) {
-    const tl = window.gsap.timeline({
-      onComplete: () => {
-        overlay.classList.remove('is-active');
-        overlay.style.clipPath = 'circle(0% at 50% 50%)';
-        if (wing) { wing.style.opacity = '0'; wing.style.transform = 'scale(0.7)'; wing.style.filter = ''; }
-        content.style.willChange = '';
-      }
-    });
+  const done = () => {
+    clearTimeout(failsafeId);
+    forceCleanState();
+  };
 
-    // Phase 1 : l'iris se retire + le wing disparait
+  if (window.gsap) {
+    const tl = window.gsap.timeline({ onComplete: done });
+
     tl.to(wing, {
       opacity: 0,
       scale: 0.6,
@@ -153,7 +171,6 @@ function animateIn() {
       duration: DURATION_IN,
       ease: EASE_IN
     }, 0.1)
-    // Phase 2 : le contenu atterrit en douceur (ouverture App iOS)
     .to(content, {
       scale: 1,
       opacity: 1,
@@ -165,7 +182,7 @@ function animateIn() {
     return;
   }
 
-  // Fallback
+  // Fallback Web Animations — avec timeout de secours pour chaque animation
   if (wing) {
     wing.animate(
       [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.6)' }],
@@ -173,33 +190,39 @@ function animateIn() {
     );
   }
 
-  overlay.animate(
-    [
-      { clipPath: 'circle(120% at 50% 50%)' },
-      { clipPath: 'circle(0% at 50% 50%)' }
-    ],
-    { duration: DURATION_IN * 1000, delay: 100, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
-  ).onfinish = () => {
-    overlay.classList.remove('is-active');
-    overlay.style.clipPath = 'circle(0% at 50% 50%)';
-    if (wing) { wing.style.opacity = '0'; wing.style.transform = 'scale(0.7)'; }
-  };
+  try {
+    const overlayAnim = overlay.animate(
+      [
+        { clipPath: 'circle(120% at 50% 50%)' },
+        { clipPath: 'circle(0% at 50% 50%)' }
+      ],
+      { duration: DURATION_IN * 1000, delay: 100, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+    );
+    overlayAnim.onfinish = done;
+  } catch {
+    // clipPath animation non supportée — le failsafe setTimeout gère
+  }
 
-  // ARCHITECT-PRIME: Fallback profondeur Z via Web Animations API
-  content.animate(
-    [
-      { transform: 'scale(1.04)', opacity: 0 },
-      { transform: 'scale(1)', opacity: 1 }
-    ],
-    { duration: 700, delay: 150, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
-  ).onfinish = () => {
-    content.style.transform = '';
-    content.style.opacity = '';
-    content.style.willChange = '';
-  };
+  try {
+    const contentAnim = content.animate(
+      [
+        { transform: 'scale(1.04)', opacity: 0 },
+        { transform: 'scale(1)', opacity: 1 }
+      ],
+      { duration: 700, delay: 150, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'forwards' }
+    );
+    contentAnim.onfinish = () => {
+      content.style.transform = '';
+      content.style.opacity = '';
+      content.style.willChange = '';
+    };
+  } catch {
+    // Fallback échoué — forceCleanState via failsafe gère tout
+    done();
+  }
 }
 
-// ── Link interception ────────────────────────────────────────────────────────
+// —— Link interception ——————————————————————————————————————————————
 
 document.addEventListener('click', (e) => {
   // ARCHITECT-PRIME: ne pas intercepter si un autre handler a deja prevenu le default
@@ -218,7 +241,7 @@ document.addEventListener('click', (e) => {
   animateOut(link.href);
 });
 
-// ── Page reveal on load ──────────────────────────────────────────────────────
+// —— Page reveal on load ——————————————————————————————————————————
 
 // ARCHITECT-PRIME: only reveal if coming from a transition (sessionStorage flag)
 if (sessionStorage.getItem('flaynn_transition')) {
@@ -226,30 +249,27 @@ if (sessionStorage.getItem('flaynn_transition')) {
   animateIn();
 }
 
-// ARCHITECT-PRIME: failsafe — si l'overlay reste bloqué plus de 4s, on force le nettoyage
-// Empêche le scroll/navigation d'être bloqué par une transition ratée
-function clearOverlayFailsafe() {
-  if (!overlay) return;
-  if (overlay.classList.contains('is-active')) {
-    overlay.classList.remove('is-active');
-    overlay.style.clipPath = 'circle(0% at 50% 50%)';
-    if (wing) { wing.style.opacity = '0'; wing.style.transform = 'scale(0.7)'; wing.style.filter = ''; }
-  }
-  const content = getPageContent();
-  if (content) {
-    content.style.transform = '';
-    content.style.opacity = '';
-    content.style.filter = '';
-    content.style.willChange = '';
-  }
-  document.documentElement.style.overflow = '';
-  document.body.style.overflow = '';
-}
+// —— Failsafe inconditionnel — nettoie TOUT au chargement ————————
+// Lancé tôt (pas besoin d'attendre load) + aussi sur load + aussi sur interaction
+// Triple filet : si l'un rate, les autres rattrapent.
 
-// Nettoyage au chargement — garantit qu'aucune transition precedente ne reste
-window.addEventListener('load', () => {
-  setTimeout(clearOverlayFailsafe, 2000);
-});
+function scheduleCleanup() {
+  // 1. Immédiat après 1s (couvre le cas où load a déjà fire)
+  setTimeout(forceCleanState, 1000);
+  // 2. Au load + 500ms (couvre le cas normal)
+  window.addEventListener('load', () => setTimeout(forceCleanState, 500));
+  // 3. Au premier scroll/touch/click — l'utilisateur VEUT interagir, on débloque
+  const unlockOnInteraction = () => {
+    forceCleanState();
+    window.removeEventListener('scroll', unlockOnInteraction);
+    window.removeEventListener('touchstart', unlockOnInteraction);
+    window.removeEventListener('pointerdown', unlockOnInteraction);
+  };
+  window.addEventListener('scroll', unlockOnInteraction, { passive: true, once: true });
+  window.addEventListener('touchstart', unlockOnInteraction, { passive: true, once: true });
+  window.addEventListener('pointerdown', unlockOnInteraction, { once: true });
+}
+scheduleCleanup();
 
 // ARCHITECT-PRIME: set sessionStorage flag in capture phase (before preventDefault)
 document.addEventListener('click', (e) => {
