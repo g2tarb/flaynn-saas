@@ -435,15 +435,9 @@
     .ambient-bg .three-canvas { display: none; }
   }
 
-  /* ARCHITECT-PRIME: canvas off sur mobile — fallback gradient CSS plus propre */
+  /* ARCHITECT-PRIME: canvas off sur mobile */
   @media (max-width: 768px) {
     .ambient-bg .three-canvas { display: none; }
-    html.has-three-bg .ambient-bg {
-      background:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.12), transparent 50%),
-        radial-gradient(circle at top center, var(--surface-base), var(--surface-void));
-      animation: ambient-drift 12s ease-in-out infinite;
-    }
   }
 
   /* ARCHITECT-PRIME: quand le canvas est actif, le gradient CSS de fond
@@ -451,6 +445,17 @@
   html.has-three-bg .ambient-bg {
     background: var(--surface-void);
     animation: none;
+  }
+
+  /* ARCHITECT-PRIME: sur mobile, restaure le gradient même si has-three-bg est actif
+     (le canvas est display:none, il faut le fallback gradient) */
+  @media (max-width: 768px) {
+    html.has-three-bg .ambient-bg {
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.12), transparent 50%),
+        radial-gradient(circle at top center, var(--surface-base), var(--surface-void));
+      animation: ambient-drift 12s ease-in-out infinite;
+    }
   }
 
   /* Fallback si Canvas 2D echoue — maintient le gradient nebulaire CSS */

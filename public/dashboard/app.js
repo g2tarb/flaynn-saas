@@ -961,7 +961,8 @@ function initTopbar(auth) {
     const avatar = el('div', 'dashboard-avatar');
     avatar.textContent = auth.name ? auth.name.charAt(0).toUpperCase() : '?';
 
-    const nameSpan = el('span', 'dashboard-topbar__title', { textContent: auth.name || auth.email });
+    const firstName = (auth.name || '').split(' ')[0] || auth.email;
+    const nameSpan = el('span', 'dashboard-topbar__title', { textContent: firstName });
 
     const logoutBtn = el('button', 'dashboard-logout-btn', { type: 'button' });
     logoutBtn.textContent = 'Déconnexion';
@@ -975,14 +976,8 @@ function initTopbar(auth) {
       window.location.replace('/');
     });
 
-    const listBtn = el('a', 'dashboard-meta', { href: '/dashboard/' });
-    listBtn.textContent = 'Mes analyses';
-    listBtn.style.textDecoration = 'none';
-    listBtn.style.marginRight = 'var(--space-3)';
-
     userBtn.appendChild(avatar);
     userBtn.appendChild(nameSpan);
-    userBtn.appendChild(listBtn);
     userBtn.appendChild(logoutBtn);
     topbar.appendChild(userBtn);
   } else {
