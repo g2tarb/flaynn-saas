@@ -29,24 +29,19 @@ export default async function miniScoreRoute(fastify) {
     }
 
     try {
-      const result = await callAI(idea);
+      const result = await callAI(idea, request);
       return reply.send(result);
     } catch (err) {
-      request.log.error(err, '[MINI-SCORE] Analyse failed');
-      // ARCHITECT-PRIME: fallback indicatif plutôt qu'erreur bloquante
-      const fallbackScore = 45 + Math.floor(Math.random() * 30);
-      return reply.send({
-        score: fallbackScore,
-        conseil: 'Notre analyse rapide suggère un potentiel à explorer. Soumettez votre dossier complet pour un diagnostic précis sur 5 piliers.'
-      });
+      request.log.error(err, '[MINI-SCORE] Analyse failed — using contextual fallback');
+      return reply.send(buildContextualFallback(idea));
     }
   });
 }
 
-// ARCHITECT-PRIME: essaie plusieurs modèles Gemini en cascade
+// ── Gemini AI call with model cascade ──────────────────────────
 const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
 
-async function callAI(idea) {
+async function callAI(idea, request) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
 
@@ -84,13 +79,16 @@ Idée : "${idea.replace(/"/g, '\\"')}"`;
       );
 
       if (!res.ok) {
-        lastErr = new Error(`Gemini API error (${model}): ${res.status}`);
+        const errBody = await res.text();
+        request.log.error({ model, status: res.status, body: errBody }, '[MINI-SCORE] Gemini API error');
+        lastErr = new Error(`Gemini ${res.status} (${model})`);
         continue;
       }
 
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
+        request.log.warn({ model, data }, '[MINI-SCORE] Empty Gemini response');
         lastErr = new Error(`Empty response from ${model}`);
         continue;
       }
@@ -105,4 +103,81 @@ Idée : "${idea.replace(/"/g, '\\"')}"`;
     }
   }
   throw lastErr;
+}
+
+// ── Contextual fallback (no AI) ────────────────────────────────
+// ARCHITECT-PRIME: analyse des mots-clés pour produire un conseil
+// pertinent même quand Gemini est indisponible.
+
+const KEYWORD_RULES = [
+  { keywords: ['freelance', 'freelances', 'indépendant', 'indépendants', 'independant'],
+    conseil: 'Le marché du freelancing est en forte croissance mais très concurrentiel. Votre différenciation (niche sectorielle, matching intelligent, garanties) sera déterminante pour capter ce segment.',
+    scoreBoost: 5 },
+  { keywords: ['santé', 'sante', 'health', 'médical', 'medical', 'patient', 'patients', 'clinique'],
+    conseil: 'Le secteur healthtech attire les investisseurs mais exige une conformité réglementaire forte. Identifiez tôt les certifications nécessaires et le parcours de remboursement.',
+    scoreBoost: 8 },
+  { keywords: ['ia', 'intelligence artificielle', 'machine learning', 'ml', 'llm', 'gpt', 'deep learning'],
+    conseil: 'L\'IA est un levier puissant mais les investisseurs cherchent un avantage défendable (données propriétaires, expertise domaine). Montrez ce qui vous rend difficile à copier.',
+    scoreBoost: 3 },
+  { keywords: ['marketplace', 'plateforme', 'mise en relation', 'matching'],
+    conseil: 'Les marketplaces doivent résoudre le problème de la poule et l\'œuf. Concentrez-vous sur un côté du marché d\'abord et prouvez la rétention avant de scaler.',
+    scoreBoost: 4 },
+  { keywords: ['fintech', 'paiement', 'banque', 'finance', 'crédit', 'credit', 'épargne', 'epargne'],
+    conseil: 'La fintech requiert un cadre réglementaire solide (agrément, KYC). Les investisseurs valorisent les équipes qui maîtrisent la compliance dès le jour 1.',
+    scoreBoost: 6 },
+  { keywords: ['saas', 'logiciel', 'outil', 'dashboard', 'tableau de bord', 'crm', 'erp'],
+    conseil: 'Le SaaS B2B se valorise sur le MRR et la rétention nette. Visez un segment précis, prouvez le product-market fit, puis élargissez.',
+    scoreBoost: 5 },
+  { keywords: ['livraison', 'logistique', 'transport', 'mobilité', 'mobilite', 'vélo', 'velo'],
+    conseil: 'La logistique est un marché à forte intensité opérationnelle. Les unit economics (coût par livraison, densité de commandes) seront scrutés par les investisseurs.',
+    scoreBoost: 3 },
+  { keywords: ['education', 'éducation', 'formation', 'apprendre', 'cours', 'edtech', 'école', 'ecole'],
+    conseil: 'L\'edtech doit prouver un impact mesurable sur l\'apprentissage. Les investisseurs regardent l\'engagement récurrent et le taux de complétion, pas juste l\'inscription.',
+    scoreBoost: 4 },
+  { keywords: ['green', 'climat', 'énergie', 'energie', 'durable', 'recyclage', 'carbone', 'écologie', 'ecologie'],
+    conseil: 'La greentech bénéficie d\'un fort appétit investisseur et réglementaire. Quantifiez votre impact carbone et identifiez les subventions/crédits disponibles.',
+    scoreBoost: 7 },
+  { keywords: ['app', 'application', 'mobile'],
+    conseil: 'Le marché des apps mobiles est saturé — le coût d\'acquisition est élevé. Misez sur la viralité organique ou un canal de distribution captif pour vous démarquer.',
+    scoreBoost: 0 },
+  { keywords: ['b2b', 'entreprise', 'entreprises', 'professionnel', 'professionnels', 'pro'],
+    conseil: 'Le B2B offre des cycles de vente plus longs mais des revenus plus prévisibles. Un POC avec 2-3 clients pilotes vaut plus qu\'un pitch deck.',
+    scoreBoost: 5 },
+  { keywords: ['food', 'restaurant', 'cuisine', 'alimentation', 'repas', 'foodtech'],
+    conseil: 'La foodtech exige des marges serrées et une logistique irréprochable. Les investisseurs veulent voir vos unit economics par commande dès le MVP.',
+    scoreBoost: 2 },
+];
+
+function buildContextualFallback(idea) {
+  const lower = idea.toLowerCase();
+  const matched = KEYWORD_RULES.filter(rule =>
+    rule.keywords.some(kw => lower.includes(kw))
+  );
+
+  // Score de base contextuel : plus l'idée est longue et détaillée, meilleur le signal
+  const wordCount = idea.trim().split(/\s+/).length;
+  const lengthBonus = Math.min(10, Math.floor(wordCount / 3));
+  let baseScore = 45 + lengthBonus + Math.floor(Math.random() * 10);
+
+  // Appliquer les boosts des domaines reconnus
+  let bestConseil = '';
+  for (const rule of matched) {
+    baseScore += rule.scoreBoost;
+    if (!bestConseil) bestConseil = rule.conseil;
+  }
+
+  // Si plusieurs domaines matchent, combiner le premier conseil avec un complément
+  if (matched.length > 1) {
+    bestConseil += ' Le croisement de plusieurs domaines peut être un atout différenciant.';
+  }
+
+  // Fallback générique si aucun mot-clé reconnu
+  if (!bestConseil) {
+    bestConseil = `Votre concept mérite d'être creusé. Précisez votre cible (qui paie ?), votre avantage concurrentiel et vos premières métriques pour obtenir un diagnostic complet.`;
+  }
+
+  return {
+    score: Math.min(85, Math.max(35, baseScore)),
+    conseil: bestConseil
+  };
 }
