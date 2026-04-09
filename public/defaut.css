@@ -2823,6 +2823,98 @@
 }
 
 /* ─────────────────────────────────────────
+   WHY FLAYNN SECTION
+───────────────────────────────────────── */
+@layer components {
+  .section--why {
+    padding-top: var(--space-10, 80px);
+    padding-bottom: var(--space-10, 80px);
+  }
+
+  .why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-8, 64px);
+    margin-bottom: var(--space-8, 64px);
+  }
+
+  @media (max-width: 768px) {
+    .why-grid { grid-template-columns: 1fr; gap: var(--space-6, 48px); }
+  }
+
+  .why-block__eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .why-list {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-4, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .why-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .why-list__icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    background: rgba(232, 101, 26, 0.1);
+    color: #E8651A;
+  }
+
+  .why-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4, 24px);
+    padding: var(--space-5, 32px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+  }
+
+  @media (max-width: 640px) {
+    .why-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .why-stat { text-align: center; }
+
+  .why-stat__value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .why-stat__label {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+  }
+}
+
+/* ─────────────────────────────────────────
    MINI SCORING HERO WIDGET
 ───────────────────────────────────────── */
 @layer components {
