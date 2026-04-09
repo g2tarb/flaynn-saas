@@ -4,7 +4,7 @@
 
 const MORPH_PHRASES = [
   'Start Proving.',
-  'Prouvez avec des données.',
+  'Prouvez-le.',
   'Obtenez votre verdict.',
   'Passez le filtre.',
   'Start Proving.',
@@ -119,7 +119,7 @@ function initNativeScrollReveal() {
   document.querySelectorAll('[data-animate="reveal"]').forEach(section => {
     section.querySelectorAll('[data-animate-child]').forEach((child, index) => {
       child.classList.add('reveal-native');
-      child.style.transitionDelay = `${index * 100}ms`; // Effet stagger (cascade)
+      child.style.transitionDelay = `${index * 60}ms`; // Effet stagger (cascade)
       observer.observe(child);
     });
   });
@@ -939,34 +939,6 @@ function initLiquidUX() {
     }
   });
 
-  // 4. ARCHITECT-PRIME: Magnetic buttons — attire le bouton vers le curseur
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !('ontouchstart' in window)) {
-    const STRENGTH = 0.3;  // pourcentage de déplacement max
-    const EASE = 'power3.out';
-
-    document.querySelectorAll('.btn-primary, .btn-gradient, .nav-cta').forEach((btn) => {
-      btn.addEventListener('mousemove', (e) => {
-        const rect = btn.getBoundingClientRect();
-        const x = e.clientX - rect.left - rect.width / 2;
-        const y = e.clientY - rect.top - rect.height / 2;
-
-        if (window.gsap) {
-          window.gsap.to(btn, { x: x * STRENGTH, y: y * STRENGTH, duration: 0.4, ease: EASE });
-        } else {
-          btn.style.transform = `translate(${x * STRENGTH}px, ${y * STRENGTH}px)`;
-        }
-      });
-
-      btn.addEventListener('mouseleave', () => {
-        if (window.gsap) {
-          window.gsap.to(btn, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.4)' });
-        } else {
-          btn.style.transform = '';
-          btn.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-        }
-      });
-    });
-  }
 }
 
 function initBarReveal() {
@@ -1162,6 +1134,94 @@ scheduleIdle(() => {
   document.querySelectorAll('.fade-up').forEach(function(el) { obs.observe(el); });
 })();
 
+// PAIN CAROUSEL — autoplay, dots, swipe, progress bar
+(function() {
+  var track = document.getElementById('pain-track');
+  var dotsWrap = document.getElementById('pain-dots');
+  var progressFill = document.getElementById('pain-progress');
+  if (!track || !dotsWrap) return;
+
+  var slides = track.children;
+  var total = slides.length;
+  var current = 0;
+  var autoplayMs = 5000;
+  var autoTimer = null;
+  var startX = 0;
+  var isDragging = false;
+  var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Build dots
+  for (var i = 0; i < total; i++) {
+    var dot = document.createElement('button');
+    dot.className = 'pain-carousel__dot' + (i === 0 ? ' is-active' : '');
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+    dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    dot.dataset.index = i;
+    dotsWrap.appendChild(dot);
+  }
+
+  function goTo(idx) {
+    if (idx < 0) idx = total - 1;
+    if (idx >= total) idx = 0;
+    current = idx;
+    track.style.transform = 'translateX(-' + (current * 100) + '%)';
+    if (progressFill) progressFill.style.width = ((current + 1) / total * 100) + '%';
+    var dots = dotsWrap.children;
+    for (var j = 0; j < dots.length; j++) {
+      dots[j].classList.toggle('is-active', j === current);
+      dots[j].setAttribute('aria-selected', j === current ? 'true' : 'false');
+    }
+  }
+
+  function startAutoplay() {
+    if (prefersReduced) return;
+    stopAutoplay();
+    autoTimer = setInterval(function() { goTo(current + 1); }, autoplayMs);
+  }
+
+  function stopAutoplay() {
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  }
+
+  dotsWrap.addEventListener('click', function(e) {
+    var dot = e.target.closest('.pain-carousel__dot');
+    if (!dot) return;
+    goTo(parseInt(dot.dataset.index, 10));
+    stopAutoplay();
+    startAutoplay();
+  });
+
+  // Swipe support
+  track.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    isDragging = true;
+    stopAutoplay();
+  }, { passive: true });
+
+  track.addEventListener('touchend', function(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    var dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 50) {
+      goTo(dx < 0 ? current + 1 : current - 1);
+    }
+    startAutoplay();
+  }, { passive: true });
+
+  // Pause on hover
+  track.closest('.pain-carousel').addEventListener('mouseenter', stopAutoplay);
+  track.closest('.pain-carousel').addEventListener('mouseleave', startAutoplay);
+
+  // Keyboard
+  dotsWrap.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight') { goTo(current + 1); stopAutoplay(); startAutoplay(); }
+    if (e.key === 'ArrowLeft') { goTo(current - 1); stopAutoplay(); startAutoplay(); }
+  });
+
+  startAutoplay();
+})();
+
 // ARCHITECT-PRIME: Showcase live update — when Quick Score returns a result,
 // reflect it in the showcase demo section instead of static data.
 (function() {
@@ -1170,10 +1230,25 @@ scheduleIdle(() => {
   var showcaseVerdict = document.querySelector('.showcase-verdict');
   var showcaseName = document.querySelector('.showcase-dash-header div:first-child div:first-child');
   var demoBadge = document.querySelector('.showcase-demo-badge');
+  var showcasePillars = document.querySelector('.showcase-pillars');
+  var showcaseHint = document.getElementById('showcase-hint');
+  var showcaseFrame = document.querySelector('.showcase-frame');
 
   window.addEventListener('flaynn:quickscore', function(e) {
     var d = e.detail;
     if (!d || !d.score) return;
+
+    // Hide pillars (quick score has no pillar breakdown)
+    if (showcasePillars) {
+      showcasePillars.style.transition = 'opacity 0.3s ease, max-height 0.4s ease';
+      showcasePillars.style.opacity = '0';
+      showcasePillars.style.maxHeight = '0';
+      showcasePillars.style.overflow = 'hidden';
+      showcasePillars.style.marginBottom = '0';
+    }
+
+    // Hide the hint text
+    if (showcaseHint) showcaseHint.classList.add('is-hidden');
 
     scoreNum.style.transition = 'opacity 0.3s ease';
     scoreNum.style.opacity = '0';
@@ -1199,6 +1274,13 @@ scheduleIdle(() => {
         demoBadge.textContent = 'Score bas\u00e9 sur votre description \u00b7 Pour un diagnostic complet, lancez le scoring';
         demoBadge.style.borderColor = 'rgba(232, 101, 26, 0.2)';
         demoBadge.style.color = '#E8651A';
+      }
+
+      // Smooth scroll to showcase so user sees the update
+      if (showcaseFrame) {
+        var navH = document.querySelector('.nav-glass')?.offsetHeight || 64;
+        var top = showcaseFrame.getBoundingClientRect().top + window.scrollY - navH - 24;
+        window.scrollTo({ top: top, behavior: 'smooth' });
       }
     }, 300);
   });

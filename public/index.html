@@ -221,29 +221,47 @@
             </div>
         </div>
 
-        <!-- POURQUOI FLAYNN (pain-grid) -->
+        <!-- POURQUOI FLAYNN (pain carousel) -->
         <section class="section section--why" data-animate="reveal">
             <div class="container">
                 <div class="fade-up" style="text-align: center; max-width: 580px; margin: 0 auto 56px;">
                     <p class="section-eyebrow" style="color: #E8651A;">Le problème</p>
                     <h2 class="heading-section">Vous levez dans le noir.</h2>
                 </div>
-                <div class="pain-grid">
-                    <div class="card-glass pain-card fade-up fade-up-delay-1">
-                        <div class="pain-stat" style="color: #E8651A;">80%</div>
-                        <h3 class="pain-title">des decks rejetés en 5 min</h3>
-                        <p class="pain-desc">Sans feedback. Sans explication.</p>
+                <div class="pain-carousel fade-up" aria-roledescription="carousel" aria-label="Problèmes rencontrés par les fondateurs">
+                    <div class="pain-carousel__viewport">
+                        <div class="pain-carousel__track" id="pain-track">
+                            <div class="pain-carousel__slide card-glass" role="group" aria-roledescription="slide" aria-label="1 sur 5">
+                                <div class="pain-carousel__stat" style="color: #E8651A;">80%</div>
+                                <h3 class="pain-carousel__title">des decks rejetés en 5 min</h3>
+                                <p class="pain-carousel__desc">Sans feedback. Sans explication. Votre dossier passe à la trappe avant même d'être lu.</p>
+                            </div>
+                            <div class="pain-carousel__slide card-glass" role="group" aria-roledescription="slide" aria-label="2 sur 5">
+                                <div class="pain-carousel__stat" style="color: #EC4899;">6-18</div>
+                                <h3 class="pain-carousel__title">mois perdus sur une levée bancale</h3>
+                                <p class="pain-carousel__desc">Vous découvrez les failles pendant les meetings. Trop tard pour corriger le tir.</p>
+                            </div>
+                            <div class="pain-carousel__slide card-glass" role="group" aria-roledescription="slide" aria-label="3 sur 5">
+                                <div class="pain-carousel__stat" style="color: #FACC15;">0</div>
+                                <h3 class="pain-carousel__title">retour objectif avant de pitcher</h3>
+                                <p class="pain-carousel__desc">Votre deck est relu par des proches, pas par un investisseur. Zéro filtre réel.</p>
+                            </div>
+                            <div class="pain-carousel__slide card-glass" role="group" aria-roledescription="slide" aria-label="4 sur 5">
+                                <div class="pain-carousel__stat" style="color: #7B2D8E;">92%</div>
+                                <h3 class="pain-carousel__title">des fondateurs sous-estiment leurs failles</h3>
+                                <p class="pain-carousel__desc">L'angle mort n'est pas le marché. C'est ce que vous ne voyez pas dans votre propre projet.</p>
+                            </div>
+                            <div class="pain-carousel__slide card-glass" role="group" aria-roledescription="slide" aria-label="5 sur 5">
+                                <div class="pain-carousel__stat" style="color: #06b6d4;">3x</div>
+                                <h3 class="pain-carousel__title">plus de chances avec un scoring objectif</h3>
+                                <p class="pain-carousel__desc">Les startups qui corrigent avant de pitcher lèvent 3 fois plus souvent au premier tour.</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-glass pain-card fade-up fade-up-delay-2">
-                        <div class="pain-stat" style="color: #EC4899;">6-18</div>
-                        <h3 class="pain-title">mois perdus sur une levée bancale</h3>
-                        <p class="pain-desc">Vous découvrez les failles pendant les meetings.</p>
+                    <div class="pain-carousel__progress">
+                        <div class="pain-carousel__progress-fill" id="pain-progress"></div>
                     </div>
-                    <div class="card-glass pain-card fade-up fade-up-delay-3">
-                        <div class="pain-stat" style="color: #FACC15;">0</div>
-                        <h3 class="pain-title">retour objectif avant de pitcher</h3>
-                        <p class="pain-desc">Votre deck est relu par des proches, pas par un investisseur.</p>
-                    </div>
+                    <div class="pain-carousel__dots" id="pain-dots" role="tablist" aria-label="Choisir un slide"></div>
                 </div>
             </div>
         </section>
@@ -515,13 +533,7 @@
                         <div class="showcase-demo-badge">Mode démo - données illustratives</div>
                     </div>
                 </div>
-                <div class="showcase-cta fade-up fade-up-delay-2" style="text-align:center; margin-top: 24px;">
-                    <a href="/scoring/" class="btn-primary btn-gradient" style="display:inline-flex;">
-                        <span>Lancer mon scoring complet</span>
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </a>
-                    <p style="font-size:0.75rem; color:var(--text-tertiary); margin-top:10px;">Résultats détaillés en 24h</p>
-                </div>
+                <p class="showcase-hint fade-up fade-up-delay-2" id="showcase-hint">Utilisez le Quick Score ci-dessus pour voir votre résultat ici <span aria-hidden="true">&#8593;</span></p>
             </div>
         </section>
 
