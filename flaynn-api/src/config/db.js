@@ -5,10 +5,15 @@ const { Pool } = pg;
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // Requis pour se connecter à PostgreSQL sur Render en production
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // ARCHITECT-PRIME: Timeout court pour ne pas bloquer le startup sur Render cold start.
+  // Sans ça, chaque tentative pend ~75s (TCP timeout OS) → dépasse le health check Render.
+  connectionTimeoutMillis: 5000,
+  max: 10,
+  idleTimeoutMillis: 30000
 });
 
-export async function initDB(logger, retries = 5, delay = 3000) {
+export async function initDB(logger, retries = 8, delay = 2000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await pool.query(`
@@ -48,11 +53,15 @@ export async function initDB(logger, retries = 5, delay = 3000) {
       return;
     } catch (err) {
       if (attempt === retries) {
-        logger.error(err, '[FATAL] Erreur d\'initialisation PostgreSQL.');
+        logger.error(err, '[FATAL] Erreur d\'initialisation PostgreSQL après %d tentatives.', retries);
         throw err;
       }
-      logger.warn(`[DB] Tentative ${attempt}/${retries} échouée (${err.code || err.message}), retry dans ${delay / 1000}s...`);
-      await new Promise(r => setTimeout(r, delay));
+      // ARCHITECT-PRIME: Backoff exponentiel plafonné à 10s.
+      // Avec connectionTimeoutMillis=5s, chaque tentative échoue vite.
+      // 8 tentatives × (5s timeout + backoff) ≈ 60s max — dans la fenêtre Render.
+      const backoff = Math.min(delay * Math.pow(1.5, attempt - 1), 10000);
+      logger.warn(`[DB] Tentative ${attempt}/${retries} échouée (${err.code || err.message}), retry dans ${(backoff / 1000).toFixed(1)}s...`);
+      await new Promise(r => setTimeout(r, backoff));
     }
   }
 }
