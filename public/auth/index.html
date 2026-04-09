@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Flaynn">
-  <link rel="apple-touch-icon" href="/icons/logo.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
   <title>Espace Membre — Flaynn</title>
 
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -125,14 +125,7 @@
   </div>
 
   <div id="page-transition-overlay" role="status" aria-live="assertive" aria-label="Chargement en cours">
-    <svg class="transition-wing" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <path d="M24 4C24 4 10 14 10 28c0 8 6 16 14 16 8 0 14-8 14-16C38 14 24 4 24 4z" fill="url(#wing-grad)" opacity="0.9"/>
-      <path d="M24 12c0 0-6 6-6 14 0 5 3 10 6 10s6-5 6-10c0-8-6-14-6-14z" fill="url(#wing-grad-inner)" opacity="0.7"/>
-      <defs>
-        <linearGradient id="wing-grad" x1="24" y1="4" x2="24" y2="44" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#E8651A"/><stop offset="50%" stop-color="#C13584"/><stop offset="100%" stop-color="#7B2D8E"/></linearGradient>
-        <linearGradient id="wing-grad-inner" x1="24" y1="12" x2="24" y2="36" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFB347"/><stop offset="100%" stop-color="#E8651A"/></linearGradient>
-      </defs>
-    </svg>
+    <img class="transition-wing" src="/icons/logo.png" alt="" width="48" height="48" aria-hidden="true">
   </div>
   <script type="module" src="/register-sw.js"></script>
   <script src="/auth/app.js" type="module"></script>

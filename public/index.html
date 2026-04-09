@@ -10,18 +10,21 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Flaynn">
-    <link rel="apple-touch-icon" href="/icons/logo.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
 
     <meta property="og:type" content="website">
     <meta property="og:locale" content="fr_FR">
     <meta property="og:url" content="https://flaynn.tech/">
     <meta property="og:title" content="Flaynn · Scoring startup &amp; mise en relation investisseur">
     <meta property="og:description" content="Votre dossier passé au crible par un comité d'analyse propriétaire. Score sur 5 piliers, benchmark marché et verdict en 24h.">
-    <meta property="og:image" content="https://flaynn.tech/favicon.svg">
+    <meta property="og:image" content="https://flaynn.tech/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Flaynn · Scoring startup &amp; mise en relation investisseur">
     <meta name="twitter:description" content="Votre dossier passé au crible par un comité d'analyse propriétaire. Score sur 5 piliers, benchmark marché et verdict en 24h.">
+    <meta name="twitter:image" content="https://flaynn.tech/og-image.png">
 
     <link rel="canonical" href="https://flaynn.tech/">
 
@@ -45,7 +48,7 @@
 
     <link rel="stylesheet" href="defaut.css">
 
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Flaynn","url":"https://flaynn.tech/","image":"https://flaynn.tech/favicon.svg","applicationCategory":"BusinessApplication","description":"Plateforme de scoring objectif pour startups françaises et mise en relation investisseur.","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Flaynn","url":"https://flaynn.tech/","image":"https://flaynn.tech/og-image.png","applicationCategory":"BusinessApplication","description":"Plateforme de scoring objectif pour startups françaises et mise en relation investisseur.","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
 </head>
 <body>
     <a href="#main-content" class="skip-link">Aller au contenu principal</a>
@@ -957,21 +960,7 @@
 
     <!-- ARCHITECT-PRIME: "The Void Shutter" — page transition overlay -->
     <div id="page-transition-overlay" role="status" aria-live="assertive" aria-label="Chargement en cours">
-        <svg class="transition-wing" width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-            <path d="M24 4C24 4 10 14 10 28c0 8 6 16 14 16 8 0 14-8 14-16C38 14 24 4 24 4z" fill="url(#wing-grad)" opacity="0.9"/>
-            <path d="M24 12c0 0-6 6-6 14 0 5 3 10 6 10s6-5 6-10c0-8-6-14-6-14z" fill="url(#wing-grad-inner)" opacity="0.7"/>
-            <defs>
-                <linearGradient id="wing-grad" x1="24" y1="4" x2="24" y2="44" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="#E8651A"/>
-                    <stop offset="50%" stop-color="#C13584"/>
-                    <stop offset="100%" stop-color="#7B2D8E"/>
-                </linearGradient>
-                <linearGradient id="wing-grad-inner" x1="24" y1="12" x2="24" y2="36" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="#FFB347"/>
-                    <stop offset="100%" stop-color="#E8651A"/>
-                </linearGradient>
-            </defs>
-        </svg>
+        <img class="transition-wing" src="/icons/logo.png" alt="" width="48" height="48" aria-hidden="true">
     </div>
 
     <!-- Modal Mentions Légales (Vanilla JS) -->

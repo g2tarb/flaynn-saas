@@ -1070,7 +1070,7 @@
   /* ARCHITECT-PRIME: contraint le logo PNG dans la nav — l'attribut HTML width/height
      sert de ratio hint, le CSS pilote la taille réelle */
   .logo-img {
-    width: 52px;
+    width: 56px;
     height: auto;
     object-fit: contain;
     display: block;
@@ -2908,6 +2908,8 @@
     transition: padding 0.3s var(--ease-out-expo), border-color 0.3s ease;
   }
 
+  .logo-img { width: 48px; }
+
   .nav-glass.is-scrolled { padding-top: 0; }
   .nav-glass.is-scrolled .nav-content { min-height: 3rem; }
   .nav-glass.is-scrolled .logo-container svg {
@@ -2915,7 +2917,7 @@
     transition: all 0.3s var(--ease-out-expo);
   }
   .nav-glass.is-scrolled .logo-img {
-    width: 36px;
+    width: 40px;
   }
   .nav-glass.is-scrolled .logo-text {
     font-size: 0.95rem;
