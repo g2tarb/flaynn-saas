@@ -293,7 +293,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const sessionData = await sessionCheck.json();
       localStorage.setItem('flaynn_auth', JSON.stringify(sessionData.user));
-      window.location.replace('/dashboard/');
+      if (window.navigateTo) { window.navigateTo('/dashboard/'); }
+      else { window.location.replace('/dashboard/'); }
     } catch (err) {
       errorEl.textContent = err.message;
       submitBtn.disabled = false;

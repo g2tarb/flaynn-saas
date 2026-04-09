@@ -426,7 +426,7 @@
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 1.75rem;
-  line-height: 1;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   color: var(--text-primary);
 }
@@ -580,6 +580,7 @@
   font-size: 0.875rem;
   line-height: 1.55;
   color: var(--text-secondary);
+  word-break: break-word;
 }
 
 .priority-badge {
@@ -654,7 +655,7 @@
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 2rem;
-  line-height: 1;
+  line-height: 1.15;
   letter-spacing: -0.03em;
 }
 
@@ -715,7 +716,7 @@
   font-weight: 700;
   font-size: clamp(1.5rem, 3vw, 2rem);
   color: var(--text-primary);
-  line-height: 1;
+  line-height: 1.15;
   letter-spacing: -0.02em;
 }
 
@@ -1023,6 +1024,7 @@
 /* ── Verdict Banner ── */
 .verdict-banner {
   padding: var(--space-4) var(--space-5);
+  word-break: break-word;
 }
 .verdict-banner__header {
   display: flex;

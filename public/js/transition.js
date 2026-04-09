@@ -14,6 +14,20 @@ const DURATION_IN  = 0.6;
 const EASE_OUT     = 'expo.out';
 const EASE_IN      = 'expo.inOut';
 
+// ARCHITECT-PRIME: Global navigation function for programmatic redirects.
+// Any JS that does window.location.href = '...' should use this instead
+// to get the Void Shutter transition.
+window.navigateTo = function(targetUrl) {
+  if (targetUrl === location.pathname || targetUrl === location.href) return;
+  if (targetUrl.startsWith('#')) {
+    const el = document.querySelector(targetUrl);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  sessionStorage.setItem('flaynn_transition', '1');
+  animateOut(targetUrl);
+};
+
 const overlay = document.getElementById('page-transition-overlay');
 const wing    = overlay?.querySelector('.transition-wing');
 

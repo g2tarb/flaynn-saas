@@ -606,7 +606,7 @@ class ScoringFormController {
         localStorage.setItem('flaynn_pending_email', emailVal);
         window.location.href = data.checkout_url;
       } else {
-        window.location.href = `/scoring/succes?ref=${data.reference}`;
+        window.navigateTo ? window.navigateTo(`/scoring/succes?ref=${data.reference}`) : (window.location.href = `/scoring/succes?ref=${data.reference}`);
       }
     } catch (err) {
       showToast(this.toastRoot, err.message || 'Erreur réseau.', 'error');
@@ -737,14 +737,7 @@ setTimeout(() => {
 /* —— Warp navigation : intercepte les liens vers /dashboard/ ————————— */
 function warpNavigate(targetUrl, e) {
   e.preventDefault();
-
-  const overlay = document.getElementById('page-transition-overlay');
-  if (overlay) {
-    overlay.style.clipPath = 'circle(120% at 50% 50%)';
-    overlay.classList.add('is-active');
-  }
-
-  window.setTimeout(() => { window.location.href = targetUrl; }, 300);
+  (window.navigateTo || function(u) { window.location.href = u; })(targetUrl);
 }
 
 document.addEventListener('click', (e) => {
@@ -756,8 +749,8 @@ document.addEventListener('click', (e) => {
   }
 });
 
-document.getElementById('btn-header-cta')?.addEventListener('click', () => { window.location.href = '/scoring/'; });
-document.getElementById('btn-hero-cta')?.addEventListener('click', () => { window.location.href = '/scoring/'; });
+document.getElementById('btn-header-cta')?.addEventListener('click', () => { window.navigateTo ? window.navigateTo('/scoring/') : (window.location.href = '/scoring/'); });
+document.getElementById('btn-hero-cta')?.addEventListener('click', () => { window.navigateTo ? window.navigateTo('/scoring/') : (window.location.href = '/scoring/'); });
 
 // —— Collapsing header on scroll ——————————————————————————————————————
 const navGlass = document.querySelector('.nav-glass');
@@ -806,7 +799,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // —— Bottom nav mobile — active section tracking + CTA ———————————————
-document.getElementById('btn-bnav-cta')?.addEventListener('click', () => { window.location.href = '/scoring/'; });
+document.getElementById('btn-bnav-cta')?.addEventListener('click', () => { window.navigateTo ? window.navigateTo('/scoring/') : (window.location.href = '/scoring/'); });
 
 // Active link tracking via IntersectionObserver
 (function initBnavTracking() {
@@ -1167,6 +1160,48 @@ scheduleIdle(() => {
     });
   }, { threshold: 0.13, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.fade-up').forEach(function(el) { obs.observe(el); });
+})();
+
+// ARCHITECT-PRIME: Showcase live update — when Quick Score returns a result,
+// reflect it in the showcase demo section instead of static data.
+(function() {
+  var scoreNum = document.querySelector('.showcase-score-num');
+  if (!scoreNum) return;
+  var showcaseVerdict = document.querySelector('.showcase-verdict');
+  var showcaseName = document.querySelector('.showcase-dash-header div:first-child div:first-child');
+  var demoBadge = document.querySelector('.showcase-demo-badge');
+
+  window.addEventListener('flaynn:quickscore', function(e) {
+    var d = e.detail;
+    if (!d || !d.score) return;
+
+    scoreNum.style.transition = 'opacity 0.3s ease';
+    scoreNum.style.opacity = '0';
+
+    setTimeout(function() {
+      scoreNum.textContent = d.score;
+      scoreNum.style.opacity = '1';
+
+      if (d.score >= 70) scoreNum.style.color = 'var(--accent-emerald, #10b981)';
+      else if (d.score >= 50) scoreNum.style.color = '#E8651A';
+      else scoreNum.style.color = 'var(--accent-rose, #f43f5e)';
+
+      if (showcaseVerdict && d.conseil) {
+        var verdictTitle = showcaseVerdict.querySelector('div:first-child');
+        var verdictDesc = showcaseVerdict.querySelector('div:last-child');
+        if (verdictTitle) verdictTitle.textContent = '\u2726 Verdict rapide';
+        if (verdictDesc) verdictDesc.textContent = d.conseil;
+      }
+
+      if (showcaseName) showcaseName.textContent = 'Votre Quick Score';
+
+      if (demoBadge) {
+        demoBadge.textContent = 'Score bas\u00e9 sur votre description \u00b7 Pour un diagnostic complet, lancez le scoring';
+        demoBadge.style.borderColor = 'rgba(232, 101, 26, 0.2)';
+        demoBadge.style.color = '#E8651A';
+      }
+    }, 300);
+  });
 })();
 
 // MOCKUP TILT 3D + PARALLAX

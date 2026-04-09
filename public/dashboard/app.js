@@ -493,7 +493,7 @@ function buildRoutes(data) {
             const card = el('article', 'card-glass');
             card.style.padding = 'var(--space-5)';
             card.style.cursor = 'pointer';
-            card.addEventListener('click', () => { window.location.href = `/dashboard/?id=${item.reference_id}`; });
+            card.addEventListener('click', () => { window.navigateTo ? window.navigateTo(`/dashboard/?id=${item.reference_id}`) : (window.location.href = `/dashboard/?id=${item.reference_id}`); });
             const title = el('h3', 'dashboard-card-title', { textContent: item.startup_name || item.reference_id });
             const date = el('p', 'dashboard-meta', { textContent: 'Analysée le ' + new Date(item.created_at).toLocaleDateString('fr-FR') });
             card.appendChild(title);
@@ -918,6 +918,16 @@ class FlaynnRouter {
     }
     stopForceSimulation();
     this.root.setAttribute('aria-busy', 'true');
+
+    // ARCHITECT-PRIME: fade out before clearing content
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!prefersReduced) {
+      this.root.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+      this.root.style.opacity = '0';
+      this.root.style.transform = 'translateY(8px)';
+      await new Promise(r => setTimeout(r, 200));
+    }
+
     clearEl(this.root);
 
     // ARCHITECT-PRIME: skeleton inline pendant le handler async (zéro écran vide)
@@ -932,11 +942,31 @@ class FlaynnRouter {
     }
     this.root.appendChild(skel);
 
+    // ARCHITECT-PRIME: show skeleton with opacity restored
+    if (!prefersReduced) {
+      this.root.style.opacity = '1';
+      this.root.style.transform = 'translateY(0)';
+    }
+
     try {
       clearEl(this.root);
       await match.handler(this.root, path);
     } finally { this.root.setAttribute('aria-busy', 'false'); }
     this.#syncNav(path);
+
+    // ARCHITECT-PRIME: fade in new content
+    if (!prefersReduced) {
+      this.root.style.opacity = '0';
+      this.root.style.transform = 'translateY(12px)';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.root.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+          this.root.style.opacity = '1';
+          this.root.style.transform = 'translateY(0)';
+        });
+      });
+    }
+
     initDashboardReveal(this.root);
     this.root.focus();
   }

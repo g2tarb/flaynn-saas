@@ -46,6 +46,10 @@
       var score = data.score;
       var colorClass = score >= 70 ? '--high' : score >= 50 ? '--mid' : '--low';
 
+      // ARCHITECT-PRIME: Dispatch event for showcase live update
+      window.__flaynnQuickScore = { score: score, conseil: data.conseil, idea: idea, timestamp: Date.now() };
+      window.dispatchEvent(new CustomEvent('flaynn:quickscore', { detail: window.__flaynnQuickScore }));
+
       scoreVal.textContent = score + '/100';
       scoreVal.className = 'mini-scoring__score mini-scoring__score' + colorClass;
       advice.textContent = data.conseil;

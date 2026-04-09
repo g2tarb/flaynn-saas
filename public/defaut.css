@@ -3004,6 +3004,7 @@
     padding: 16px;
     background: rgba(123,45,142,0.06); border: 1px solid rgba(123,45,142,0.15);
     border-radius: 12px; margin-bottom: 16px;
+    word-break: break-word;
   }
 
   .showcase-demo-badge {
@@ -3013,7 +3014,12 @@
   }
 
   @media (max-width: 600px) {
-    .showcase-content { padding: 20px 16px; }
+    .showcase-content {
+      padding: 20px 16px;
+      max-height: 420px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
     .showcase-score-num { font-size: 2rem; }
   }
 }
