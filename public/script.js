@@ -219,6 +219,7 @@ class ScoringFormController {
     this.stepLabel = document.getElementById('step-current');
     this.#bind();
     this.#initChips();
+    this.#initLabelBadges();
     this.#updateProgress();
     this.#updateStepButtons();
   }
@@ -268,9 +269,121 @@ class ScoringFormController {
       this.#submit();
     });
 
+    // ARCHITECT-PRIME: Searchable dropdown for secteur
+    this.form.querySelectorAll('[data-dropdown]').forEach((dropdown) => {
+      const searchInput = dropdown.querySelector('[data-dropdown-search]');
+      const hiddenInput = dropdown.parentElement.querySelector('input[type="hidden"]');
+      const list = dropdown.querySelector('[role="listbox"]');
+      if (!searchInput || !hiddenInput || !list) return;
+      const items = Array.from(list.querySelectorAll('[role="option"]'));
+
+      const showList = () => { list.hidden = false; searchInput.setAttribute('aria-expanded', 'true'); };
+      const hideList = () => { list.hidden = true; searchInput.setAttribute('aria-expanded', 'false'); };
+
+      const filterItems = () => {
+        const q = searchInput.value.toLowerCase().trim();
+        let visibleCount = 0;
+        items.forEach((item) => {
+          const match = !q || item.textContent.toLowerCase().includes(q);
+          item.hidden = !match;
+          if (match) visibleCount++;
+        });
+        if (visibleCount > 0) showList(); else hideList();
+      };
+
+      searchInput.addEventListener('focus', () => { filterItems(); });
+      searchInput.addEventListener('input', () => {
+        hiddenInput.value = '';
+        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+        filterItems();
+      });
+
+      items.forEach((item) => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          hiddenInput.value = item.dataset.value;
+          searchInput.value = item.textContent;
+          hideList();
+          hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+          this.#updateStepButtons();
+        });
+      });
+
+      searchInput.addEventListener('blur', () => { setTimeout(hideList, 150); });
+
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { hideList(); searchInput.blur(); }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const visible = items.find((i) => !i.hidden);
+          if (visible) {
+            hiddenInput.value = visible.dataset.value;
+            searchInput.value = visible.textContent;
+            hideList();
+            hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            this.#updateStepButtons();
+          }
+        }
+      });
+    });
+
+    // ARCHITECT-PRIME: TAM logarithmic slider
+    const tamRange = this.form.querySelector('#tam_range');
+    const tamHidden = this.form.querySelector('#tam_usd');
+    const tamFloatLabel = this.form.querySelector('#tam-float-label');
+    if (tamRange && tamHidden) {
+      const TAM_VALUES = ['100K', '500K', '1M', '5M', '10M', '50M', '100M', '500M', '1B', '5B', '10B'];
+      const TAM_LABELS = ['~100K€', '~500K€', '~1M€', '~5M€', '~10M€', '~50M€', '~100M€', '~500M€', '~1Md€', '~5Md€', '~10Md€'];
+
+      const updateTam = () => {
+        const idx = Number(tamRange.value);
+        tamHidden.value = TAM_VALUES[idx];
+        tamRange.setAttribute('aria-valuenow', String(idx));
+        tamRange.setAttribute('aria-valuetext', TAM_LABELS[idx]);
+        if (tamFloatLabel) {
+          tamFloatLabel.textContent = TAM_LABELS[idx];
+          const pct = (idx / 10) * 100;
+          const clampedPct = Math.max(8, Math.min(92, pct));
+          tamFloatLabel.style.left = `${clampedPct}%`;
+        }
+        this.#updateStepButtons();
+      };
+      tamRange.addEventListener('input', updateTam);
+      updateTam();
+    }
+
     // Pitch deck file upload — base64 conversion
+    // ARCHITECT-PRIME: Pitch deck upload with format/size validation and preview
+    const ALLOWED_DOC_TYPES = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const ALLOWED_EXTENSIONS = ['.pdf', '.pptx', '.docx'];
+
+    function isAllowedFile(file) {
+      if (ALLOWED_DOC_TYPES.includes(file.type)) return true;
+      const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+      return ALLOWED_EXTENSIONS.includes(ext);
+    }
+
+    function fileIcon(name) {
+      const ext = name.toLowerCase().slice(name.lastIndexOf('.'));
+      if (ext === '.pdf') return '\u{1F4C4}';
+      if (ext === '.pptx') return '\u{1F4CA}';
+      if (ext === '.docx') return '\u{1F4DD}';
+      return '\u{1F4CE}';
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
     const fileInput = this.form.querySelector('#pitch_deck_file');
     if (fileInput) {
+      const preview = this.form.querySelector('#pitch-deck-preview');
       fileInput.addEventListener('change', () => {
         const file = fileInput.files[0];
         const b64Input = this.form.querySelector('#pitch_deck_base64');
@@ -280,22 +393,31 @@ class ScoringFormController {
         if (!file) {
           if (b64Input) b64Input.value = '';
           if (nameInput) nameInput.value = '';
+          if (preview) preview.hidden = true;
           return;
         }
 
-        if (file.type !== 'application/pdf') {
-          if (errEl) errEl.textContent = 'Format PDF uniquement.';
+        if (!isAllowedFile(file)) {
+          if (errEl) errEl.textContent = 'Format accepté : PDF, PPTX ou DOCX.';
           fileInput.value = '';
           return;
         }
 
-        if (file.size > 10 * 1024 * 1024) {
-          if (errEl) errEl.textContent = 'Fichier trop volumineux (max 10 MB).';
+        if (file.size > 25 * 1024 * 1024) {
+          if (errEl) errEl.textContent = 'Fichier trop volumineux (max 25 MB).';
           fileInput.value = '';
           return;
         }
 
         if (errEl) errEl.textContent = '';
+        if (preview) {
+          const iconEl = preview.querySelector('.file-preview__icon');
+          const nameEl = preview.querySelector('.file-preview__name');
+          if (iconEl) iconEl.textContent = fileIcon(file.name);
+          if (nameEl) nameEl.textContent = `${file.name} (${formatSize(file.size)})`;
+          preview.hidden = false;
+        }
+
         const reader = new FileReader();
         reader.onload = () => {
           const base64 = reader.result.split(',')[1];
@@ -305,6 +427,105 @@ class ScoringFormController {
         reader.readAsDataURL(file);
       });
     }
+
+    // ARCHITECT-PRIME: Extra docs dropzone with drag-and-drop
+    const dropzone = this.form.querySelector('#extra-docs-dropzone');
+    const extraInput = this.form.querySelector('#extra_docs_files');
+    const extraList = this.form.querySelector('#extra-docs-list');
+    if (dropzone && extraInput && extraList) {
+      this._extraFiles = [];
+
+      const renderExtraFiles = () => {
+        extraList.replaceChildren();
+        this._extraFiles.forEach((file, idx) => {
+          const li = document.createElement('li');
+          li.className = 'dropzone__file-item';
+
+          const icon = document.createElement('span');
+          icon.setAttribute('aria-hidden', 'true');
+          icon.textContent = fileIcon(file.name);
+
+          const name = document.createElement('span');
+          name.className = 'dropzone__file-name';
+          name.textContent = file.name;
+
+          const size = document.createElement('span');
+          size.className = 'dropzone__file-size';
+          size.textContent = formatSize(file.size);
+
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'dropzone__file-remove';
+          removeBtn.setAttribute('aria-label', `Retirer ${file.name}`);
+          removeBtn.textContent = '\u2715';
+          removeBtn.addEventListener('click', () => {
+            this._extraFiles.splice(idx, 1);
+            renderExtraFiles();
+          });
+
+          li.appendChild(icon);
+          li.appendChild(name);
+          li.appendChild(size);
+          li.appendChild(removeBtn);
+          extraList.appendChild(li);
+        });
+      };
+
+      const addFiles = (files) => {
+        const errEl = dropzone.closest('.field')?.querySelector('.field__error');
+        let errorMsg = '';
+        for (const file of files) {
+          if (!isAllowedFile(file)) {
+            errorMsg = `${file.name} : format non accepté (PDF, PPTX, DOCX).`;
+            continue;
+          }
+          if (file.size > 10 * 1024 * 1024) {
+            errorMsg = `${file.name} : fichier trop volumineux (max 10 MB).`;
+            continue;
+          }
+          this._extraFiles.push(file);
+        }
+        if (errEl) errEl.textContent = errorMsg;
+        renderExtraFiles();
+      };
+
+      dropzone.addEventListener('click', () => extraInput.click());
+      dropzone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); extraInput.click(); }
+      });
+      extraInput.addEventListener('change', () => {
+        if (extraInput.files.length) addFiles(Array.from(extraInput.files));
+        extraInput.value = '';
+      });
+
+      dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('is-dragover'); });
+      dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('is-dragover'); });
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('is-dragover');
+        if (e.dataTransfer?.files.length) addFiles(Array.from(e.dataTransfer.files));
+      });
+    }
+
+    // ARCHITECT-PRIME: URL validation for linkedin/site fields
+    this.form.querySelectorAll('[data-validate="urlopt"]').forEach((field) => {
+      const input = field.querySelector('.field__input');
+      if (!input) return;
+      input.addEventListener('blur', () => {
+        const val = input.value.trim();
+        const errEl = field.querySelector('.field__error');
+        if (val && !val.startsWith('https://')) {
+          if (errEl) errEl.textContent = 'L\'URL doit commencer par https://';
+          field.classList.add('field--error');
+        } else if (val) {
+          try { new URL(val); if (errEl) errEl.textContent = ''; field.classList.remove('field--error'); }
+          catch { if (errEl) errEl.textContent = 'URL invalide.'; field.classList.add('field--error'); }
+        } else {
+          if (errEl) errEl.textContent = '';
+          field.classList.remove('field--error');
+        }
+      });
+    });
   }
 
   #initChips() {
@@ -330,10 +551,28 @@ class ScoringFormController {
     });
   }
 
+  // ARCHITECT-PRIME: Add Requis/Optionnel micro-badges to all labels
+  #initLabelBadges() {
+    this.form.querySelectorAll('.field').forEach((field) => {
+      const label = field.querySelector('.field__label');
+      if (!label) return;
+      // Skip if badge already exists
+      if (label.querySelector('.field__label-badge')) return;
+      const input = field.querySelector('.field__input, input[type="hidden"][required], select[required], textarea[required]');
+      const isRequired = field.dataset.validate?.includes('required') || input?.hasAttribute('required');
+      // Skip labels that are spans (chip groups — they have their own patterns)
+      if (label.tagName === 'SPAN') return;
+      const badge = document.createElement('span');
+      badge.className = 'field__label-badge';
+      badge.textContent = isRequired ? 'Requis' : 'Optionnel';
+      label.appendChild(badge);
+    });
+  }
+
   #validateField(input, showError, skipButtonUpdate = false) {
     const field = input.closest('.field');
     if (!field || !field.dataset.validate) return true;
-    if (input.type === 'hidden' && input.id !== 'stage') return true;
+    if (input.type === 'hidden' && input.id !== 'stage' && input.id !== 'secteur' && input.id !== 'tam_usd') return true;
     const rules = field.dataset.validate.split('|');
     const value = input.value.trim();
     let error = '';
@@ -436,38 +675,57 @@ class ScoringFormController {
       return;
     }
 
-    const forward = target > this.currentStep;
-    const exitX = forward ? -18 : 18;
-    const enterX = forward ? 22 : -22;
-    const easing = 'cubic-bezier(0.16, 1, 0.3, 1)';
+    // ARCHITECT-PRIME: Wormhole transition with starfield warp
+    // Disable navigation buttons during transition
+    const navBtns = this.form.querySelectorAll('.btn-form--next, .btn-form--ghost');
+    navBtns.forEach((btn) => { btn.style.pointerEvents = 'none'; btn.setAttribute('aria-disabled', 'true'); });
+
+    // t=0ms: Starfield warp + content fade-out
+    if (window.starfield?.setSpeed) window.starfield.setSpeed(15);
 
     const exitAnim = currentEl.animate(
       [
-        { opacity: 1, transform: 'translateX(0)' },
-        { opacity: 0, transform: `translateX(${exitX}px)` }
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: 0, transform: 'scale(0.95)' }
       ],
-      { duration: 280, easing, fill: 'both' }
+      { duration: 300, easing: 'ease-in', fill: 'both' }
     );
 
     exitAnim.finished
       .then(() => {
+        // t=300ms: Swap content
         exitAnim.cancel();
         this.#swapStepDom(target, currentEl, nextEl);
+        nextEl.style.opacity = '0';
+
+        // t=600ms: Decelerate starfield + fade-in new content
+        return new Promise(resolve => setTimeout(resolve, 300));
+      })
+      .then(() => {
+        if (window.starfield?.setSpeed) window.starfield.setSpeed(1, 400);
+
         const enterAnim = nextEl.animate(
           [
-            { opacity: 0, transform: `translateX(${enterX}px)` },
-            { opacity: 1, transform: 'translateX(0)' }
+            { opacity: 0, transform: 'translateY(20px)' },
+            { opacity: 1, transform: 'translateY(0)' }
           ],
-          { duration: 320, easing, fill: 'both' }
+          { duration: 350, easing: 'ease-out', fill: 'both' }
         );
+
         return enterAnim.finished.then(() => {
           enterAnim.cancel();
-          const first = nextEl.querySelector('.field__input, .chip');
+          nextEl.style.opacity = '';
+          const first = nextEl.querySelector('.field__input, .chip, [data-dropdown-search]');
           if (first) first.focus();
+          // Re-enable buttons
+          navBtns.forEach((btn) => { btn.style.pointerEvents = ''; btn.removeAttribute('aria-disabled'); });
         });
       })
       .catch(() => {
+        if (window.starfield?.setSpeed) window.starfield.setSpeed(1);
         this.#swapStepDom(target, currentEl, nextEl);
+        nextEl.style.opacity = '';
+        navBtns.forEach((btn) => { btn.style.pointerEvents = ''; btn.removeAttribute('aria-disabled'); });
         const f = nextEl.querySelector('.field__input, .chip');
         if (f) f.focus();
       });
@@ -497,11 +755,21 @@ class ScoringFormController {
     if (this.stepLabel) {
       this.stepLabel.textContent = String(this.currentStep);
     }
-    const dots = this.form.closest('.scoring-form-wrap')
-      ?.querySelectorAll('.progress-dot');
-    if (dots) {
+    // Accessibility: update screen reader text
+    const srLabel = document.getElementById('step-current-sr');
+    if (srLabel) srLabel.textContent = `Étape ${this.currentStep} sur ${this.totalSteps}`;
+
+    // ARCHITECT-PRIME: Linear-style progress dots
+    const dotsBar = document.getElementById('progress-dots-bar');
+    if (dotsBar) {
+      const dots = dotsBar.querySelectorAll('.progress-dots-bar__dot');
       dots.forEach((dot, i) => {
-        dot.classList.toggle('progress-dot--active', i < this.currentStep);
+        dot.classList.remove('progress-dots-bar__dot--completed', 'progress-dots-bar__dot--current');
+        if (i < this.currentStep) {
+          dot.classList.add('progress-dots-bar__dot--completed');
+        } else if (i === this.currentStep) {
+          dot.classList.add('progress-dots-bar__dot--current');
+        }
       });
     }
   }
@@ -519,11 +787,13 @@ class ScoringFormController {
       tam_usd: 'TAM', estimation_tam: 'Estimation TAM',
       acquisition_clients: 'Acquisition', concurrents: 'Concurrents',
       stade: 'Stade', revenus: 'Revenus', mrr: 'MRR', clients_payants: 'Clients payants',
+      moat: 'Barrières à l\'entrée',
       pourquoi_vous: 'Pourquoi vous', equipe_temps_plein: 'Temps plein',
       priorite_6_mois: 'Priorité 6 mois', montant_leve: 'Montant levée',
       jalons_18_mois: 'Jalons 18 mois', utilisation_fonds: 'Utilisation fonds',
-      vision_5_ans: 'Vision 5 ans',
-      pitch_deck_filename: 'Pitch deck', doc_supplementaire_url: 'Document supp.'
+      vision_5_ans: 'Vision 5 ans', autres_informations: 'Infos complémentaires',
+      pitch_deck_filename: 'Pitch deck', doc_supplementaire_url: 'Document supp.',
+      linkedin_url: 'LinkedIn', site_url: 'Site web'
     };
 
     const formData = new FormData(this.form);
@@ -552,9 +822,12 @@ class ScoringFormController {
     if (!this.#validateStep(this.totalSteps, true)) return;
 
     const btn = this.form.querySelector('#btn-submit');
-    const label = btn?.querySelector('.btn-form__text');
-    if (btn) btn.disabled = true;
-    if (label) label.textContent = 'Envoi\u2026';
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('btn-form--loading');
+      btn.setAttribute('aria-disabled', 'true');
+      btn.style.pointerEvents = 'none';
+    }
 
     // Collecte automatique de tous les champs par leur name
     const formData = new FormData(this.form);
@@ -610,8 +883,12 @@ class ScoringFormController {
       }
     } catch (err) {
       showToast(this.toastRoot, err.message || 'Erreur réseau.', 'error');
-      if (btn) btn.disabled = false;
-      if (label) label.textContent = 'Soumettre';
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('btn-form--loading');
+        btn.removeAttribute('aria-disabled');
+        btn.style.pointerEvents = '';
+      }
     }
   }
 }

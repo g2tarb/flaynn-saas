@@ -5,6 +5,11 @@
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const ctx = canvas.getContext('2d');
   let W, H, particles;
+  let speedMultiplier = 1;
+  let targetSpeed = 1;
+  let speedEaseStart = 0;
+  let speedEaseFrom = 1;
+  let speedEaseDuration = 0;
   const mouse = { x: null, y: null };
   const isMobile = window.innerWidth < 768;
   const N = isMobile ? 40 : 70;
@@ -37,7 +42,7 @@
       }
     }
     this.vx *= 0.99; this.vy *= 0.99;
-    this.x += this.vx; this.y += this.vy;
+    this.x += this.vx * speedMultiplier; this.y += this.vy * speedMultiplier;
     if (this.x < 0) this.x = W; if (this.x > W) this.x = 0;
     if (this.y < 0) this.y = H; if (this.y > H) this.y = 0;
   };
@@ -45,6 +50,15 @@
   function init() { particles = Array.from({ length: N }, () => new Particle()); }
 
   function draw() {
+    // ARCHITECT-PRIME: Smooth speed easing for wormhole transitions
+    if (speedEaseDuration > 0) {
+      const elapsed = performance.now() - speedEaseStart;
+      const t = Math.min(1, elapsed / speedEaseDuration);
+      // Cubic-bezier approximation: ease-out
+      const eased = 1 - Math.pow(1 - t, 3);
+      speedMultiplier = speedEaseFrom + (targetSpeed - speedEaseFrom) * eased;
+      if (t >= 1) { speedMultiplier = targetSpeed; speedEaseDuration = 0; }
+    }
     ctx.clearRect(0, 0, W, H);
     for (let i = 0; i < particles.length; i++) {
       particles[i].update();
@@ -76,6 +90,17 @@
   window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
   window.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
   resize(); init(); draw();
+
+  // ARCHITECT-PRIME: Speed API for wormhole transitions
+  window.starfield = {
+    setSpeed: function(n, easeDuration) {
+      speedEaseFrom = speedMultiplier;
+      targetSpeed = n;
+      speedEaseStart = performance.now();
+      speedEaseDuration = easeDuration || 0;
+      if (!easeDuration) speedMultiplier = n;
+    }
+  };
 
   window.starfieldWarp = function(duration) {
     if (!particles || !particles.length) return;

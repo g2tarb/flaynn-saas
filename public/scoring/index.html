@@ -61,18 +61,21 @@
             </div>
             <form id="scoring-form-form" class="scoring-form__form" novalidate>
                 <div class="form-progress" role="status" aria-live="polite" aria-atomic="true">
-                    <div class="form-progress__header">
-                        <span class="form-progress__label">Étape <span id="step-current">0</span> sur 8</span>
-                        <div class="form-progress__steps-dots" aria-hidden="true">
-                            <span class="progress-dot progress-dot--active"></span>
-                            <span class="progress-dot"></span><span class="progress-dot"></span>
-                            <span class="progress-dot"></span><span class="progress-dot"></span>
-                            <span class="progress-dot"></span><span class="progress-dot"></span>
-                            <span class="progress-dot"></span><span class="progress-dot"></span>
-                        </div>
-                    </div>
+                    <span class="sr-only" id="step-current-sr">Étape 0 sur 8</span>
+                    <span id="step-current" hidden>0</span>
                     <div class="form-progress__track" aria-hidden="true">
                         <div class="form-progress__fill" id="progress-fill"></div>
+                        <div class="progress-dots-bar" id="progress-dots-bar">
+                            <span class="progress-dots-bar__dot progress-dots-bar__dot--current"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                            <span class="progress-dots-bar__dot"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -131,34 +134,46 @@
                         <input type="text" id="pitch_une_phrase" name="pitch_une_phrase" class="field__input" required placeholder="Nous aidons les X à faire Y grâce à Z.">
                         <span class="field__error" role="alert"></span>
                     </div>
-                    <div class="field" data-validate="required|min:30|max:2000">
+                    <div class="field" data-validate="required|min:20|max:2000">
                         <label for="probleme" class="field__label">Le problème <span class="field__label-hint">(point de douleur)</span></label>
-                        <textarea id="probleme" name="probleme" class="field__input field__input--textarea" rows="4" required placeholder="Quel problème résolvez-vous ? Pour qui ?"></textarea>
+                        <textarea id="probleme" name="probleme" class="field__input field__input--textarea" rows="4" required placeholder="Ex: les PME industrielles perdent en moyenne 12% de leur CA à cause de pannes non anticipées. Aucun outil accessible ne permet de prédire les défaillances sur machines anciennes..."></textarea>
                         <span class="field__error" role="alert"></span>
                     </div>
-                    <div class="field" data-validate="required|min:30|max:2000">
+                    <div class="field" data-validate="required|min:20|max:2000">
                         <label for="solution" class="field__label">Comment résolvez-vous ce problème ?</label>
-                        <textarea id="solution" name="solution" class="field__input field__input--textarea" rows="4" required placeholder="Votre approche, votre technologie, votre différence."></textarea>
+                        <textarea id="solution" name="solution" class="field__input field__input--textarea" rows="4" required placeholder="Ex: capteurs IoT low-cost + algorithme de maintenance prédictive entraîné sur 500K heures de données industrielles. Détection des anomalies 72h avant la panne avec 94% de précision..."></textarea>
                         <span class="field__error" role="alert"></span>
                     </div>
                     <div class="field field--inline">
                         <div class="field" data-validate="required">
                             <label for="secteur" class="field__label">Secteur principal</label>
-                            <div class="field__select-wrap">
-                                <select id="secteur" name="secteur" class="field__input field__input--select" required>
-                                    <option value="" disabled selected>Sélectionner</option>
-                                    <option value="fintech">FinTech</option>
-                                    <option value="healthtech">HealthTech</option>
-                                    <option value="saas">SaaS</option>
-                                    <option value="marketplace">Marketplace</option>
-                                    <option value="deeptech">DeepTech</option>
-                                    <option value="greentech">GreenTech</option>
-                                    <option value="edtech">EdTech</option>
-                                    <option value="proptech">PropTech</option>
-                                    <option value="legaltech">LegalTech</option>
-                                    <option value="foodtech">FoodTech</option>
-                                    <option value="other">Autre</option>
-                                </select>
+                            <div class="searchable-dropdown" data-dropdown>
+                                <input type="text" class="field__input" data-dropdown-search placeholder="Rechercher un secteur..." autocomplete="off" aria-expanded="false" aria-controls="secteur-list" role="combobox">
+                                <input type="hidden" id="secteur" name="secteur" required>
+                                <ul id="secteur-list" class="searchable-dropdown__list" role="listbox" hidden>
+                                    <li role="option" data-value="fintech">FinTech</li>
+                                    <li role="option" data-value="healthtech">HealthTech</li>
+                                    <li role="option" data-value="saas">SaaS</li>
+                                    <li role="option" data-value="marketplace">Marketplace</li>
+                                    <li role="option" data-value="deeptech">DeepTech</li>
+                                    <li role="option" data-value="greentech">GreenTech</li>
+                                    <li role="option" data-value="edtech">EdTech</li>
+                                    <li role="option" data-value="proptech">PropTech</li>
+                                    <li role="option" data-value="legaltech">LegalTech</li>
+                                    <li role="option" data-value="foodtech">FoodTech</li>
+                                    <li role="option" data-value="mobility_logistics">Mobility / Logistics</li>
+                                    <li role="option" data-value="media_entertainment">Media / Entertainment</li>
+                                    <li role="option" data-value="hr_recruiting">HR / Recruiting</li>
+                                    <li role="option" data-value="cybersecurity">Cybersecurity</li>
+                                    <li role="option" data-value="insurtech">InsurTech</li>
+                                    <li role="option" data-value="biotech">BioTech</li>
+                                    <li role="option" data-value="agritech">AgriTech</li>
+                                    <li role="option" data-value="social_impact">Social Impact</li>
+                                    <li role="option" data-value="ai_ml_native">AI / ML Native</li>
+                                    <li role="option" data-value="web3_blockchain">Web3 / Blockchain</li>
+                                    <li role="option" data-value="space_defense">Space / Defense</li>
+                                    <li role="option" data-value="other">Autre</li>
+                                </ul>
                             </div>
                             <span class="field__error" role="alert"></span>
                         </div>
@@ -187,32 +202,42 @@
                 <fieldset class="form-step is-hidden" data-step="3" id="form-step-3" hidden>
                     <legend class="fieldset-legend">Marché & Concurrence</legend>
                     <div class="field" data-validate="required">
-                        <label for="tam_usd" class="field__label">TAM (marché total adressable en USD)</label>
-                        <div class="field__select-wrap">
-                            <select id="tam_usd" name="tam_usd" class="field__input field__input--select" required>
-                                <option value="" disabled selected>Sélectionner</option>
-                                <option value="<1M">&lt; 1M $</option>
-                                <option value="1M-10M">1M - 10M $</option>
-                                <option value="10M-100M">10M - 100M $</option>
-                                <option value="100M-1B">100M - 1B $</option>
-                                <option value=">1B">&gt; 1B $</option>
-                            </select>
+                        <label for="tam_range" class="field__label">TAM (marché total adressable)</label>
+                        <div class="tam-slider" data-tam-slider>
+                            <div class="tam-slider__track-wrap">
+                                <span class="tam-slider__float-label" id="tam-float-label">~100K€</span>
+                                <input type="range" id="tam_range" class="tam-slider__input" min="0" max="10" step="1" value="0" aria-valuenow="0" aria-valuetext="~100K€">
+                            </div>
+                            <div class="tam-slider__legend" aria-hidden="true">
+                                <span class="tam-slider__tick" style="left:0%">100K</span>
+                                <span class="tam-slider__tick" style="left:20%">1M</span>
+                                <span class="tam-slider__tick" style="left:40%">10M</span>
+                                <span class="tam-slider__tick" style="left:60%">100M</span>
+                                <span class="tam-slider__tick" style="left:80%">1Md</span>
+                                <span class="tam-slider__tick" style="left:100%">10Md</span>
+                            </div>
                         </div>
+                        <input type="hidden" id="tam_usd" name="tam_usd" value="100K" required>
                         <span class="field__error" role="alert"></span>
                     </div>
-                    <div class="field" data-validate="required|min:5|max:500">
+                    <div class="field" data-validate="required|min:20|max:2000">
                         <label for="estimation_tam" class="field__label">Comment avez-vous estimé ce chiffre ?</label>
-                        <input type="text" id="estimation_tam" name="estimation_tam" class="field__input" required placeholder="Sources, méthodologie...">
+                        <textarea id="estimation_tam" name="estimation_tam" class="field__input field__input--textarea" rows="4" required placeholder="Ex: rapport McKinsey 2024 estimant le marché européen du X à 2,3Md€, multiplié par notre taux d'adressabilité de 15% sur le segment PME..."></textarea>
                         <span class="field__error" role="alert"></span>
                     </div>
                     <div class="field" data-validate="required|min:20|max:2000">
                         <label for="acquisition_clients" class="field__label">Comment acquérez-vous vos clients ?</label>
-                        <textarea id="acquisition_clients" name="acquisition_clients" class="field__input field__input--textarea" rows="3" required placeholder="Canaux d'acquisition, stratégie go-to-market..."></textarea>
+                        <textarea id="acquisition_clients" name="acquisition_clients" class="field__input field__input--textarea" rows="4" required placeholder="Ex: prospection directe auprès des directeurs usine via LinkedIn Sales Nav (taux de réponse 18%), partenariats avec 3 intégrateurs industriels, content marketing B2B avec 2K visiteurs/mois..."></textarea>
                         <span class="field__error" role="alert"></span>
                     </div>
                     <div class="field" data-validate="required|min:20|max:2000">
-                        <label for="concurrents" class="field__label">Concurrents et pourquoi vous gagnez</label>
-                        <textarea id="concurrents" name="concurrents" class="field__input field__input--textarea" rows="3" required placeholder="Qui sont vos concurrents ? Quel est votre avantage ?"></textarea>
+                        <label for="concurrents" class="field__label">Concurrents et différenciateur</label>
+                        <textarea id="concurrents" name="concurrents" class="field__input field__input--textarea" rows="4" required placeholder="Ex: Siemens MindSphere (trop cher pour PME, 50K€/an), Uptake (US only). Notre avantage : prix 10x inférieur, installation en 2h sans intégrateur, modèle IA spécialisé machines legacy..."></textarea>
+                        <span class="field__error" role="alert"></span>
+                    </div>
+                    <div class="field" data-validate="required|min:20|max:2000">
+                        <label for="moat" class="field__label">Barrières à l'entrée (moat)</label>
+                        <textarea id="moat" name="moat" class="field__input field__input--textarea" rows="4" required placeholder="Ex: brevets déposés, contrats d'exclusivité avec 3 distributeurs, dataset propriétaire de 2M entrées inaccessible aux concurrents, effet réseau entre utilisateurs..."></textarea>
                         <span class="field__error" role="alert"></span>
                     </div>
                     <div class="form-step-actions">
@@ -230,6 +255,7 @@
                             <select id="stade" name="stade" class="field__input field__input--select" required>
                                 <option value="" disabled selected>Sélectionner</option>
                                 <option value="idea">Idée</option>
+                                <option value="pre-seed">Pré-seed</option>
                                 <option value="mvp">MVP</option>
                                 <option value="seed">Seed</option>
                                 <option value="serieA">Série A</option>
@@ -270,7 +296,7 @@
                     <legend class="fieldset-legend">Équipe</legend>
                     <div class="field" data-validate="required|min:20|max:2000">
                         <label for="pourquoi_vous" class="field__label">Pourquoi vous ? <span class="field__label-hint">(fondateurs + avantage)</span></label>
-                        <textarea id="pourquoi_vous" name="pourquoi_vous" class="field__input field__input--textarea" rows="4" required placeholder="Parcours des fondateurs, expertise unique, avantage compétitif de l'équipe..."></textarea>
+                        <textarea id="pourquoi_vous" name="pourquoi_vous" class="field__input field__input--textarea" rows="4" required placeholder="Ex: CTO ex-Google Brain 8 ans en ML industriel, CEO 2 exits dont 1 à 40M€ dans l'IoT, advisor sectoriel avec réseau acheteurs dans 200 usines européennes..."></textarea>
                         <span class="field__error" role="alert"></span>
                     </div>
                     <div class="field" data-validate="required">
@@ -327,27 +353,62 @@
                         <textarea id="vision_5_ans" name="vision_5_ans" class="field__input field__input--textarea" rows="3" required placeholder="Où voyez-vous votre startup dans 5 ans ?"></textarea>
                         <span class="field__error" role="alert"></span>
                     </div>
+                    <div class="field">
+                        <label for="autres_informations" class="field__label">Informations complémentaires <span class="field__label-hint">(optionnel)</span></label>
+                        <textarea id="autres_informations" name="autres_informations" class="field__input field__input--textarea" rows="4" placeholder="Tout ce que vous jugez utile et que le formulaire ne couvre pas : contexte de marché, partenariats en cours, contraintes réglementaires, historique pertinent..."></textarea>
+                        <span class="field__error" role="alert"></span>
+                    </div>
                     <div class="form-step-actions">
                         <button type="button" class="btn-form btn-form--ghost" data-back="5"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Retour</button>
                         <button type="button" class="btn-form btn-form--next" data-next="7" disabled><span>Continuer</span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
                     </div>
                 </fieldset>
 
-                <!-- ETAPE 7 : Documents & Soumission -->
+                <!-- ETAPE 7 : Documents & Liens -->
                 <fieldset class="form-step is-hidden" data-step="7" id="form-step-7" hidden>
-                    <legend class="fieldset-legend">Documents</legend>
+                    <legend class="fieldset-legend">Documents & Liens</legend>
+
+                    <!-- Bloc 1 : Pitch deck -->
                     <div class="field">
-                        <label for="pitch_deck_file" class="field__label">Pitch deck <span class="field__label-hint">(PDF, max 10 MB)</span></label>
-                        <input type="file" id="pitch_deck_file" name="pitch_deck_file" class="field__input field__input--file" accept=".pdf,application/pdf">
+                        <label for="pitch_deck_file" class="field__label">Pitch deck <span class="field__label-hint">(PDF, PPTX ou DOCX — max 25 MB)</span></label>
+                        <input type="file" id="pitch_deck_file" name="pitch_deck_file" class="field__input field__input--file" accept=".pdf,.pptx,.docx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                        <div class="file-preview" id="pitch-deck-preview" hidden>
+                            <span class="file-preview__icon" aria-hidden="true"></span>
+                            <span class="file-preview__name"></span>
+                        </div>
                         <input type="hidden" id="pitch_deck_base64" name="pitch_deck_base64">
                         <input type="hidden" id="pitch_deck_filename" name="pitch_deck_filename">
                         <span class="field__error" role="alert"></span>
                     </div>
-                    <div class="field">
-                        <label for="doc_supplementaire_url" class="field__label">Document supplémentaire <span class="field__label-hint">(optionnel)</span></label>
-                        <input type="url" id="doc_supplementaire_url" name="doc_supplementaire_url" class="field__input" inputmode="url" placeholder="https://...">
+
+                    <!-- Bloc 2 : Liens -->
+                    <div class="field" data-validate="urlopt">
+                        <label for="linkedin_url" class="field__label">Profil LinkedIn du/des fondateur(s) <span class="field__label-hint">(optionnel)</span></label>
+                        <input type="url" id="linkedin_url" name="linkedin_url" class="field__input" inputmode="url" placeholder="https://linkedin.com/in/votre-profil">
                         <span class="field__error" role="alert"></span>
                     </div>
+                    <div class="field" data-validate="urlopt">
+                        <label for="site_url" class="field__label">Site web / landing page <span class="field__label-hint">(optionnel)</span></label>
+                        <input type="url" id="site_url" name="site_url" class="field__input" inputmode="url" placeholder="https://votre-startup.com">
+                        <span class="field__error" role="alert"></span>
+                    </div>
+
+                    <!-- Bloc 3 : Documents complémentaires -->
+                    <div class="field">
+                        <label class="field__label">Documents additionnels <span class="field__label-hint">(optionnel)</span></label>
+                        <p class="field__sublabel">Business plan, one-pager, données financières, deck investisseur...</p>
+                        <div class="dropzone" id="extra-docs-dropzone" role="button" tabindex="0" aria-label="Zone de dépôt de fichiers complémentaires">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="dropzone__text">Glissez vos fichiers ici ou cliquez pour parcourir</span>
+                            <span class="dropzone__hint">PDF, PPTX, DOCX — max 10 MB par fichier</span>
+                            <input type="file" id="extra_docs_files" class="dropzone__input" multiple accept=".pdf,.pptx,.docx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document" tabindex="-1">
+                        </div>
+                        <ul class="dropzone__file-list" id="extra-docs-list" aria-live="polite"></ul>
+                        <span class="field__error" role="alert"></span>
+                    </div>
+
                     <div class="form-legal-block">
                         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1l1.5 3h3.5l-2.8 2 1 3.5L8 7.5 4.8 9.5l1-3.5L3 4h3.5L8 1z" stroke="var(--text-tertiary)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         <p class="form-legal">En soumettant, vous acceptez d'être recontacté au sujet de votre scoring. Vos données sont confidentielles et ne sont jamais revendues.</p>
@@ -371,6 +432,7 @@
                         <button type="button" class="btn-form btn-form--ghost" data-back="7"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4l-4 4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Modifier</button>
                         <button type="submit" class="btn-form btn-form--submit" id="btn-submit">
                             <span class="btn-form__text">Payer et soumettre &middot; 29&#8364;</span>
+                            <svg class="btn-form__spinner" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="2" stroke-dasharray="40 20" stroke-linecap="round"/></svg>
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 8l10 0M8 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </button>
                     </div>
@@ -397,3 +459,52 @@
     <script>document.getElementById('footer-year').textContent=String(new Date().getFullYear());</script>
 </body>
 </html>
+<!--
+SYNC N8N — NE PAS SUPPRIMER
+Champs modifiés dans cette session (à répercuter manuellement dans le prompt Claude
+du nœud Scoring du workflow n8n avant toute mise en prod) :
+
+SECTEUR (modifié) :
+  - Type : searchable dropdown → hidden input
+  - Valeurs ajoutées : mobility_logistics, media_entertainment, hr_recruiting, cybersecurity,
+    insurtech, biotech, agritech, social_impact, ai_ml_native, web3_blockchain, space_defense
+  - Total : 22 secteurs (z.enum)
+
+STADE (modifié) :
+  - Valeur ajoutée : pre-seed (entre idea et mvp)
+  - Total : 6 stades (z.enum)
+
+TAM_USD (modifié) :
+  - Ancien type : select avec ranges (<1M, 1M-10M, etc.)
+  - Nouveau type : slider logarithmique → hidden input string
+  - Nouvelles valeurs : 100K, 500K, 1M, 5M, 10M, 50M, 100M, 500M, 1B, 5B, 10B (z.enum)
+
+ESTIMATION_TAM (modifié) :
+  - Ancien type : input text, min:5
+  - Nouveau type : textarea, min:20, max:2000
+
+MOAT (ajouté) :
+  - Nouveau champ textarea, requis, min:20, max:2000
+  - Label : "Barrières à l'entrée (moat)"
+
+AUTRES_INFORMATIONS (ajouté) :
+  - Nouveau champ textarea, optionnel, max:3000
+  - Label : "Informations complémentaires"
+
+LINKEDIN_URL (ajouté) :
+  - Nouveau champ URL, optionnel, z.string().url().max(500)
+
+SITE_URL (ajouté) :
+  - Nouveau champ URL, optionnel, z.string().url().max(500)
+
+CHAMPS TEXTAREA — min relevé à 20 :
+  - probleme, solution, acquisition_clients, concurrents, pourquoi_vous,
+    jalons_18_mois, utilisation_fonds, vision_5_ans
+
+DOC_SUPPLEMENTAIRE_URL :
+  - Toujours présent dans le schéma, mais déplacé dans la section Liens (step 7)
+
+PITCH_DECK_FILE :
+  - Formats étendus : PDF + PPTX + DOCX (anciennement PDF seul)
+  - Taille max : 25 MB (anciennement 10 MB)
+-->
