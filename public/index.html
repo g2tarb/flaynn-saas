@@ -42,12 +42,60 @@
     <link rel="modulepreload" href="script.js">
     <link rel="modulepreload" href="js/landing-motion.js">
 
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet"></noscript>
 
     <link rel="stylesheet" href="defaut.css">
 
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Flaynn","url":"https://flaynn.tech/","image":"https://flaynn.tech/og-image.png","applicationCategory":"BusinessApplication","description":"Plateforme de scoring objectif pour startups françaises et mise en relation investisseur.","operatingSystem":"Web","offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"}}</script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Flaynn",
+      "url": "https://flaynn.tech/",
+      "image": "https://flaynn.tech/og-image.png",
+      "applicationCategory": "BusinessApplication",
+      "description": "Plateforme de scoring objectif pour startups françaises et mise en relation investisseur.",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "29",
+        "priceCurrency": "EUR"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Combien coûte le scoring d'une startup sur Flaynn ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Le scoring complet est au tarif unique de 29\u20ac, incluant une analyse sur 5 piliers (Market, Product, Traction, Team, Execution) et un verdict sous 24h. Aucun abonnement, aucun frais caché."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne la mise en relation avec les investisseurs ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Les startups atteignant le score minimum accèdent au matching investisseur pour 150\u20ac, avec une garantie de remboursement si aucun meeting n'est obtenu dans les 6 mois."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Mes données sont-elles partagées avec les investisseurs ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Jamais sans votre accord explicite. Votre dossier reste strictement confidentiel. La mise en relation n'est proposée que si votre score atteint le seuil et après votre validation."
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
     <a href="#main-content" class="skip-link">Aller au contenu principal</a>
@@ -117,6 +165,7 @@
         <section class="hero section" aria-labelledby="hero-title">
             <div class="container hero-layout">
                 <div class="hero-copy">
+                    <span class="sr-only">Scoring Startup &amp; Audit Investisseur — </span>
                     <h1 id="hero-title" class="text-display hero__title">
                         Stop Pitching.<br>
                         <span class="gradient-text js-morph-text">Start Proving.</span>
