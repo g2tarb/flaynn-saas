@@ -1,0 +1,33 @@
+ Flaynn — Stack réel
+
+ Stack
+- Vanilla HTML / CSS / JS — AUCUN framework (pas React, pas Astro, pas Next)
+- Backend Fastify (Node.js), déployé sur Render
+- Fichiers principaux : public/index.html + public/defaut.css + public/script.js
+- GSAP chargé en lazy depuis public/js/landing-motion.js
+- Animations existantes : morph text, GSAP scroll reveal, starfield warp, 3D tilt, live scoring, IntersectionObserver natif, pain carousel
+
+ Fichiers intouchables — NE JAMAIS MODIFIER
+- flaynn-api/ (backend Fastify complet)
+- public/sw.js (Service Worker)
+- public/js/ (GSAP bundle + landing-motion.js — ne pas restructurer)
+- Tout fichier .env
+
+ Fichiers modifiables
+- public/index.html (landing principale)
+- public/defaut.css (styles globaux)
+- public/script.js (JS vanilla — animations déjà en place)
+
+ Règles absolues
+1. Lire les fichiers AVANT de modifier
+2. Ne jamais supprimer de JS ou CSS existant — uniquement AJOUTER ou CORRIGER
+3. Toujours inclure @media (prefers-reduced-motion: reduce) pour toute nouvelle animation
+4. Valider dans le navigateur après chaque changement (F5)
+5. Lister exactement les lignes modifiées après chaque phase
+6. Pas de npm install sans demander explicitement
+7. Pas de framework, pas de bundler — tout reste vanilla
+
+ Contexte projet
+Flaynn = scoring startup IA + matchmaking business angels français.
+Site beta fermée. Cible : fondateurs + BAs.
+Salon investisseurs dans 2 jours. Le site doit en imposer visuellement.

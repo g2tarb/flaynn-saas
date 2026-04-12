@@ -1343,6 +1343,52 @@ function initLiquidUX() {
 
 }
 
+// ARCHITECT-PRIME: Phase 3 — Cursor glow tracking on premium cards
+function initCardGlow() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const cards = document.querySelectorAll('.pillar-card, .process-step, .trust-card');
+  cards.forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      card.style.setProperty('--glow-x', x + '%');
+      card.style.setProperty('--glow-y', y + '%');
+    }, { passive: true });
+    card.addEventListener('mouseleave', () => {
+      card.style.setProperty('--glow-x', '50%');
+      card.style.setProperty('--glow-y', '50%');
+    });
+  });
+}
+
+// ARCHITECT-PRIME: Phase 3 — Lenis smooth scroll 120Hz
+function initLenis() {
+  if (typeof Lenis === 'undefined') return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const lenis = new Lenis({
+    duration: 1.1,
+    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    orientation: 'vertical',
+    smoothWheel: true,
+    touchMultiplier: 1.5,
+  });
+
+  // Synchroniser avec GSAP ScrollTrigger si chargé
+  lenis.on('scroll', () => {
+    if (window.ScrollTrigger) window.ScrollTrigger.update();
+  });
+
+  function raf(time) {
+    lenis.raf(time);
+    requestAnimationFrame(raf);
+  }
+  requestAnimationFrame(raf);
+
+  window.lenisInstance = lenis;
+}
+
 function initBarReveal() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     document.querySelectorAll('.pillar-score-bar, .bento-pillar-track').forEach(el => el.classList.add('is-revealed'));
@@ -1516,8 +1562,10 @@ const scheduleIdle = (fn) => {
   }
 };
 scheduleIdle(() => {
+  initLenis();
   void bootDeferred();
   initLiquidUX();
+  initCardGlow();
   initModals();
   initBarReveal();
   initLiveScoring();
