@@ -2559,6 +2559,11 @@
     color: var(--text-secondary);
   }
 
+  .file-preview[hidden],
+  .field[hidden] {
+    display: none;
+  }
+
   .file-preview__icon::before {
     content: '\1F4C4';
   }

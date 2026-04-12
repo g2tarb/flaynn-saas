@@ -290,6 +290,21 @@ class ScoringFormController {
       if (!searchInput || !hiddenInput || !list) return;
       const items = Array.from(list.querySelectorAll('[role="option"]'));
 
+      // Champ "Autre" conditionnel pour le secteur
+      const secteurAutreField = this.form.querySelector('#secteur-autre-field');
+      const isSecteur = hiddenInput.id === 'secteur';
+      const toggleAutre = (val) => {
+        if (!isSecteur || !secteurAutreField) return;
+        const autreInput = secteurAutreField.querySelector('#secteur_autre');
+        if (val === 'other') {
+          secteurAutreField.hidden = false;
+          if (autreInput) autreInput.focus();
+        } else {
+          secteurAutreField.hidden = true;
+          if (autreInput) autreInput.value = '';
+        }
+      };
+
       const showList = () => { list.hidden = false; searchInput.setAttribute('aria-expanded', 'true'); };
       const hideList = () => { list.hidden = true; searchInput.setAttribute('aria-expanded', 'false'); };
 
@@ -308,6 +323,7 @@ class ScoringFormController {
       searchInput.addEventListener('input', () => {
         hiddenInput.value = '';
         hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+        toggleAutre('');
         filterItems();
       });
 
@@ -318,6 +334,7 @@ class ScoringFormController {
           searchInput.value = item.textContent;
           hideList();
           hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+          toggleAutre(item.dataset.value);
           this.#updateStepButtons();
         });
       });
@@ -334,6 +351,7 @@ class ScoringFormController {
             searchInput.value = visible.textContent;
             hideList();
             hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+            toggleAutre(visible.dataset.value);
             this.#updateStepButtons();
           }
         }

@@ -18,6 +18,7 @@ export const ScoreSubmissionSchema = z.object({
     'social_impact', 'ai_ml_native', 'web3_blockchain',
     'space_defense', 'other'
   ]),
+  secteur_autre: z.string().trim().min(2).max(100).optional(),
   type_client: z.enum(['b2b', 'b2c', 'b2b2c', 'b2g', 'other']),
   tam_usd: z.enum(['100K', '500K', '1M', '5M', '10M', '50M', '100M', '500M', '1B', '5B', '10B']),
   estimation_tam: z.string().trim().min(20).max(2000),
