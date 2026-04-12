@@ -11,6 +11,22 @@ async function loadD3() {
   return d3Cache;
 }
 
+/* ── Dénominateurs par pilier (source de vérité) ─────────────────────── */
+const PILLAR_MAX = {
+  'Market': 25,
+  'Solution/Product': 20,
+  'Product': 20,
+  'Traction': 25,
+  'Team': 20,
+  'Execution': 10,
+};
+
+/** Retourne le dénominateur d'un pilier : champ max > lookup > 100 */
+function getPillarMax(p) {
+  if (p.max != null && Number.isFinite(p.max) && p.max > 0) return p.max;
+  return PILLAR_MAX[p.name] || 100;
+}
+
 /* ── Auth ──────────────────────────────────────────────────────────────── */
 function getAuth() {
   try { return JSON.parse(localStorage.getItem('flaynn_auth') || 'null'); }
@@ -47,15 +63,15 @@ const DEMO_DATA = {
   stage: 'Seed',
   sector: 'SaaS / B2B',
   pillars: [
-    { name: 'Market',    score: 82, prev: 78, color: 'var(--accent-violet)',
+    { name: 'Market',    score: 20, max: 25, prev: 19, color: 'var(--accent-violet)',
       insight: 'TAM solide, positionnement différencié. Renforcer la défensibilité sur le segment mid-market.' },
-    { name: 'Product',   score: 71, prev: 63, color: 'var(--accent-blue)',
+    { name: 'Product',   score: 14, max: 20, prev: 13, color: 'var(--accent-blue)',
       insight: 'MVP validé, proposition de valeur claire. Roadmap 12 mois à documenter pour rassurer les investisseurs.' },
-    { name: 'Traction',  score: 68, prev: 56, color: 'var(--accent-emerald)',
+    { name: 'Traction',  score: 17, max: 25, prev: 14, color: 'var(--accent-emerald)',
       insight: 'Croissance MoM positive (+15%) mais churn élevé (8%). Priorité : réduire le churn sous 3%.' },
-    { name: 'Team',      score: 85, prev: 83, color: 'var(--accent-violet)',
+    { name: 'Team',      score: 17, max: 20, prev: 16, color: 'var(--accent-violet)',
       insight: 'Équipe fondatrice complémentaire et expérimentée. Advisory board à structurer avant la levée.' },
-    { name: 'Execution', score: 62, prev: 56, color: 'var(--accent-amber)',
+    { name: 'Execution', score: 6,  max: 10, prev: 5,  color: 'var(--accent-amber)',
       insight: 'Point faible identifié. Mettre en place des OKRs trimestriels et un reporting hebdomadaire structuré.' },
   ],
   history: [
@@ -96,6 +112,30 @@ const DEMO_DATA = {
     ]
   }
 };
+
+/* ── Market value helpers (TAM/SAM/SOM parsing & formatting) ──────────── */
+
+/** Parse une valeur marché type "€2.4B" / "$340M" / "28M€" en nombre brut */
+function parseMarketValue(str) {
+  if (!str || typeof str !== 'string') return 0;
+  const cleaned = str.replace(/[^0-9.,BMKbmk]/g, '');
+  const num = parseFloat(cleaned.replace(',', '.'));
+  if (isNaN(num)) return 0;
+  const upper = str.toUpperCase();
+  if (upper.includes('B')) return num * 1_000_000_000;
+  if (upper.includes('M')) return num * 1_000_000;
+  if (upper.includes('K')) return num * 1_000;
+  return num;
+}
+
+/** Formate un nombre en valeur marché lisible (ex: 480000000 → "€480M") */
+function formatMarketValue(num) {
+  if (!Number.isFinite(num) || num <= 0) return '—';
+  if (num >= 1_000_000_000) return `€${(num / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+  if (num >= 1_000_000) return `€${(num / 1_000_000).toFixed(0)}M`;
+  if (num >= 1_000) return `€${(num / 1_000).toFixed(0)}K`;
+  return `€${Math.round(num)}`;
+}
 
 /* ── DOM helpers ───────────────────────────────────────────────────────── */
 function el(tag, className, attrs = {}) {
@@ -187,7 +227,7 @@ function renderPillarRadar(container, pillars, d3) {
   });
 
   const pts = pillars.map((p, i) => {
-    const a = angle(i), r = (p.score / 100) * maxR;
+    const a = angle(i), r = (p.score / getPillarMax(p)) * maxR;
     return `${center + r * Math.cos(a)},${center + r * Math.sin(a)}`;
   }).join(' ');
 
@@ -200,7 +240,7 @@ function renderPillarRadar(container, pillars, d3) {
 
   /* Dots sur les sommets */
   pillars.forEach((p, i) => {
-    const a = angle(i), r = (p.score / 100) * maxR;
+    const a = angle(i), r = (p.score / getPillarMax(p)) * maxR;
     const dot = svg.append('circle')
       .attr('cx', center).attr('cy', center).attr('r', 4)
       .attr('fill', 'var(--accent-violet)').attr('stroke', 'var(--surface-void)').attr('stroke-width', 2);
@@ -405,13 +445,15 @@ function buildRecommendations(list) {
 function buildPillarRows(pillars) {
   const wrap = el('div', 'pillar-rows');
   pillars.forEach(p => {
+    const max = getPillarMax(p);
+    const pct = Math.round((p.score / max) * 100);
     const row = el('div', 'pillar-row');
     const nameEl = el('span', 'pillar-row__name', { textContent: p.name });
     const track  = el('div', 'pillar-row__track');
     const fill   = el('div', 'pillar-row__fill');
     fill.style.background = p.color;
     track.appendChild(fill);
-    const scoreEl = el('span', 'pillar-row__score', { textContent: String(p.score) });
+    const scoreEl = el('span', 'pillar-row__score', { textContent: `${p.score}/${max}` });
     scoreEl.style.color = p.color;
     row.appendChild(nameEl);
     row.appendChild(track);
@@ -421,7 +463,7 @@ function buildPillarRows(pillars) {
 
     /* Animate bar après insertion */
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => { fill.style.width = `${p.score}%`; });
+      window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
     });
   });
   return wrap;
@@ -759,7 +801,7 @@ function buildRoutes(data) {
 
         section.appendChild(el('h2', 'heading-section', { textContent: 'Analyse par pilier' }));
         section.appendChild(el('p', 'dashboard-app__lead', {
-          textContent: 'Chaque pilier est noté de 0 à 100 et benchmarké contre des entreprises comparables à votre stade et secteur.'
+          textContent: 'Chaque pilier est noté sur son propre barème et benchmarké contre des entreprises comparables à votre stade et secteur.'
         }));
 
         /* Radar centré */
@@ -772,6 +814,8 @@ function buildRoutes(data) {
         /* Cards détail */
         const detailGrid = el('div', 'pillar-detail-grid');
         data.pillars.forEach(p => {
+          const max = getPillarMax(p);
+          const pct = Math.round((p.score / max) * 100);
           const card = el('article', 'card-glass pillar-detail-card');
 
           const header = el('div', 'pillar-detail-card__header');
@@ -780,7 +824,7 @@ function buildRoutes(data) {
           const score  = el('span', 'pillar-detail-card__score', { textContent: String(p.score) });
           score.style.color = p.color;
           swrap.appendChild(score);
-          swrap.appendChild(el('span', 'pillar-detail-card__score-max', { textContent: '/100' }));
+          swrap.appendChild(el('span', 'pillar-detail-card__score-max', { textContent: `/${max}` }));
           header.appendChild(name);
           header.appendChild(swrap);
 
@@ -791,7 +835,7 @@ function buildRoutes(data) {
 
           const meta = el('div', '', { style: 'display:flex;align-items:center;gap:8px;margin-top:2px' });
           meta.appendChild(buildTrendChip(p.score, p.prev));
-          meta.appendChild(el('span', 'dashboard-meta', { textContent: `Précédent : ${p.prev}/100` }));
+          meta.appendChild(el('span', 'dashboard-meta', { textContent: `Précédent : ${p.prev}/${max}` }));
 
           card.appendChild(header);
           card.appendChild(track);
@@ -800,13 +844,13 @@ function buildRoutes(data) {
           detailGrid.appendChild(card);
 
           window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(() => { fill.style.width = `${p.score}%`; });
+            window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
           });
         });
 
         section.appendChild(detailGrid);
         root.appendChild(section);
-        renderPillarRadar(radarViz, data.pillars, d3);
+        if (data.pillars.length > 0) renderPillarRadar(radarViz, data.pillars, d3);
       }
     },
 
@@ -834,13 +878,29 @@ function buildRoutes(data) {
           textContent: 'Estimation du marché adressable et positionnement concurrentiel — données illustratives benchmarkées sur votre secteur.'
         }));
 
-        /* TAM / SAM / SOM */
+        /* TAM / SAM / SOM — fallback dynamique si SAM/SOM absents */
         const statsGrid = el('div', 'market-stats-grid');
+        const rawMarket = data.market || {};
+        const tamStr = rawMarket.tam || rawMarket.TAM || rawMarket.tam_value || '—';
+        let samStr = rawMarket.sam || rawMarket.SAM || rawMarket.sam_value || '';
+        let somStr = rawMarket.som || rawMarket.SOM || rawMarket.som_value || '';
+
+        // ARCHITECT-PRIME: fallback SAM = TAM × 20%, SOM = SAM × 5% si absents
+        if ((!samStr || !somStr) && tamStr && tamStr !== '—') {
+          const tamNum = parseMarketValue(tamStr);
+          if (tamNum > 0) {
+            const samNum = samStr ? parseMarketValue(samStr) : tamNum * 0.20;
+            if (!samStr) samStr = formatMarketValue(samNum);
+            if (!somStr) somStr = formatMarketValue((samStr ? parseMarketValue(samStr) : samNum) * 0.05);
+          }
+        }
+
         const marketDefs = [
-          { label: 'TAM — Marché total',     value: data.market?.tam || '—', sub: 'Marché global adressable' },
-          { label: 'SAM — Marché accessible', value: data.market?.sam || '—', sub: 'Votre segment cible réaliste' },
-          { label: 'SOM — Part atteignable',  value: data.market?.som || '—', sub: 'Objectif 3 ans (5% SAM)' },
+          { label: 'TAM — Marché total',     value: tamStr || '—', sub: 'Marché global adressable' },
+          { label: 'SAM — Marché accessible', value: samStr || '—', sub: 'Votre segment cible réaliste' },
+          { label: 'SOM — Part atteignable',  value: somStr || '—', sub: 'Objectif 3 ans (5% SAM)' },
         ];
+        const allEmpty = marketDefs.every(m => m.value === '—');
         marketDefs.forEach((m, idx) => {
           const card = el('article', 'card-glass market-stat-card');
           card.appendChild(el('span', 'market-stat-card__label', { textContent: m.label }));
@@ -851,6 +911,11 @@ function buildRoutes(data) {
           statsGrid.appendChild(card);
         });
         section.appendChild(statsGrid);
+        if (allEmpty) {
+          const notice = el('p', 'dashboard-meta', { textContent: 'Les données de marché ne sont pas encore disponibles pour cette analyse.' });
+          notice.style.marginTop = 'var(--space-2)';
+          section.appendChild(notice);
+        }
 
         /* Graphe force-directed */
         const graphCard = el('article', 'card-glass');
@@ -875,7 +940,9 @@ function buildRoutes(data) {
         graphCard.appendChild(legend);
 
         root.appendChild(section);
-        renderCompetitiveGraph(graphViz, data.graph, d3);
+        if (data.graph.nodes.length > 0) {
+          renderCompetitiveGraph(graphViz, data.graph, d3);
+        }
       }
     }
   ];
@@ -1150,6 +1217,34 @@ async function main() {
     }
     clearEl(app);
     app.setAttribute('aria-busy', 'false');
+  }
+
+  // ARCHITECT-PRIME: sanitize data — fallbacks pour champs vides/manquants
+  if (!data.isList) {
+    data.score = Number.isFinite(data.score) ? data.score : 0;
+    data.scorePrev = Number.isFinite(data.scorePrev) ? data.scorePrev : data.score;
+    data.level = data.level || '—';
+    data.stage = data.stage || '—';
+    data.sector = data.sector || '—';
+    data.updatedAt = data.updatedAt || new Date().toISOString();
+    data.pillars = Array.isArray(data.pillars) && data.pillars.length > 0 ? data.pillars : [];
+    data.pillars.forEach(p => {
+      p.score = Number.isFinite(p.score) ? p.score : 0;
+      p.prev = Number.isFinite(p.prev) ? p.prev : p.score;
+      p.name = p.name || 'Pilier';
+      p.color = p.color || 'var(--accent-violet)';
+      p.insight = p.insight || '';
+    });
+    data.history = Array.isArray(data.history) && data.history.length > 0 ? data.history : [
+      { label: 'Actuel', date: new Date().toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }), score: data.score }
+    ];
+    data.recommendations = Array.isArray(data.recommendations) ? data.recommendations : [];
+    data.investorReadiness = Array.isArray(data.investorReadiness) ? data.investorReadiness : [];
+    data.market = data.market || {};
+    data.graph = data.graph && data.graph.nodes ? data.graph : {
+      nodes: [{ id: 'you', label: 'Vous', type: 'user' }],
+      links: []
+    };
   }
 
   const routes = buildRoutes(data);
