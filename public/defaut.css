@@ -489,7 +489,8 @@
     min-width: 0;
     overflow-wrap: break-word;
     overflow: visible;
-    padding-bottom: 0.15em;
+    padding-bottom: 0.2em;
+    line-height: 1.15;
   }
 
   .hero-orbit {
@@ -1619,7 +1620,7 @@
   }
 
   .pillar-score-bar.is-revealed .pillar-score-bar__fill {
-    width: var(--bar-width, 0%);
+    width: var(--bar-width, 100%);
   }
   .pillar-score-bar__fill--emerald {
     background: linear-gradient(90deg, #10b981, #3b82f6, #10b981);
@@ -1792,7 +1793,7 @@
   }
 
   .bento-pillar-track.is-revealed .bento-pillar-fill {
-    width: var(--w, 0%);
+    width: var(--w, 100%);
   }
 
   .bento-pillar-fill--market {

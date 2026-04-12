@@ -11,19 +11,19 @@
 
     // Accélère le starfield
     if (window.starfield?.setSpeed) {
-      window.starfield.setSpeed(15);
+      window.starfield.setSpeed(35);
     }
 
     // Navigue après 400ms
     setTimeout(() => {
       window.location.href = href;
-    }, 400);
+    }, 350);
   });
 
   // Décélère le starfield au chargement de la nouvelle page
   window.addEventListener('pageshow', function() {
     if (window.starfield?.setSpeed) {
-      window.starfield.setSpeed(1, 600);
+      window.starfield.setSpeed(1, 800);
     }
   });
 })();

@@ -1425,6 +1425,19 @@ function initBarReveal() {
   }, { rootMargin: '0px 0px -5% 0px', threshold: 0 });
 
   document.querySelectorAll('.pillar-score-bar, .bento-pillar-track, .score-ring-wrap').forEach(el => observer.observe(el));
+
+  // ARCHITECT-PRIME: Fallback immédiat pour les barres déjà visibles dans le viewport au chargement
+  document.querySelectorAll('.pillar-score-bar__fill, .pillar-fill, .bento-pillar-track').forEach(el => {
+    if (!el.classList.contains('is-revealed')) {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) {
+        el.classList.add('is-revealed');
+        // Aussi révéler le parent .pillar-score-bar si c'est un fill
+        const parentBar = el.closest('.pillar-score-bar');
+        if (parentBar) parentBar.classList.add('is-revealed');
+      }
+    }
+  });
 }
 
 /**
@@ -1542,6 +1555,10 @@ function initLiveScoring() {
       const newScore = rand(min, max);
       fill.style.setProperty('--w', `${newScore}%`);
       fill.style.width = `${newScore}%`;
+      fill.classList.add('is-revealed');
+      // ARCHITECT-PRIME: Révéler le parent track pour déclencher le CSS .bento-pillar-track.is-revealed
+      const parentTrack = fill.closest('.bento-pillar-track');
+      if (parentTrack) parentTrack.classList.add('is-revealed');
       if (pillarScores[i]) {
         animateNumber(pillarScores[i], currentPillars[i], newScore, 1000);
         currentPillars[i] = newScore;
@@ -1553,6 +1570,10 @@ function initLiveScoring() {
       const newWidth = rand(55, 96);
       fill.style.setProperty('--bar-width', `${newWidth}%`);
       fill.style.width = `${newWidth}%`;
+      fill.classList.add('is-revealed');
+      // ARCHITECT-PRIME: Révéler le parent pour déclencher le CSS .pillar-score-bar.is-revealed
+      const parentBar = fill.closest('.pillar-score-bar');
+      if (parentBar) parentBar.classList.add('is-revealed');
     });
   }
 
