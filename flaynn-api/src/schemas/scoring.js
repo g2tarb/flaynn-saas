@@ -41,4 +41,10 @@ export const ScoreSubmissionSchema = z.object({
   pitch_deck_base64: z.string().min(1).max(15_000_000),
   pitch_deck_filename: z.string().max(200).regex(/\.pdf$/i, 'Le pitch deck doit être au format PDF.'),
   doc_supplementaire_url: z.string().url().max(500).optional(),
+  extra_docs: z.array(
+    z.object({
+      filename: z.string().max(200).regex(/\.(pdf|pptx|docx)$/i, 'Format autorisé : PDF, PPTX ou DOCX.'),
+      base64: z.string().min(1).max(14_000_000),
+    })
+  ).max(5).optional(),
 }).strip();

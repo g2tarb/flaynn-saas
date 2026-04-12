@@ -963,6 +963,15 @@ class ScoringFormController {
     }
   }
 
+  #toBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = () => reject(new Error(`Impossible de lire ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+  }
+
   async #submit() {
     if (!this.#validateStep(this.totalSteps, true)) return;
 
@@ -988,13 +997,24 @@ class ScoringFormController {
     if (payload.mrr) payload.mrr = Number(payload.mrr);
     if (payload.clients_payants) payload.clients_payants = Number(payload.clients_payants);
 
+    // Conversion des documents additionnels en base64
+    if (this._extraFiles && this._extraFiles.length > 0) {
+      const extraDocsBase64 = await Promise.all(
+        this._extraFiles.map(f => this.#toBase64(f))
+      );
+      payload.extra_docs = extraDocsBase64.map((data, i) => ({
+        filename: this._extraFiles[i].name,
+        base64: data
+      }));
+    }
+
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Flaynn-Source': 'web-form' },
         credentials: 'same-origin',
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(20000)
+        signal: AbortSignal.timeout(60000)
       });
 
       const data = await res.json().catch(() => ({}));

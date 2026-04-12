@@ -6,6 +6,48 @@ import { ScoreSubmissionSchema } from '../schemas/scoring.js';
 
 export default async function scoringRoutes(fastify) {
 
+  // Servir un document additionnel par index
+  fastify.get('/api/decks/:ref/extra/:index', {
+    config: { rateLimit: { max: 20, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const { ref, index } = request.params;
+    const idx = Number(index);
+    if (!ref || ref.length > 64 || !Number.isInteger(idx) || idx < 0 || idx > 4) {
+      return reply.code(400).send({ error: 'INVALID_PARAMS' });
+    }
+    try {
+      const { rows } = await pool.query(
+        "SELECT data->'extra_docs' as extra_docs FROM scores WHERE reference_id = $1",
+        [ref]
+      );
+      if (rows.length === 0 || !rows[0].extra_docs) {
+        return reply.code(404).send({ error: 'NOT_FOUND' });
+      }
+      const docs = rows[0].extra_docs;
+      if (!Array.isArray(docs) || idx >= docs.length || !docs[idx]?.base64) {
+        return reply.code(404).send({ error: 'NOT_FOUND' });
+      }
+      const doc = docs[idx];
+      const buf = Buffer.from(doc.base64, 'base64');
+      if (buf.length < 100) {
+        return reply.code(404).send({ error: 'INVALID_FILE' });
+      }
+      const ext = doc.filename?.toLowerCase()?.slice(doc.filename.lastIndexOf('.')) || '';
+      const mimeMap = {
+        '.pdf': 'application/pdf',
+        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
+      return reply
+        .header('Content-Type', mimeMap[ext] || 'application/octet-stream')
+        .header('Cache-Control', 'private, max-age=3600')
+        .send(buf);
+    } catch (err) {
+      request.log.error(err, 'Erreur serving extra doc');
+      return reply.code(500).send({ error: 'INTERNAL_ERROR' });
+    }
+  });
+
   // Servir le pitch deck PDF stocke en base pour Mistral OCR
   fastify.get('/api/decks/:ref', {
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } }
@@ -40,7 +82,7 @@ export default async function scoringRoutes(fastify) {
 
   fastify.post('/api/score', {
     config: { rateLimit: { max: 3, timeWindow: '1 minute' } },
-    bodyLimit: 16 * 1024 * 1024
+    bodyLimit: 90 * 1024 * 1024
   }, async (request, reply) => {
     try {
       const parsed = ScoreSubmissionSchema.parse(request.body);
@@ -67,10 +109,11 @@ export default async function scoringRoutes(fastify) {
 
       const reference = `FLY-${randomBytes(4).toString('hex').toUpperCase()}`;
 
-      // Stocker le base64 du deck dans data pour le servir via /api/decks/:ref
+      // Stocker le base64 du deck + extra docs dans data
       const initialData = {
         status: 'pending_analysis',
         pitch_deck_base64: parsed.pitch_deck_base64 || null,
+        extra_docs: parsed.extra_docs || [],
         payload: parsed
       };
 
@@ -86,12 +129,18 @@ export default async function scoringRoutes(fastify) {
         ? `${protocol}://${host}/api/decks/${reference}`
         : '';
 
-      // Envoyer a n8n SANS le base64, avec l URL du deck
-      const { pitch_deck_base64, ...payloadWithoutBase64 } = parsed;
+      // Construire les URLs des docs additionnels pour n8n
+      const extraDocsUrls = (parsed.extra_docs || []).map((_, i) =>
+        `${protocol}://${host}/api/decks/${reference}/extra/${i}`
+      );
+
+      // Envoyer a n8n SANS le base64, avec l URL du deck + extra docs
+      const { pitch_deck_base64, extra_docs, ...payloadWithoutBase64 } = parsed;
       n8nBridge.submitScore({
         ...payloadWithoutBase64,
         reference,
-        pitch_deck_url: deckUrl
+        pitch_deck_url: deckUrl,
+        extra_docs_urls: extraDocsUrls
       }, request.id)
         .catch(async (err) => {
           request.log.error(err, `Echec envoi n8n pour ${reference}`);
