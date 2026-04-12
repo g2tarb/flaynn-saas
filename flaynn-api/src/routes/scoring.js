@@ -74,7 +74,12 @@ export default async function scoringRoutes(fastify) {
       if (rows.length === 0 || !rows[0].pdf_b64) {
         return reply.code(404).send({ error: 'NOT_FOUND' });
       }
-      const pdfBuffer = Buffer.from(rows[0].pdf_b64, 'base64');
+      let pdfBase64 = rows[0].pdf_b64;
+      // Supprimer le préfixe data URI si présent
+      if (pdfBase64.includes(',')) {
+        pdfBase64 = pdfBase64.split(',')[1];
+      }
+      const pdfBuffer = Buffer.from(pdfBase64, 'base64');
       if (pdfBuffer.length < 100) {
         request.log.warn(`PDF trop petit pour ref ${ref} (${pdfBuffer.length} bytes)`);
         return reply.code(404).send({ error: 'INVALID_PDF' });
