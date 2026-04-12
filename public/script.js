@@ -959,7 +959,7 @@ class ScoringFormController {
       priorite_6_mois: 'Priorité 6 mois', montant_leve: 'Montant levée',
       jalons_18_mois: 'Jalons 18 mois', utilisation_fonds: 'Utilisation fonds',
       vision_5_ans: 'Vision 5 ans', autres_informations: 'Infos complémentaires',
-      pitch_deck_filename: 'Pitch deck', doc_supplementaire_url: 'Document supp.',
+      pitch_deck_filename: 'Pitch deck', doc_supplementaire_url: 'Liens documents',
       linkedin_url: 'LinkedIn', site_url: 'Site web'
     };
 
@@ -1018,6 +1018,15 @@ class ScoringFormController {
     // Conversion des champs numériques
     if (payload.mrr) payload.mrr = Number(payload.mrr);
     if (payload.clients_payants) payload.clients_payants = Number(payload.clients_payants);
+
+    // Split doc_supplementaire_url : virgules ou retours à la ligne → tableau d'URLs
+    if (payload.doc_supplementaire_url) {
+      const urls = payload.doc_supplementaire_url
+        .split(/[\n,]+/)
+        .map(u => u.trim())
+        .filter(u => u.length > 0);
+      payload.doc_supplementaire_url = urls.length > 0 ? urls : undefined;
+    }
 
     // Conversion des documents additionnels en base64
     if (this._extraFiles && this._extraFiles.length > 0) {
