@@ -81,6 +81,7 @@ export default async function scoringRoutes(fastify) {
       }
       return reply
         .header('Content-Type', 'application/pdf')
+        .header('Content-Encoding', 'identity')
         .header('Cache-Control', 'private, max-age=3600')
         .send(pdfBuffer);
     } catch (err) {
