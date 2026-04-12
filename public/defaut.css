@@ -4411,3 +4411,166 @@
   .score-ring__arc { filter: none; }
 }
 } /* end @layer utilities */
+
+/* ═══════════════════════════════════════════════════════
+   === APP PREMIUM === Phase 3 — Web app 120Hz physics
+   Ajouté par ARCHITECT-PRIME. Ne pas supprimer.
+═══════════════════════════════════════════════════════ */
+
+@layer components {
+
+  /* ── A. SPRING PHYSICS — Cards ────────────────────── */
+
+  .pillar-card,
+  .process-step,
+  .trust-card {
+    transition:
+      transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      border-color 300ms ease,
+      box-shadow 300ms ease;
+    will-change: transform;
+  }
+
+  .pillar-card:hover,
+  .process-step:hover,
+  .trust-card:hover {
+    transform: translateY(-8px) scale(1.015);
+    border-color: rgba(123, 45, 142, 0.45);
+    box-shadow:
+      0 20px 60px rgba(123, 45, 142, 0.18),
+      0 0 0 1px rgba(123, 45, 142, 0.12);
+  }
+
+  /* ── B. CTA BUTTONS — Réactivité <16ms ────────────── */
+
+  .btn-primary,
+  .btn-gradient {
+    transition:
+      transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 200ms ease,
+      background 150ms ease;
+    will-change: transform;
+  }
+
+  .btn-primary:hover,
+  .btn-gradient:hover {
+    transform: scale(1.04) translateY(-2px);
+    box-shadow:
+      0 0 32px rgba(123, 45, 142, 0.5),
+      0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-primary:active,
+  .btn-gradient:active {
+    transform: scale(0.96);
+    transition-duration: 80ms;
+  }
+
+  /* ── C. CURSOR GLOW — Cards ::after ───────────────── */
+
+  .pillar-card,
+  .process-step,
+  .trust-card {
+    --glow-x: 50%;
+    --glow-y: 50%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pillar-card::after,
+  .process-step::after,
+  .trust-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      120px circle at var(--glow-x) var(--glow-y),
+      rgba(123, 45, 142, 0.12),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 1;
+  }
+
+  .pillar-card:hover::after,
+  .process-step:hover::after,
+  .trust-card:hover::after {
+    opacity: 1;
+  }
+
+  /* ── D. SCORE RING — Entrée avec overshoot ────────── */
+
+  @keyframes score-ring-draw {
+    0%   { stroke-dashoffset: 283; opacity: 0; }
+    60%  { stroke-dashoffset: -12; opacity: 1; }
+    80%  { stroke-dashoffset: 8; }
+    100% { stroke-dashoffset: 0; }
+  }
+
+  .score-ring__arc {
+    animation: score-ring-draw 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+               ring-glow 3s ease-in-out 1.4s infinite;
+  }
+
+  /* ── E. HERO DEPTH — Radial glow overlay ──────────── */
+
+  .hero.section {
+    position: relative;
+  }
+
+  .hero.section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse 80% 50% at 50% -5%,
+      rgba(123, 45, 142, 0.12) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .hero-layout > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── G. LENIS — Désactiver scroll-behavior natif ──── */
+
+  html.lenis, html.lenis body {
+    scroll-behavior: auto;
+  }
+
+} /* end @layer components — APP PREMIUM */
+
+/* ── F. REDUCED MOTION — APP PREMIUM ────────────────── */
+@layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    .pillar-card,
+    .process-step,
+    .trust-card,
+    .btn-primary,
+    .btn-gradient {
+      transition: none;
+      transform: none;
+    }
+
+    .pillar-card::after,
+    .process-step::after,
+    .trust-card::after {
+      display: none;
+    }
+
+    .score-ring__arc {
+      animation: ring-glow 3s ease-in-out infinite;
+    }
+
+    .hero.section::before {
+      opacity: 0.5;
+    }
+  }
+}
