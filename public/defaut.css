@@ -488,7 +488,8 @@
     text-wrap: balance;
     min-width: 0;
     overflow-wrap: break-word;
-    padding-bottom: 0.1em;
+    overflow: visible;
+    padding-bottom: 0.15em;
   }
 
   .hero-orbit {
@@ -4556,7 +4557,7 @@
 
   /* ── G. LENIS — Désactiver scroll-behavior natif ──── */
 
-  html.lenis, html.lenis body {
+  html.lenis, html.lenis body, html.lenis * {
     scroll-behavior: auto;
   }
 

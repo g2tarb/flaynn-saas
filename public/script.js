@@ -1393,6 +1393,21 @@ function initLenis() {
   requestAnimationFrame(raf);
 
   window.lenisInstance = lenis;
+
+  // ARCHITECT-PRIME: Intercept anchor links for smooth Lenis scroll
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', (e) => {
+      const href = anchor.getAttribute('href');
+      if (!href || href === '#') return;
+      const target = document.querySelector(href);
+      if (!target || !window.lenisInstance) return;
+      e.preventDefault();
+      window.lenisInstance.scrollTo(target, {
+        duration: 1.2,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t))
+      });
+    });
+  });
 }
 
 function initBarReveal() {
@@ -1424,6 +1439,8 @@ function initLiveScoring() {
   // Refs bento
   const scoreArc = document.querySelector('.score-ring__arc');
   const scoreValue = document.querySelector('.score-value');
+  // ARCHITECT-PRIME: Force opacity visible — inline style="opacity:0" in HTML hides the score
+  if (scoreValue) scoreValue.style.opacity = '1';
   const tamMetric = document.querySelector('.bento-metric--blue');
   const tractionMetric = document.querySelector('.bento-metric--emerald');
   const sparklineSvg = document.querySelector('.bento-sparkline svg');
