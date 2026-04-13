@@ -232,6 +232,7 @@ class ScoringFormController {
     this.#bind();
     this.#initChips();
     this.#initLabelBadges();
+    this.#initResubmitToggle();
     this.#updateProgress();
     this.#updateStepButtons();
   }
@@ -699,6 +700,21 @@ class ScoringFormController {
     });
   }
 
+  #initResubmitToggle() {
+    const checkbox = this.form.querySelector('#resubmit_check');
+    const field = this.form.querySelector('#previous-ref-field');
+    const input = this.form.querySelector('#previous_ref');
+    if (!checkbox || !field || !input) return;
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        field.style.display = '';
+      } else {
+        field.style.display = 'none';
+        input.value = '';
+      }
+    });
+  }
+
   #validateField(input, showError, skipButtonUpdate = false) {
     const field = input.closest('.field');
     if (!field || !field.dataset.validate) return true;
@@ -947,7 +963,7 @@ class ScoringFormController {
     container.replaceChildren();
 
     const labels = {
-      previous_ref: 'Référence précédente',
+      previous_ref: 'Référence de votre scoring précédent',
       nom_fondateur: 'Fondateur', email: 'Email', pays: 'Pays', ville: 'Ville',
       nom_startup: 'Startup', pitch_une_phrase: 'Pitch', probleme: 'Problème',
       solution: 'Solution', secteur: 'Secteur', type_client: 'Client cible',
