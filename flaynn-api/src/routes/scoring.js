@@ -95,6 +95,49 @@ export default async function scoringRoutes(fastify) {
     }
   });
 
+  // ARCHITECT-PRIME: endpoint public pour afficher le pitch deck en inline (pas de téléchargement)
+  // Pas d'auth requise — le reference_id (FLY-XXXX) sert d'identifiant opaque
+  fastify.get('/api/decks/:ref/view', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const ref = request.params.ref;
+    if (!ref || !/^FLY-[A-F0-9]{4,16}$/i.test(ref)) {
+      return reply.code(400).send({ error: 'INVALID_REF', message: 'Référence invalide.' });
+    }
+
+    try {
+      const { rows } = await pool.query(
+        "SELECT COALESCE(data->>'pitch_deck_base64', data->'payload'->>'pitch_deck_base64') as pdf_b64, startup_name FROM scores WHERE reference_id = $1",
+        [ref]
+      );
+      if (rows.length === 0 || !rows[0].pdf_b64) {
+        return reply.code(404).send({ error: 'NOT_FOUND', message: 'Pitch deck introuvable.' });
+      }
+
+      let pdfBase64 = rows[0].pdf_b64;
+      if (pdfBase64.includes(',')) {
+        pdfBase64 = pdfBase64.split(',')[1];
+      }
+      const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      if (pdfBuffer.length < 100) {
+        return reply.code(404).send({ error: 'INVALID_PDF', message: 'Le PDF semble corrompu.' });
+      }
+
+      const safeName = (rows[0].startup_name || ref).replace(/[^a-zA-Z0-9_\-]/g, '_');
+
+      return reply
+        .header('Content-Type', 'application/pdf')
+        .header('Content-Disposition', `inline; filename="Pitch-${safeName}.pdf"`)
+        .header('Content-Encoding', 'identity')
+        .header('Cache-Control', 'public, max-age=86400, immutable')
+        .header('X-Content-Type-Options', 'nosniff')
+        .send(pdfBuffer);
+    } catch (err) {
+      request.log.error(err, 'Erreur serving deck view');
+      return reply.code(500).send({ error: 'INTERNAL_ERROR' });
+    }
+  });
+
   fastify.post('/api/score', {
     config: { rateLimit: { max: 3, timeWindow: '1 minute' } },
     bodyLimit: 90 * 1024 * 1024
