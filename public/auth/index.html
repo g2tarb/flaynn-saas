@@ -32,10 +32,22 @@
     </div>
 
     <article class="card-glass auth-card">
-      <h1 class="auth-title">Espace membre</h1>
-      <p class="auth-subtitle">Connectez-vous pour accéder à vos analyses.</p>
+      <h1 class="auth-title" id="auth-title">Espace membre</h1>
+      <p class="auth-subtitle" id="auth-subtitle">Connectez-vous pour accéder à vos analyses.</p>
+
+      <!-- Tabs Connexion / Inscription -->
+      <div class="auth-tabs" id="auth-tabs">
+        <button type="button" class="auth-tab is-active" data-tab="login">Connexion</button>
+        <button type="button" class="auth-tab" data-tab="register">Inscription</button>
+      </div>
 
       <form id="auth-form" novalidate>
+        <!-- Nom (inscription uniquement) -->
+        <div class="field" id="name-field" hidden>
+          <label for="name" class="field__label">Nom complet</label>
+          <input type="text" id="name" name="name" class="field__input" minlength="2" maxlength="100" autocomplete="name" placeholder="Votre nom">
+        </div>
+
         <!-- Email -->
         <div class="field">
           <label for="email" class="field__label">Email professionnel</label>
