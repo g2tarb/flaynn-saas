@@ -839,29 +839,6 @@ function buildRoutes(data) {
           section.appendChild(pdfRow);
         }
 
-        /* Pitch deck viewer */
-        if (data.has_pitch_deck) {
-          const deckCard = el('article', 'card-glass pitch-deck-card');
-          deckCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Pitch deck soumis' }));
-          const deckUrl = `/api/decks/${encodeURIComponent(data.id)}/view`;
-          const embedWrap = el('div', 'pitch-deck-card__embed');
-          const embed = document.createElement('iframe');
-          embed.src = deckUrl;
-          embed.title = `Pitch deck — ${data.startupName || data.id}`;
-          embed.setAttribute('loading', 'lazy');
-          embed.setAttribute('allowfullscreen', '');
-          embedWrap.appendChild(embed);
-          deckCard.appendChild(embedWrap);
-          const actions = el('div', 'pitch-deck-card__actions');
-          const openBtn = el('a', 'btn-ghost btn-small');
-          openBtn.href = deckUrl;
-          openBtn.target = '_blank';
-          openBtn.rel = 'noopener';
-          openBtn.textContent = 'Ouvrir dans un nouvel onglet';
-          actions.appendChild(openBtn);
-          deckCard.appendChild(actions);
-          section.appendChild(deckCard);
-        }
 
         root.appendChild(section);
 
