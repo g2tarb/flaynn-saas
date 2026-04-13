@@ -709,7 +709,13 @@ function buildRoutes(data) {
         /* Verdict banner */
         if (data.verdict) {
           const verdictCard = el('article', 'card-glass verdict-banner');
-          const verdictColors = { 'Ready': 'var(--accent-emerald)', 'Almost': 'var(--accent-amber)', 'Not yet': 'var(--accent-rose)' };
+          const verdictColors = {
+            'Strong Yes': 'var(--accent-emerald)',
+            'Yes':        'var(--accent-emerald)',
+            'Almost':     'var(--accent-amber)',
+            'Not yet':    'var(--accent-rose)',
+            'Ready':      'var(--accent-emerald)'
+          };
           const verdictColor = verdictColors[data.verdict] || 'var(--accent-violet)';
           verdictCard.style.borderLeft = `4px solid ${verdictColor}`;
 
