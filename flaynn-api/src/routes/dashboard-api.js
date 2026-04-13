@@ -181,7 +181,7 @@ export default async function dashboardApiRoutes(fastify) {
         return reply.code(404).send({ error: 'NOT_FOUND', message: 'Analyse introuvable ou en cours de génération.' });
       }
 
-      const { pdf_base64, ...dataWithoutPdf } = rows[0].data || {};
+      const { pdf_base64, pitch_deck_base64, extra_docs, ...dataWithoutBlobs } = rows[0].data || {};
 
       // Chercher le scoring précédent pour la même startup (trend chips)
       let previousData = null;
@@ -198,11 +198,12 @@ export default async function dashboardApiRoutes(fastify) {
         }
       }
 
-      const adapted = adaptN8nToDashboard(dataWithoutPdf, rows[0].startup_name, parsed.data, rows[0].created_at, previousData);
+      const adapted = adaptN8nToDashboard(dataWithoutBlobs, rows[0].startup_name, parsed.data, rows[0].created_at, previousData);
       return reply.code(200).send({
         id: parsed.data,
         startupName: rows[0].startup_name,
         has_pdf: !!pdf_base64,
+        has_pitch_deck: !!pitch_deck_base64,
         ...adapted
       });
     } catch (err) {
