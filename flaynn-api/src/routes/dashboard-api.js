@@ -226,7 +226,7 @@ export default async function dashboardApiRoutes(fastify) {
     try {
       const userEmail = request.user.email;
       const { rows } = await pool.query(
-        "SELECT data->>'pdf_base64' as pdf, startup_name FROM scores WHERE reference_id = $1 AND user_email = $2",
+        "SELECT data->'pdf_base64' as pdf, startup_name FROM scores WHERE reference_id = $1 AND user_email = $2",
         [parsed.data, userEmail]
       );
 
@@ -234,7 +234,8 @@ export default async function dashboardApiRoutes(fastify) {
         return reply.code(404).send({ error: 'NOT_FOUND', message: 'PDF non disponible.' });
       }
 
-      const pdfBuffer = Buffer.from(rows[0].pdf, 'base64');
+      const rawBase64 = JSON.parse(rows[0].pdf).replace(/^data:application\/pdf;base64,/, '');
+      const pdfBuffer = Buffer.from(rawBase64, 'base64');
       const rawName = (rows[0].startup_name || parsed.data).replace(/[^\w\s\-'.]/g, '_');
       const filename = `Flaynn-Scoring-${rawName}.pdf`;
 
@@ -259,7 +260,7 @@ export default async function dashboardApiRoutes(fastify) {
     }
     try {
       const { rows } = await pool.query(
-        "SELECT data->>'status' as status, startup_name, created_at FROM scores WHERE reference_id = $1",
+        "SELECT data->>'status' as status FROM scores WHERE reference_id = $1",
         [ref]
       );
       if (rows.length === 0) {
@@ -268,7 +269,6 @@ export default async function dashboardApiRoutes(fastify) {
       return reply.send({
         reference: ref,
         status: rows[0].status || 'unknown',
-        startup_name: rows[0].startup_name,
       });
     } catch (err) {
       request.log.error(err);
