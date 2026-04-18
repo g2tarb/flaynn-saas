@@ -1,6 +1,9 @@
 import { z } from 'zod';
+import { readFile, stat } from 'node:fs/promises';
+import { join } from 'node:path';
 import { pool } from '../config/db.js';
 import { generateUniqueSlug } from '../lib/slug.js';
+import { renderOgImage, getOgOutputDir } from '../lib/og-render.js';
 
 // ARCHITECT-PRIME — Delta 9 step 1 : route SSR publique /score/:slug (stub).
 // Le rendu HTML est minimal et vérifiable via curl. Le CSS complet (J5) et le JS
@@ -369,7 +372,7 @@ export default async function publicCardsRoutes(fastify) {
       }
       const indexSeo = computeIndexSeo(snapshot);
 
-      // 7) INSERT. og_image_path reste NULL en J2 — rempli en J3 par le render Satori.
+      // 7) INSERT avec og_image_path = NULL. Render OG en étape 8.
       const insertResult = await pool.query(
         `INSERT INTO public_cards
            (slug, reference_id, user_email, startup_name, snapshot_data, og_image_path,
@@ -378,10 +381,25 @@ export default async function publicCardsRoutes(fastify) {
          RETURNING id, slug, og_image_path, index_seo, created_at`,
         [slug, referenceId, userEmail, startupName, JSON.stringify(snapshot), indexSeo]
       );
-      const card = insertResult.rows[0];
+      let card = insertResult.rows[0];
+
+      // 8) Render OG image. Échec non fatal : la row reste, og_image_path reste NULL,
+      //    la route GET /og/:slug.png déclenchera un lazy re-render au premier hit.
+      try {
+        const ogPath = await renderOgImage(slug, snapshot, startupName);
+        const updated = await pool.query(
+          `UPDATE public_cards SET og_image_path = $1 WHERE id = $2
+           RETURNING id, slug, og_image_path, index_seo, created_at`,
+          [ogPath, card.id]
+        );
+        card = updated.rows[0];
+      } catch (err) {
+        request.log.error({ err, cardId: card.id, slug }, 'og_render_failed_on_publish');
+        // card.og_image_path reste NULL → buildPublishResponse renvoie og_pending: true
+      }
 
       request.log.info(
-        { cardId: card.id, slug: card.slug, referenceId, indexSeo },
+        { cardId: card.id, slug: card.slug, referenceId, indexSeo, ogPending: !card.og_image_path },
         'public_card_published'
       );
 
@@ -458,6 +476,85 @@ export default async function publicCardsRoutes(fastify) {
       request.log.error({ err, referenceId, cardId }, 'public_card_unpublish_failed');
       return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Erreur serveur.' });
     }
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // GET /og/:slug.png — PNG public 1200×630 pour les previews sociaux.
+  // Enregistrée avant fastifyStatic (ordre dans server.js) → priorité sur la
+  // serve statique du dossier public/og/.
+  // Lazy re-render si le fichier est absent mais la card est active
+  // (filesystem Render éphémère — cf. doc §5.4 dette acceptée v1).
+  // ──────────────────────────────────────────────────────────────────────
+  fastify.get('/og/:slug.png', {
+    config: { rateLimit: { max: 300, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const { slug } = request.params;
+    if (!isValidSlug(slug)) {
+      return reply.code(404).type('text/plain; charset=utf-8').send('Not Found');
+    }
+
+    const ogDir = getOgOutputDir();
+    const filePath = join(ogDir, `${slug}.png`);
+
+    // 1) Tentative de lecture directe sur le disque.
+    try {
+      await stat(filePath);
+      const buf = await readFile(filePath);
+      return reply
+        .code(200)
+        .type('image/png')
+        .header('Cache-Control', 'public, max-age=31536000, immutable')
+        .send(buf);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        request.log.error({ err, slug }, 'og_disk_read_failed');
+      }
+    }
+
+    // 2) Lazy re-render : charger la card, vérifier qu'elle est active,
+    //    rendre le PNG, UPDATE og_image_path, servir le buffer.
+    let card;
+    try {
+      const { rows } = await pool.query(
+        `SELECT id, slug, startup_name, snapshot_data, is_active
+         FROM public_cards WHERE slug = $1 LIMIT 1`,
+        [slug]
+      );
+      card = rows[0];
+    } catch (err) {
+      request.log.error({ err, slug }, 'og_lookup_failed');
+      return reply.code(503).type('text/plain; charset=utf-8').send('Service Unavailable');
+    }
+
+    if (!card) {
+      return reply.code(404).type('text/plain; charset=utf-8').send('Not Found');
+    }
+    if (!card.is_active) {
+      return reply.code(410).type('text/plain; charset=utf-8').send('Gone');
+    }
+
+    let buf;
+    try {
+      await renderOgImage(card.slug, card.snapshot_data || {}, card.startup_name);
+      buf = await readFile(filePath);
+    } catch (err) {
+      request.log.error({ err, slug, cardId: card.id }, 'og_lazy_render_failed');
+      return reply.code(500).type('text/plain; charset=utf-8').send('Render Failed');
+    }
+
+    // Best-effort UPDATE du chemin en DB (non-bloquant sur la réponse).
+    pool.query(
+      `UPDATE public_cards SET og_image_path = $1 WHERE id = $2 AND og_image_path IS NULL`,
+      [`/og/${card.slug}.png`, card.id]
+    ).catch((err) => {
+      request.log.warn({ err, cardId: card.id }, 'og_path_update_failed');
+    });
+
+    return reply
+      .code(200)
+      .type('image/png')
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .send(buf);
   });
 
   fastify.get('/score/:slug', {
