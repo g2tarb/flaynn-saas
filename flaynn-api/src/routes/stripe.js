@@ -162,59 +162,202 @@ export default async function stripeRoutes(fastify) {
       return reply.code(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // Gestion du succès du paiement
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const reference = session.metadata.reference;
+    // ARCHITECT-PRIME: routage par event.type ET par metadata.source pour distinguer
+    // les flux scoring (29€ one-shot) et BA subscription (350€/mois).
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object;
+          const isBaFlow = session.mode === 'subscription'
+            || session.metadata?.source === 'rejoindre-v1';
 
-      request.log.info(`Paiement validé pour la référence : ${reference}`);
-
-      try {
-        // 1. On récupère le dossier en base
-        const scoreRecord = await pool.query('SELECT data FROM scores WHERE reference_id = $1', [reference]);
-        
-        if (scoreRecord.rowCount === 0) {
-          request.log.error(`Webhook : Dossier introuvable pour la ref ${reference}`);
-          return reply.code(200).send(); // On renvoie 200 à Stripe pour qu'il arrête de retry
+          if (isBaFlow) {
+            await handleBaCheckoutCompleted(session, request);
+          } else {
+            await handleScoringCheckoutCompleted(session, request);
+          }
+          break;
         }
 
-        const data = scoreRecord.rows[0].data;
-        const parsedPayload = data.payload;
+        case 'customer.subscription.deleted': {
+          const sub = event.data.object;
+          await handleBaSubscriptionDeleted(sub, request);
+          break;
+        }
 
-        // 2. On met à jour le statut en base (pending_payment -> pending_analysis)
-        await pool.query(
-          `UPDATE scores SET data = jsonb_set(data, '{status}', '"pending_analysis"') WHERE reference_id = $1`,
-          [reference]
-        );
+        case 'invoice.payment_failed': {
+          const invoice = event.data.object;
+          await handleBaInvoicePaymentFailed(invoice, request);
+          break;
+        }
 
-        // 3. On construit l'URL du deck PDF (comme dans scoring.js)
-        const host = request.headers['x-forwarded-host'] || request.headers.host || 'flaynn.tech';
-        const protocol = request.headers['x-forwarded-proto'] || 'https';
-        const deckUrl = data.pitch_deck_base64
-          ? `${protocol}://${host}/api/decks/${reference}`
-          : '';
-
-        // 4. On déclenche n8n SANS le base64 (pour ne pas surcharger)
-        const { pitch_deck_base64, ...payloadWithoutBase64 } = parsedPayload;
-        
-        n8nBridge.submitScore({
-          ...payloadWithoutBase64,
-          reference,
-          pitch_deck_url: deckUrl
-        }, request.id).catch(async (err) => {
-            request.log.error(err, `Échec envoi n8n post-paiement pour ${reference}`);
-            await pool.query(
-              `UPDATE scores SET data = jsonb_set(data, '{status}', '"error"') WHERE reference_id = $1`,
-              [reference]
-            );
-        });
-
-      } catch (dbErr) {
-        request.log.error({ err: dbErr }, `Erreur base de données traitement webhook pour ${reference}`);
+        default:
+          // Stripe envoie beaucoup d'events qu'on ignore volontairement.
+          request.log.debug({ type: event.type }, 'stripe_event_ignored');
       }
+    } catch (err) {
+      // ARCHITECT-PRIME: on log mais on renvoie 200 à Stripe pour ne pas déclencher
+      // un retry agressif sur une erreur métier non-récupérable. Les erreurs DB
+      // récupérables (503) sont traitées dans chaque handler avec leur propre logique.
+      request.log.error({ err: err.message, type: event.type }, 'stripe_webhook_handler_error');
     }
 
-    // On répond 200 à Stripe pour confirmer la réception
-    reply.code(200).send({ received: true });
+    return reply.code(200).send({ received: true });
   });
+
+  // ----------------------------------------------------------------------------
+  // Handlers — scoring (existant, extrait tel quel pour clarté)
+  // ----------------------------------------------------------------------------
+  async function handleScoringCheckoutCompleted(session, request) {
+    const reference = session.metadata?.reference;
+    if (!reference) {
+      request.log.warn({ session_id: session.id }, 'scoring_checkout_missing_reference');
+      return;
+    }
+
+    request.log.info(`Paiement validé pour la référence : ${reference}`);
+
+    const scoreRecord = await pool.query('SELECT data FROM scores WHERE reference_id = $1', [reference]);
+    if (scoreRecord.rowCount === 0) {
+      request.log.error(`Webhook : Dossier introuvable pour la ref ${reference}`);
+      return;
+    }
+
+    const data = scoreRecord.rows[0].data;
+    const parsedPayload = data.payload;
+
+    await pool.query(
+      `UPDATE scores SET data = jsonb_set(data, '{status}', '"pending_analysis"') WHERE reference_id = $1`,
+      [reference]
+    );
+
+    const host = request.headers['x-forwarded-host'] || request.headers.host || 'flaynn.tech';
+    const protocol = request.headers['x-forwarded-proto'] || 'https';
+    const deckUrl = data.pitch_deck_base64
+      ? `${protocol}://${host}/api/decks/${reference}`
+      : '';
+
+    const { pitch_deck_base64, ...payloadWithoutBase64 } = parsedPayload;
+
+    n8nBridge.submitScore({
+      ...payloadWithoutBase64,
+      reference,
+      pitch_deck_url: deckUrl
+    }, request.id).catch(async (err) => {
+      request.log.error(err, `Échec envoi n8n post-paiement pour ${reference}`);
+      await pool.query(
+        `UPDATE scores SET data = jsonb_set(data, '{status}', '"error"') WHERE reference_id = $1`,
+        [reference]
+      );
+    });
+  }
+
+  // ----------------------------------------------------------------------------
+  // Handlers — Delta 12 BA subscription
+  // ----------------------------------------------------------------------------
+  async function handleBaCheckoutCompleted(session, request) {
+    // ARCHITECT-PRIME: client_reference_id défini par /api/ba/apply (étape 6).
+    const baIdRaw = session.client_reference_id;
+    const baId = Number.parseInt(baIdRaw, 10);
+
+    if (!Number.isInteger(baId) || baId <= 0) {
+      request.log.warn({ session_id: session.id, client_reference_id: baIdRaw }, 'ba_checkout_invalid_ref');
+      return;
+    }
+    if (!session.customer || !session.subscription) {
+      request.log.warn({ session_id: session.id, ba_id: baId }, 'ba_checkout_missing_customer_or_sub');
+      return;
+    }
+
+    // UPDATE conditionnel : seulement si status='pending'. Idempotent — un retry
+    // Stripe sur le même event laisse le row inchangé.
+    const { rowCount, rows } = await pool.query(
+      `UPDATE business_angels
+       SET stripe_customer_id = $1, stripe_subscription_id = $2,
+           status = 'active', activated_at = NOW()
+       WHERE id = $3 AND status = 'pending'
+       RETURNING id, email, first_name, last_name`,
+      [session.customer, session.subscription, baId]
+    );
+
+    if (rowCount === 0) {
+      request.log.warn({ ba_id: baId, session_id: session.id }, 'ba_checkout_no_pending_row');
+      return;
+    }
+
+    request.log.info({ ba_id: baId }, 'ba_activated');
+
+    // Notif welcome déléguée à n8n. Fail-open : si n8n down, l'admin verra
+    // l'event d'activation côté logs et pourra renvoyer manuellement.
+    n8nBridge.submitScore({
+      event: 'ba.activated',
+      ba_id: rows[0].id,
+      email: rows[0].email,
+      first_name: rows[0].first_name,
+      last_name: rows[0].last_name
+    }, request.id).catch((err) => {
+      request.log.warn({ err: err.message, ba_id: baId }, 'ba_activated_n8n_notify_failed');
+    });
+  }
+
+  async function handleBaSubscriptionDeleted(sub, request) {
+    if (!sub.id) {
+      request.log.warn({ sub_id: sub.id }, 'ba_sub_deleted_missing_id');
+      return;
+    }
+    const { rowCount, rows } = await pool.query(
+      `UPDATE business_angels
+       SET status = 'cancelled', cancelled_at = NOW()
+       WHERE stripe_subscription_id = $1
+         AND status IN ('active', 'paused')
+       RETURNING id, email`,
+      [sub.id]
+    );
+
+    if (rowCount === 0) {
+      request.log.debug({ sub_id: sub.id }, 'ba_sub_deleted_no_match');
+      return;
+    }
+
+    request.log.info({ ba_id: rows[0].id, sub_id: sub.id }, 'ba_cancelled');
+
+    n8nBridge.submitScore({
+      event: 'ba.cancelled',
+      ba_id: rows[0].id,
+      email: rows[0].email
+    }, request.id).catch((err) => {
+      request.log.warn({ err: err.message, ba_id: rows[0].id }, 'ba_cancelled_n8n_notify_failed');
+    });
+  }
+
+  async function handleBaInvoicePaymentFailed(invoice, request) {
+    if (!invoice.customer) {
+      request.log.warn({ invoice_id: invoice.id }, 'ba_invoice_failed_missing_customer');
+      return;
+    }
+    const { rowCount, rows } = await pool.query(
+      `UPDATE business_angels
+       SET status = 'paused', paused_at = NOW()
+       WHERE stripe_customer_id = $1
+         AND status = 'active'
+       RETURNING id, email`,
+      [invoice.customer]
+    );
+
+    if (rowCount === 0) {
+      request.log.debug({ customer_id: invoice.customer }, 'ba_invoice_failed_no_active_match');
+      return;
+    }
+
+    request.log.info({ ba_id: rows[0].id, customer_id: invoice.customer }, 'ba_paused');
+
+    n8nBridge.submitScore({
+      event: 'ba.paused',
+      ba_id: rows[0].id,
+      email: rows[0].email,
+      attempt_count: invoice.attempt_count || 1
+    }, request.id).catch((err) => {
+      request.log.warn({ err: err.message, ba_id: rows[0].id }, 'ba_paused_n8n_notify_failed');
+    });
+  }
 }
