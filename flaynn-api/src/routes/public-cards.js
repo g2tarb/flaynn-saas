@@ -405,6 +405,7 @@ ${robotsTag}
   </footer>
 </main>
 <script src="/js/starfield.js" defer></script>
+<script src="/js/score-card.js" defer></script>
 </body>
 </html>`;
 
