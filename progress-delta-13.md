@@ -67,6 +67,10 @@ DB Render expire le **4 mai 2026**. On libère la DB des PDF stockés en base64 
 2. Refactor `scoring.js` upload deck — pas de double écriture base64, purge `payload.pitch_deck_base64` + `payload.extra_docs[].base64` avant persist.
 3. Refactor `webhooks.js` upload PDF — signature HMAC conservée, pas de path traversal sur la key (reference_id validé).
 
+## TODO / Dette connue
+
+- Cleanup R2 orphelins sur échec partiel upload extra_docs : si le `putObject` échoue au milieu d'un array d'`extra_docs`, les uploads déjà faits restent dans R2 (orphelins). Acceptable v1 (coût R2 négligeable, zéro risque fonctionnel). V2 : wrapper transactionnel ou cleanup batch hebdomadaire.
+
 ## Points hors scope Delta 13
 
 - Migration des données existantes (aucune — purge manuelle des vieux dossiers de test).

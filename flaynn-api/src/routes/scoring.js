@@ -1,8 +1,46 @@
 import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
+import { extname } from 'node:path';
 import { n8nBridge } from '../services/n8n-bridge.js';
 import { pool } from '../config/db.js';
 import { ScoreSubmissionSchema } from '../schemas/scoring.js';
+import { putObject } from '../lib/r2-storage.js';
+
+// ARCHITECT-PRIME: Delta 13 — helpers privés pour upload R2 depuis POST /api/score.
+const ALLOWED_EXTRA_EXTENSIONS = new Set(['.pdf', '.pptx', '.docx']);
+
+// Mapping partagé extension → MIME pour extra_docs (upload R2 + route legacy GET).
+const EXTRA_MIME_MAP = {
+  '.pdf': 'application/pdf',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+function extractBase64Payload(input) {
+  if (typeof input !== 'string' || input.length === 0) {
+    throw new Error('base64 payload empty');
+  }
+  let contentType = null;
+  let b64 = input;
+  // Support optionnel du data URI "data:application/pdf;base64,XXX".
+  if (input.startsWith('data:')) {
+    const match = /^data:([^;,]+);base64,(.+)$/.exec(input);
+    if (!match) throw new Error('invalid data URI');
+    contentType = match[1];
+    b64 = match[2];
+  }
+  const buffer = Buffer.from(b64, 'base64');
+  if (buffer.length === 0) {
+    throw new Error('base64 decode produced empty buffer');
+  }
+  return { buffer, contentType };
+}
+
+function sanitizeExtension(filename) {
+  if (typeof filename !== 'string' || filename.length === 0) return '.pdf';
+  const ext = extname(filename).toLowerCase();
+  return ALLOWED_EXTRA_EXTENSIONS.has(ext) ? ext : '.pdf';
+}
 
 export default async function scoringRoutes(fastify) {
 
@@ -33,13 +71,8 @@ export default async function scoringRoutes(fastify) {
         return reply.code(404).send({ error: 'INVALID_FILE' });
       }
       const ext = doc.filename?.toLowerCase()?.slice(doc.filename.lastIndexOf('.')) || '';
-      const mimeMap = {
-        '.pdf': 'application/pdf',
-        '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      };
       return reply
-        .header('Content-Type', mimeMap[ext] || 'application/octet-stream')
+        .header('Content-Type', EXTRA_MIME_MAP[ext] || 'application/octet-stream')
         .header('Cache-Control', 'private, max-age=3600')
         .send(buf);
     } catch (err) {
@@ -167,12 +200,69 @@ export default async function scoringRoutes(fastify) {
 
       const reference = `FLY-${randomBytes(4).toString('hex').toUpperCase()}`;
 
-      // Stocker le base64 du deck + extra docs dans data
+      // ARCHITECT-PRIME: Delta 13 — Upload R2 AVANT persist DB. La DB ne stocke plus
+      // de base64, uniquement des métadonnées légères. En cas d'échec partiel (ex: 2/5
+      // extras uploadés puis 3e KO) on laisse des orphelins R2 acceptés pour ce step ;
+      // cleanup V2 (cf. progress-delta-13.md).
+      let pitchDeckStorage = null;
+      const extraDocsStorage = [];
+      try {
+        if (parsed.pitch_deck_base64) {
+          const { buffer } = extractBase64Payload(parsed.pitch_deck_base64);
+          const key = `decks/${reference}.pdf`;
+          const meta = await putObject(key, buffer, 'application/pdf', { logger: request.log });
+          pitchDeckStorage = {
+            kind: 'r2',
+            key: meta.key,
+            size: meta.size,
+            content_type: 'application/pdf',
+            uploaded_at: new Date().toISOString(),
+          };
+        }
+
+        if (Array.isArray(parsed.extra_docs) && parsed.extra_docs.length > 0) {
+          for (let i = 0; i < parsed.extra_docs.length; i++) {
+            const doc = parsed.extra_docs[i];
+            if (!doc?.base64) {
+              request.log.warn(
+                { reference, index: i, filename: doc?.filename },
+                'extra_doc sans base64, skip'
+              );
+              continue;
+            }
+            const { buffer, contentType } = extractBase64Payload(doc.base64);
+            const ext = sanitizeExtension(doc.filename);
+            const key = `extras/${reference}/${i}${ext}`;
+            // Cascade MIME : data URI valide → mapping extension → fallback PDF
+            // (cohérent avec sanitizeExtension qui retombe sur .pdf si ext inconnue).
+            const mime = contentType || EXTRA_MIME_MAP[ext] || 'application/pdf';
+            const meta = await putObject(key, buffer, mime, { logger: request.log });
+            extraDocsStorage.push({
+              kind: 'r2',
+              key: meta.key,
+              size: meta.size,
+              filename: doc.filename,
+              content_type: mime,
+              uploaded_at: new Date().toISOString(),
+            });
+          }
+        }
+      } catch (uploadErr) {
+        request.log.error({ err: uploadErr, reference }, 'Echec upload R2 pendant /api/score');
+        return reply.code(502).send({
+          error: 'STORAGE_UNAVAILABLE',
+          message: 'Le stockage des documents est temporairement indisponible. Réessayez dans quelques instants.',
+        });
+      }
+
+      // Payload sans base64 : réutilisé pour DB + n8n (aucun blob persisté/envoyé deux fois).
+      const { pitch_deck_base64: _pdb, extra_docs: _ed, ...payloadWithoutBase64 } = parsed;
+
       const initialData = {
         status: 'pending_analysis',
-        pitch_deck_base64: parsed.pitch_deck_base64 || null,
-        extra_docs: parsed.extra_docs || [],
-        payload: parsed
+        pitch_deck_storage: pitchDeckStorage,
+        extra_docs: extraDocsStorage,
+        payload: payloadWithoutBase64,
       };
 
       await pool.query(
@@ -183,17 +273,16 @@ export default async function scoringRoutes(fastify) {
       // Construire l URL du deck pour n8n/Mistral
       const host = request.headers['x-forwarded-host'] || request.headers.host || 'flaynn.tech';
       const protocol = request.headers['x-forwarded-proto'] || 'https';
-      const deckUrl = parsed.pitch_deck_base64
+      const deckUrl = pitchDeckStorage
         ? `${protocol}://${host}/api/decks/${reference}`
         : '';
 
       // Construire les URLs des docs additionnels pour n8n
-      const extraDocsUrls = (parsed.extra_docs || []).map((_, i) =>
+      const extraDocsUrls = extraDocsStorage.map((_, i) =>
         `${protocol}://${host}/api/decks/${reference}/extra/${i}`
       );
 
       // Envoyer a n8n SANS le base64, avec l URL du deck + extra docs
-      const { pitch_deck_base64, extra_docs, ...payloadWithoutBase64 } = parsed;
       n8nBridge.submitScore({
         ...payloadWithoutBase64,
         reference,
