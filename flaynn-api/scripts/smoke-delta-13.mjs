@@ -126,6 +126,12 @@ function mockQuery(sql, params = []) {
     return Promise.resolve({ rowCount: 0, rows: [] });
   }
 
+  // Matcher Delta 9 (public_cards) — retourne vide, smoke test ne vérifie
+  // pas la logique card publique (Delta 9 a ses propres tests).
+  if (/^SELECT id, slug, view_count, created_at, og_image_path FROM public_cards WHERE reference_id = \$1 AND user_email = \$2 AND is_active = TRUE/i.test(s)) {
+    return Promise.resolve({ rowCount: 0, rows: [] });
+  }
+
   // dashboard-api.js — GET /list
   if (/^SELECT reference_id, startup_name, created_at FROM scores WHERE user_email = \$1/i.test(s)) {
     const rows = [...store.values()]
