@@ -9,8 +9,8 @@ Fastify 5 ESM. Voir rapport de découverte pour divergences avec le doc.
 | 1 | DB + slug + route SSR stub `/score/:slug` | ✅ | 15ecede |
 | 2 | API `POST/DELETE` publish/unpublish | ✅ | feb7e63 |
 | 3 | OG image Satori + route `/og/:slug.png` + warm-up boot | ✅ | 3825865 |
-| 4 | Meta OG/Twitter/JSON-LD + sitemap dynamique + CSP nonce/hash JSON-LD | ✅ | — |
-| 5 | CSS card publique (`public/css/score-card.css`) + responsive | ⬜ | — |
+| 4 | Meta OG/Twitter/JSON-LD + sitemap dynamique + CSP nonce/hash JSON-LD | ✅ | e7f8527 |
+| 5 | CSS card publique (`public/css/score-card.css`) + responsive | ✅ | — |
 | 6 | Toggle dashboard (3 états) injecté dans `app.js` (el() helper) | ⬜ | — |
 | 7 | Polish copywriting + A11y + tests cross-platform partage | ⬜ | — |
 

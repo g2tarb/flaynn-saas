@@ -122,50 +122,100 @@ function formatFrDate(value) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-function renderNotFoundPage() {
+// Labels FR affichés pour les piliers — les clés EN restent côté DB (décision E).
+// Ordre explicite = ordre d'affichage côté UI.
+const PILLAR_ORDER = ['market', 'solution_product', 'traction', 'team', 'execution_ask'];
+const PILLAR_LABELS_FR = {
+  market: 'Marché',
+  solution_product: 'Produit',
+  traction: 'Traction',
+  team: 'Équipe',
+  execution_ask: 'Exécution'
+};
+const PILLAR_MAX = 20;
+
+function verdictClass(verdict) {
+  if (!verdict) return '';
+  return verdict
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function buildPillarsHtml(pillars) {
+  if (!pillars || typeof pillars !== 'object') return '';
+  const items = PILLAR_ORDER.map((key) => {
+    const raw = Number(pillars[key] ?? 0);
+    const score = Number.isFinite(raw) ? raw : 0;
+    // Barres normalisées sur PILLAR_MAX (20) par convention Flaynn. Clamp [0,100]%.
+    const pct = Math.max(0, Math.min(100, (score / PILLAR_MAX) * 100));
+    const label = PILLAR_LABELS_FR[key];
+    return `
+      <li class="score-card__pillar">
+        <div class="score-card__pillar-head">
+          <span class="score-card__pillar-name">${escapeHtml(label)}</span>
+          <span class="score-card__pillar-score">${score}<span class="score-card__pillar-max">/${PILLAR_MAX}</span></span>
+        </div>
+        <div class="score-card__pillar-bar" role="progressbar" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="${PILLAR_MAX}" aria-label="${escapeHtml(label)}">
+          <div class="score-card__pillar-fill" data-target="${pct.toFixed(0)}" style="width:${pct.toFixed(1)}%"></div>
+        </div>
+      </li>`;
+  }).join('');
+  return `
+    <section class="score-card__pillars">
+      <h2 class="score-card__section-title"><span class="score-card__section-icon">●</span> Scoring par pilier</h2>
+      <ul class="score-card__pillars-list">${items}</ul>
+    </section>`;
+}
+
+function buildShareUrls(pageUrl, title) {
+  const u = encodeURIComponent(pageUrl);
+  const t = encodeURIComponent(title);
+  return {
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${u}`,
+    x: `https://twitter.com/intent/tweet?url=${u}&text=${t}`,
+    whatsapp: `https://wa.me/?text=${t}%20${u}`
+  };
+}
+
+function renderMinimalPage(title, heading, message) {
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Flaynn · Carte introuvable</title>
+<title>${escapeHtml(title)}</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/defaut.css">
+<link rel="stylesheet" href="/css/score-card.css">
 </head>
-<body class="dashboard-body">
-<main style="max-width:720px;margin:96px auto;padding:48px 24px;text-align:center">
-  <h1 style="font-size:48px;margin:0 0 16px">Carte introuvable</h1>
-  <p style="color:var(--text-secondary);margin:0 0 32px">
-    Cette Flaynn Card n'existe pas ou n'a jamais été publiée.
-  </p>
-  <a href="/" style="color:var(--accent-violet);text-decoration:none;font-weight:600">← Retour à l'accueil Flaynn</a>
+<body class="score-card">
+<main class="score-card__minimal">
+  <h1>${escapeHtml(heading)}</h1>
+  <p>${escapeHtml(message)}</p>
+  <a href="/">← Retour à l'accueil Flaynn</a>
 </main>
 </body>
 </html>`;
 }
 
+function renderNotFoundPage() {
+  return renderMinimalPage(
+    'Flaynn · Carte introuvable',
+    'Carte introuvable',
+    "Cette Flaynn Card n'existe pas ou n'a jamais été publiée."
+  );
+}
+
 function renderUnpublishedPage() {
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
-<title>Flaynn · Carte dépubliée</title>
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/defaut.css">
-</head>
-<body class="dashboard-body">
-<main style="max-width:720px;margin:96px auto;padding:48px 24px;text-align:center">
-  <h1 style="font-size:48px;margin:0 0 16px">Carte dépubliée</h1>
-  <p style="color:var(--text-secondary);margin:0 0 32px">
-    Cette Flaynn Card a été dépubliée par son fondateur.
-  </p>
-  <a href="/" style="color:var(--accent-violet);text-decoration:none;font-weight:600">← Retour à l'accueil Flaynn</a>
-</main>
-</body>
-</html>`;
+  return renderMinimalPage(
+    'Flaynn · Carte dépubliée',
+    'Carte dépubliée',
+    'Cette Flaynn Card a été dépubliée par son fondateur.'
+  );
 }
 
 function renderCardPage(card) {
@@ -201,17 +251,23 @@ function renderCardPage(card) {
     : '<meta name="robots" content="noindex, nofollow">';
 
   const forcesHtml = forces.length
-    ? `<ol>${forces.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ol>`
-    : '<p style="color:var(--text-secondary)">Aucune force listée.</p>';
+    ? `<ol class="score-card__list">${forces.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ol>`
+    : '<p class="score-card__empty">Aucune force listée.</p>';
 
   const challengesHtml = challenges.length
-    ? `<ol>${challenges.map((c) => `<li>${escapeHtml(c)}</li>`).join('')}</ol>`
-    : '<p style="color:var(--text-secondary)">Aucune zone listée.</p>';
+    ? `<ol class="score-card__list">${challenges.map((c) => `<li>${escapeHtml(c)}</li>`).join('')}</ol>`
+    : '<p class="score-card__empty">Aucune zone listée.</p>';
 
   const metaLine = [sector, track, scoredAtFr ? `Scoré le ${scoredAtFr}` : '']
     .filter(Boolean)
     .map(escapeHtml)
     .join(' · ');
+
+  const pillarsHtml = buildPillarsHtml(snapshot.pillars);
+  const shareUrls = buildShareUrls(pageUrl, title);
+  const verdictCssClass = verdictClass(verdict);
+  const methodologyUrl = '/manifesto';
+  const founderSignupUrl = '/#scoring';
 
   // ARCHITECT-PRIME — Delta 9 J4 : JSON-LD structured data pour SEO (Article +
   // Review embeddé). Stable pour une card donnée : tous les champs proviennent
@@ -295,46 +351,60 @@ ${robotsTag}
 <link rel="canonical" href="${escapeHtml(pageUrl)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/defaut.css">
+<link rel="stylesheet" href="/css/score-card.css">
 <script type="application/ld+json">${jsonLdContent}</script>
 </head>
-<body class="dashboard-body">
-<main style="max-width:920px;margin:0 auto;padding:48px 24px 96px">
-  <header style="display:flex;justify-content:space-between;align-items:center;padding-bottom:32px;border-bottom:1px solid var(--border-default);margin-bottom:48px">
-    <a href="/" style="font-weight:700;font-size:24px;letter-spacing:-0.02em;background:var(--gradient-violet-rose);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none">FLAYNN</a>
-    <span style="padding:8px 20px;border-radius:999px;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent-emerald);border:1px solid var(--accent-emerald)">${escapeHtml(verdict)}</span>
+<body class="score-card">
+<a class="score-card__skip" href="#main">Aller au contenu</a>
+<canvas id="canvas-bg" class="score-card__starfield" aria-hidden="true"></canvas>
+<main id="main" class="score-card__container">
+  <header class="score-card__header">
+    <a class="score-card__logo" href="/" aria-label="Flaynn — accueil">FLAYNN</a>
+    ${verdict ? `<span class="score-card__verdict score-card__verdict--${escapeHtml(verdictCssClass)}">${escapeHtml(verdict)}</span>` : ''}
   </header>
 
-  <section style="margin-bottom:64px">
-    <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:16px">${metaLine}</div>
-    <h1 style="font-size:clamp(40px,6vw,72px);font-weight:700;line-height:1.05;letter-spacing:-0.03em;margin:0 0 40px">${escapeHtml(startupName)}</h1>
-    <div style="display:flex;align-items:baseline;gap:12px">
-      <span style="font-size:14px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-secondary);margin-right:8px">Flaynn Score</span>
-      <span style="font-size:clamp(80px,12vw,160px);font-weight:700;line-height:1;letter-spacing:-0.05em">${score}</span>
-      <span style="font-size:clamp(40px,6vw,80px);color:var(--text-secondary);font-weight:400">/100</span>
+  <section class="score-card__hero">
+    ${metaLine ? `<p class="score-card__meta">${metaLine}</p>` : ''}
+    <h1 class="score-card__title">${escapeHtml(startupName)}</h1>
+    <div class="score-card__score">
+      <span class="score-card__score-label">Flaynn Score</span>
+      <span class="score-card__score-value">${score}</span>
+      <span class="score-card__score-max">/100</span>
     </div>
   </section>
 
-  <section style="margin-bottom:48px">
-    <h2 style="font-size:18px;font-weight:700;margin:0 0 24px">✓ Trois forces identifiées</h2>
+  ${pillarsHtml}
+
+  <section class="score-card__block score-card__block--forces" aria-labelledby="forces-title">
+    <h2 class="score-card__section-title" id="forces-title"><span class="score-card__section-icon">✓</span> Trois forces identifiées</h2>
     ${forcesHtml}
   </section>
 
-  <section style="margin-bottom:48px">
-    <h2 style="font-size:18px;font-weight:700;margin:0 0 24px">⏳ Trois zones à renforcer</h2>
+  <section class="score-card__block score-card__block--challenges" aria-labelledby="challenges-title">
+    <h2 class="score-card__section-title" id="challenges-title"><span class="score-card__section-icon">⏳</span> Trois zones à renforcer</h2>
     ${challengesHtml}
   </section>
 
-  ${methodology ? `<section style="margin-bottom:48px;color:var(--text-secondary);font-size:13px;letter-spacing:0.05em">Validé par l'analyste Flaynn · Méthodologie ${escapeHtml(methodology)}</section>` : ''}
-
-  <section style="display:flex;flex-direction:column;gap:16px;margin-bottom:64px">
-    <a href="/#scoring" style="padding:20px 32px;border-radius:12px;font-weight:700;text-align:center;font-size:17px;background:var(--gradient-violet-rose);color:#fff;text-decoration:none">Obtenir votre scoring · 29€</a>
-    <a href="${escapeHtml(baJoinUrl)}" style="padding:14px 24px;border-radius:12px;font-weight:500;text-align:center;font-size:14px;border:1px solid var(--border-default);color:var(--text-primary);text-decoration:none;letter-spacing:0.02em">Vous êtes investisseur ? Rejoindre Flaynn →</a>
+  <section class="score-card__methodology">
+    <span class="score-card__badge"><span class="score-card__badge-dot" aria-hidden="true"></span>${methodology ? `Validé par l'analyste Flaynn · Méthodologie ${escapeHtml(methodology)}` : "Validé par l'analyste Flaynn"}</span>
+    <a class="score-card__methodology-link" href="${escapeHtml(methodologyUrl)}">Comprendre la méthodologie →</a>
   </section>
 
-  <footer style="padding-top:48px;border-top:1px solid var(--border-default);font-size:12px;color:var(--text-secondary);letter-spacing:0.08em;text-transform:uppercase">
-    Flaynn · Infrastructure du capital sélectif francophone
+  <section class="score-card__ctas">
+    <a class="score-card__cta score-card__cta--primary" href="${escapeHtml(founderSignupUrl)}">Obtenir votre scoring · 29€</a>
+    <a class="score-card__cta score-card__cta--secondary" href="${escapeHtml(baJoinUrl)}">Vous êtes investisseur ? Rejoindre Flaynn →</a>
+  </section>
+
+  <footer class="score-card__footer">
+    <div class="score-card__share">
+      <button class="score-card__share-btn" type="button" data-action="copy-link" aria-label="Copier le lien de cette page">Copier le lien</button>
+      <a class="score-card__share-btn" href="${escapeHtml(shareUrls.linkedin)}" target="_blank" rel="noopener">Partager sur LinkedIn</a>
+      <a class="score-card__share-btn" href="${escapeHtml(shareUrls.x)}" target="_blank" rel="noopener">Partager sur X</a>
+    </div>
+    <p class="score-card__signature">Flaynn · Infrastructure du capital sélectif francophone</p>
   </footer>
 </main>
+<script src="/js/starfield.js" defer></script>
 </body>
 </html>`;
 
