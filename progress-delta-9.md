@@ -12,7 +12,7 @@ Fastify 5 ESM. Voir rapport de découverte pour divergences avec le doc.
 | 4 | Meta OG/Twitter/JSON-LD + sitemap dynamique + CSP nonce/hash JSON-LD | ✅ | e7f8527 |
 | 5 | CSS card publique (`public/css/score-card.css`) + responsive | ✅ | a25077c |
 | 6 | Toggle dashboard (3 états) injecté dans `app.js` (el() helper) | ✅ | e2c3f05 |
-| 7 | Polish copywriting + A11y + smoke test end-to-end 14/14 | ✅ | — |
+| 7 | Polish copywriting + A11y + smoke test end-to-end 14/14 | ✅ | 0236825 |
 
 ## Décisions prises (validées phase 1)
 
