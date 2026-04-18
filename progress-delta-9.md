@@ -8,8 +8,8 @@ Fastify 5 ESM. Voir rapport de découverte pour divergences avec le doc.
 |---|-------|--------|--------|
 | 1 | DB + slug + route SSR stub `/score/:slug` | ✅ | 15ecede |
 | 2 | API `POST/DELETE` publish/unpublish | ✅ | feb7e63 |
-| 3 | OG image Satori + route `/og/:slug.png` + warm-up boot | ✅ | — |
-| 4 | Meta OG/Twitter/JSON-LD + sitemap dynamique + CSP nonce/hash JSON-LD | ⬜ | — |
+| 3 | OG image Satori + route `/og/:slug.png` + warm-up boot | ✅ | 3825865 |
+| 4 | Meta OG/Twitter/JSON-LD + sitemap dynamique + CSP nonce/hash JSON-LD | ✅ | — |
 | 5 | CSS card publique (`public/css/score-card.css`) + responsive | ⬜ | — |
 | 6 | Toggle dashboard (3 états) injecté dans `app.js` (el() helper) | ⬜ | — |
 | 7 | Polish copywriting + A11y + tests cross-platform partage | ⬜ | — |
@@ -37,11 +37,12 @@ Fastify 5 ESM. Voir rapport de découverte pour divergences avec le doc.
 - **FK `intro_requests.card_id → public_cards(id)`** : la table `public_cards` existe dès J1, mais l'ALTER
   d'ajout de la FK est laissé à une étape d'intégration explicite (séparée) pour éviter de modifier un schéma
   delta 12 sans accord. TODO restera jusqu'à décision.
-- **CSP + JSON-LD** : `script-src 'self'` bloque les `<script type="application/ld+json">` inline côté navigateur
-  (bots SEO non affectés). J1 n'émet pas de JSON-LD. J4 doit trancher : hash SHA-256 par card, nonce, ou accepter
-  le warning console (crawlers lisent quand même).
+- ~~**CSP + JSON-LD**~~ : tranché en J4 — hash SHA-256 par card calculé dans `renderCardPage`, header CSP scoped
+  à la réponse `/score/:slug` via `buildCspHeader([jsonLdHash])` dans `config/security.js`. `reply.header()` en
+  handler écrase le header helmet (last-write-wins). Policy globale conservée stricte.
 - **OG PNG sur filesystem Render éphémère** : accepté. Lazy re-render dans `GET /og/:slug.png` (J3).
-- **Trailing slash canonical** : `/score/:slug/` → 301 `/score/:slug`. Traitement J4.
+- ~~**Trailing slash canonical**~~ : traité en J4 — route explicite `/score/:slug/` renvoie 301 vers la version
+  sans slash.
 
 ## Points sensibles à relire ligne par ligne (rappel user)
 

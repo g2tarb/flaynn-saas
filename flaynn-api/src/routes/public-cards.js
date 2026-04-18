@@ -1,9 +1,11 @@
 import { z } from 'zod';
+import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pool } from '../config/db.js';
 import { generateUniqueSlug } from '../lib/slug.js';
 import { renderOgImage, getOgOutputDir } from '../lib/og-render.js';
+import { buildCspHeader } from '../config/security.js';
 
 // ARCHITECT-PRIME — Delta 9 step 1 : route SSR publique /score/:slug (stub).
 // Le rendu HTML est minimal et vérifiable via curl. Le CSS complet (J5) et le JS
@@ -211,7 +213,58 @@ function renderCardPage(card) {
     .map(escapeHtml)
     .join(' · ');
 
-  return `<!DOCTYPE html>
+  // ARCHITECT-PRIME — Delta 9 J4 : JSON-LD structured data pour SEO (Article +
+  // Review embeddé). Stable pour une card donnée : tous les champs proviennent
+  // du snapshot figé + métadonnées immuables (slug, created_at).
+  //
+  // Le hash SHA-256 calculé ci-dessous est injecté dans le header CSP scoped
+  // (script-src 'sha256-...'). Invariant CRITIQUE : le contenu hashé doit être
+  // EXACTEMENT le texte entre <script type="application/ld+json"> et </script>
+  // — aucun espace / newline ajouté côté template.
+  const publishedIso = card.created_at instanceof Date
+    ? card.created_at.toISOString()
+    : new Date(card.created_at).toISOString();
+
+  const jsonLdObject = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: title,
+    description,
+    datePublished: publishedIso,
+    url: pageUrl,
+    image: ogImage,
+    author: {
+      '@type': 'Organization',
+      name: 'Flaynn Intelligence',
+      url: baseUrl
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Flaynn',
+      url: baseUrl
+    },
+    about: {
+      '@type': 'Organization',
+      name: startupName
+    },
+    review: {
+      '@type': 'Review',
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: score,
+        bestRating: 100,
+        worstRating: 0
+      },
+      author: {
+        '@type': 'Organization',
+        name: 'Flaynn Intelligence'
+      }
+    }
+  };
+  const jsonLdContent = JSON.stringify(jsonLdObject);
+  const jsonLdHash = 'sha256-' + createHash('sha256').update(jsonLdContent).digest('base64');
+
+  const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -227,17 +280,22 @@ ${robotsTag}
 <meta property="og:image" content="${escapeHtml(ogImage)}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="${escapeHtml(`Flaynn Score ${score}/100 — ${startupName}`)}">
 <meta property="og:site_name" content="Flaynn">
 <meta property="og:locale" content="fr_FR">
+<meta property="article:published_time" content="${escapeHtml(publishedIso)}">
+<meta property="article:author" content="Flaynn Intelligence">
 
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${escapeHtml(title)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${escapeHtml(ogImage)}">
+<meta name="twitter:image:alt" content="${escapeHtml(`Flaynn Score ${score}/100 — ${startupName}`)}">
 
 <link rel="canonical" href="${escapeHtml(pageUrl)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/defaut.css">
+<script type="application/ld+json">${jsonLdContent}</script>
 </head>
 <body class="dashboard-body">
 <main style="max-width:920px;margin:0 auto;padding:48px 24px 96px">
@@ -279,6 +337,8 @@ ${robotsTag}
 </main>
 </body>
 </html>`;
+
+  return { html, jsonLdHash };
 }
 
 export default async function publicCardsRoutes(fastify) {
@@ -608,10 +668,92 @@ export default async function publicCardsRoutes(fastify) {
       request.log.warn({ err, cardId: card.id }, 'public_card_view_count_failed');
     });
 
+    const { html, jsonLdHash } = renderCardPage(card);
+
+    // CSP override scoped à cette réponse : on autorise le <script type=
+    // "application/ld+json"> inline via son hash SHA-256 sans assouplir la
+    // policy globale. reply.header() écrase la valeur posée par helmet plus tôt
+    // dans la chaîne de hooks (Fastify : last-write-wins sur les headers).
     return reply
       .code(200)
       .type('text/html; charset=utf-8')
       .header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
-      .send(renderCardPage(card));
+      .header('Content-Security-Policy', buildCspHeader([jsonLdHash]))
+      .send(html);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // GET /score/:slug/ — redirection 301 vers la version canonique sans slash.
+  // SEO hygiène : évite le dédoublement d'URLs indexées (doc §10.11).
+  // ──────────────────────────────────────────────────────────────────────
+  fastify.get('/score/:slug/', {
+    config: { rateLimit: { max: 120, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const { slug } = request.params;
+    if (!isValidSlug(slug)) {
+      return reply
+        .code(404)
+        .type('text/html; charset=utf-8')
+        .send(renderNotFoundPage());
+    }
+    return reply.code(301).redirect(`/score/${slug}`);
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // GET /sitemap.xml — sitemap dynamique. Inclut la homepage + le dashboard
+  // (legacy), PLUS toutes les cards is_active AND index_seo. Remplace le
+  // fichier public/sitemap.xml statique (supprimé en J4).
+  // Enregistré ici avant fastifyStatic dans server.js → priorité.
+  // ──────────────────────────────────────────────────────────────────────
+  fastify.get('/sitemap.xml', {
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const baseUrl = process.env.APP_URL || 'https://flaynn.tech';
+
+    let cardRows = [];
+    try {
+      const result = await pool.query(
+        `SELECT slug, created_at FROM public_cards
+         WHERE is_active = TRUE AND index_seo = TRUE
+         ORDER BY created_at DESC LIMIT 50000`
+      );
+      cardRows = result.rows;
+    } catch (err) {
+      request.log.error({ err }, 'sitemap_cards_query_failed');
+      // En cas d'erreur DB on sert quand même la partie statique — les bots
+      // retenteront et indexeront les cards plus tard.
+    }
+
+    const staticUrls = [
+      { loc: `${baseUrl}/`,           changefreq: 'weekly',  priority: '1.0', lastmod: null },
+      { loc: `${baseUrl}/dashboard/`, changefreq: 'weekly',  priority: '0.8', lastmod: null }
+    ];
+
+    const urlEntries = [];
+    for (const u of staticUrls) {
+      urlEntries.push(
+        `  <url>\n    <loc>${u.loc}</loc>\n    <changefreq>${u.changefreq}</changefreq>\n    <priority>${u.priority}</priority>\n  </url>`
+      );
+    }
+    for (const c of cardRows) {
+      const iso = c.created_at instanceof Date
+        ? c.created_at.toISOString()
+        : new Date(c.created_at).toISOString();
+      urlEntries.push(
+        `  <url>\n    <loc>${baseUrl}/score/${c.slug}</loc>\n    <lastmod>${iso}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>0.7</priority>\n  </url>`
+      );
+    }
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlEntries.join('\n')}
+</urlset>
+`;
+
+    return reply
+      .code(200)
+      .type('application/xml; charset=utf-8')
+      .header('Cache-Control', 'public, max-age=3600')
+      .send(xml);
   });
 }
