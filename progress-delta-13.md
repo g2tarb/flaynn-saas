@@ -15,8 +15,9 @@ DB Render expire le **4 mai 2026**. On libère la DB des PDF stockés en base64 
 - Serving : signed URL R2 + 302 redirect (TTL 5 min pour dashboard/view, 10 min pour OCR bypass).
 - Ingestion : décodage base64 côté serveur → upload R2 immédiat → DB ne stocke que les métadonnées `{kind:'r2', key, size}`.
 - Nouveau format DB : `scores.data.pdf_report_storage` (rapport n8n) et `scores.data.pitch_deck_storage` (deck founder). Extras : `scores.data.extra_docs[i] = {filename, key, size, kind:'r2'}`.
-- bodyLimit `/api/score` : 90 MB → 25 MB. `/api/webhooks/n8n/pdf` reste 10 MB. `/api/checkout` : refactor step 9.
+- bodyLimit `/api/score` : 90 MB → 25 MB. `/api/webhooks/n8n/pdf` reste 10 MB. `/api/checkout` : 16 MB → 25 MB (step 9, même Zod que /api/score).
 - Uploads R2 en écrasement silencieux (comportement S3 natif), avec `HeadObject` préalable non-bloquant + `warn` si l'objet existe déjà.
+- Helpers métier factorisés dans `lib/pdf-upload.js` (step 9) : `extractBase64Payload`, `sanitizeExtension`, `EXTRA_MIME_MAP`, `ALLOWED_EXTRA_EXTENSIONS`. Séparation de niveau vs `lib/r2-storage.js` (couche S3 bas-niveau).
 
 ## Checklist
 
@@ -70,10 +71,12 @@ DB Render expire le **4 mai 2026**. On libère la DB des PDF stockés en base64 
 ## API contract changes
 
 - POST /api/score bodyLimit : 90 MB → 25 MB (step 7). Couvre le 95th percentile des decks + 4 extras. Les uploads au-delà renvoient 413 Payload Too Large — à gérer côté frontend en V2.
+- POST /api/checkout bodyLimit : 16 MB → 25 MB (step 9). Alignement avec /api/score (même ScoreSubmissionSchema, même contrat). Les uploads au-delà renvoient 413 — à gérer côté frontend en V2.
 
 ## TODO / Dette connue
 
 - Cleanup R2 orphelins sur échec partiel upload extra_docs : si le `putObject` échoue au milieu d'un array d'`extra_docs`, les uploads déjà faits restent dans R2 (orphelins). Acceptable v1 (coût R2 négligeable, zéro risque fonctionnel). V2 : wrapper transactionnel ou cleanup batch hebdomadaire.
+- Webhook checkout.session.completed : assume payload sans base64 (format Delta 13+). Replay d'un event pré-Delta 13 en dev : base64 transmis inutilement à n8n, sans crash. Acceptable (Stripe en test actuellement, zéro session stale).
 
 ## Points hors scope Delta 13
 

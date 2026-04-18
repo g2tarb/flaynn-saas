@@ -1,46 +1,10 @@
 import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
-import { extname } from 'node:path';
 import { n8nBridge } from '../services/n8n-bridge.js';
 import { pool } from '../config/db.js';
 import { ScoreSubmissionSchema } from '../schemas/scoring.js';
 import { putObject, getSignedGetUrl } from '../lib/r2-storage.js';
-
-// ARCHITECT-PRIME: Delta 13 — helpers privés pour upload R2 depuis POST /api/score.
-const ALLOWED_EXTRA_EXTENSIONS = new Set(['.pdf', '.pptx', '.docx']);
-
-// Mapping partagé extension → MIME pour extra_docs (upload R2 + route legacy GET).
-const EXTRA_MIME_MAP = {
-  '.pdf': 'application/pdf',
-  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-};
-
-function extractBase64Payload(input) {
-  if (typeof input !== 'string' || input.length === 0) {
-    throw new Error('base64 payload empty');
-  }
-  let contentType = null;
-  let b64 = input;
-  // Support optionnel du data URI "data:application/pdf;base64,XXX".
-  if (input.startsWith('data:')) {
-    const match = /^data:([^;,]+);base64,(.+)$/.exec(input);
-    if (!match) throw new Error('invalid data URI');
-    contentType = match[1];
-    b64 = match[2];
-  }
-  const buffer = Buffer.from(b64, 'base64');
-  if (buffer.length === 0) {
-    throw new Error('base64 decode produced empty buffer');
-  }
-  return { buffer, contentType };
-}
-
-function sanitizeExtension(filename) {
-  if (typeof filename !== 'string' || filename.length === 0) return '.pdf';
-  const ext = extname(filename).toLowerCase();
-  return ALLOWED_EXTRA_EXTENSIONS.has(ext) ? ext : '.pdf';
-}
+import { extractBase64Payload, sanitizeExtension, EXTRA_MIME_MAP } from '../lib/pdf-upload.js';
 
 export default async function scoringRoutes(fastify) {
 
