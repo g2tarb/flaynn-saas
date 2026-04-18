@@ -48,8 +48,88 @@ export async function initDB(logger, retries = 8, delay = 2000) {
 
         CREATE INDEX IF NOT EXISTS idx_scores_user_email
         ON scores(user_email);
+
+        -- ======================================================================
+        -- Delta 12 — Onboarding Business Angels (BA)
+        -- ARCHITECT-PRIME: enums créés via DO/EXCEPTION pour idempotence inter-versions PG.
+        -- ======================================================================
+        DO $$ BEGIN
+          CREATE TYPE ba_status AS ENUM ('pending', 'active', 'paused', 'cancelled', 'rejected');
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+        DO $$ BEGIN
+          CREATE TYPE intro_status AS ENUM (
+            'pending_founder', 'founder_notified', 'founder_accepted',
+            'founder_declined', 'meeting_scheduled', 'cancelled'
+          );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+        CREATE TABLE IF NOT EXISTS business_angels (
+          id                     SERIAL PRIMARY KEY,
+          first_name             VARCHAR(80)  NOT NULL,
+          last_name              VARCHAR(80)  NOT NULL,
+          email                  VARCHAR(254) NOT NULL,
+          linkedin_url           VARCHAR(500) NOT NULL,
+          exit_context           TEXT,
+          thesis                 JSONB        NOT NULL,
+          referral_source        VARCHAR(200),
+          stripe_customer_id     VARCHAR(255),
+          stripe_subscription_id VARCHAR(255),
+          status                 ba_status    NOT NULL DEFAULT 'pending',
+          consent_rgpd_at        TIMESTAMP WITH TIME ZONE NOT NULL,
+          created_at             TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          activated_at           TIMESTAMP WITH TIME ZONE,
+          paused_at              TIMESTAMP WITH TIME ZONE,
+          cancelled_at           TIMESTAMP WITH TIME ZONE,
+          validated_by_admin_at  TIMESTAMP WITH TIME ZONE,
+          admin_notes            TEXT
+        );
+
+        -- Dédup applicative : un seul dossier "vivant" par email à la fois.
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_ba_email_active
+          ON business_angels(email)
+          WHERE status IN ('pending', 'active', 'paused');
+
+        CREATE INDEX IF NOT EXISTS idx_ba_status
+          ON business_angels(status);
+        CREATE INDEX IF NOT EXISTS idx_ba_stripe_customer
+          ON business_angels(stripe_customer_id);
+        CREATE INDEX IF NOT EXISTS idx_ba_stripe_sub
+          ON business_angels(stripe_subscription_id);
+        CREATE INDEX IF NOT EXISTS idx_ba_thesis
+          ON business_angels USING GIN (thesis);
+
+        -- intro_requests : pas de FK vers public_cards (table livrée par delta 9, absente ici).
+        -- Le check d'existence de la card est fait côté applicatif au moment de l'INSERT.
+        -- TODO(delta-9) : ajouter FK card_id -> public_cards(id) ON DELETE CASCADE quand la table existera.
+        CREATE TABLE IF NOT EXISTS intro_requests (
+          id                    SERIAL PRIMARY KEY,
+          ba_id                 INTEGER      NOT NULL REFERENCES business_angels(id) ON DELETE CASCADE,
+          card_id               INTEGER      NOT NULL,
+          message               TEXT,
+          status                intro_status NOT NULL DEFAULT 'pending_founder',
+          created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          updated_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          founder_decided_at    TIMESTAMP WITH TIME ZONE,
+          meeting_scheduled_at  TIMESTAMP WITH TIME ZONE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_intro_ba     ON intro_requests(ba_id);
+        CREATE INDEX IF NOT EXISTS idx_intro_card   ON intro_requests(card_id);
+        CREATE INDEX IF NOT EXISTS idx_intro_status ON intro_requests(status);
+
+        CREATE TABLE IF NOT EXISTS ba_digests (
+          id          SERIAL PRIMARY KEY,
+          ba_id       INTEGER     NOT NULL REFERENCES business_angels(id) ON DELETE CASCADE,
+          sent_at     TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          card_ids    INTEGER[]   NOT NULL,
+          opened_at   TIMESTAMP WITH TIME ZONE,
+          clicked_at  TIMESTAMP WITH TIME ZONE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_digests_ba ON ba_digests(ba_id);
       `);
-      logger.info('[ARCHITECT-PRIME] PostgreSQL : Tables "users", "scores" et "refresh_tokens" synchronisées et prêtes.');
+      logger.info('[ARCHITECT-PRIME] PostgreSQL : Tables "users", "scores", "refresh_tokens", "business_angels", "intro_requests", "ba_digests" synchronisées et prêtes.');
       return;
     } catch (err) {
       if (attempt === retries) {
