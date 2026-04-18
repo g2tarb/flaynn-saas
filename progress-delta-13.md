@@ -24,15 +24,15 @@ DB Render expire le **4 mai 2026**. On libère la DB des PDF stockés en base64 
 | # | Étape | Statut | Commit |
 |---|-------|--------|--------|
 | 0 | Découverte + rapport | ✅ | (chat) |
-| 1 | Tracker + deps AWS SDK + envSchema + render.yaml | ⏳ | |
-| 2 | `lib/r2-storage.js` : putObject / getSignedGetUrl / deleteObject + boot validation | | |
-| 3 | Refactor `scoring.js` `POST /api/score` : upload R2 deck + extras | | |
-| 4 | Refactor `scoring.js` GET decks (`/:ref` + `/:ref/view` + `/:ref/extra/:index`) : signed URL + 302 | | |
-| 5 | Refactor `webhooks.js` `POST /api/webhooks/n8n/pdf` : upload R2 | | |
-| 6 | Refactor `dashboard-api.js` GET `/:id/pdf` + `has_pdf`/`has_pitch_deck` | | |
-| 7 | bodyLimit `/api/score` 90MB → 25MB | | |
-| 8 | Smoke test E2E local (stub auth + vrai R2) | | |
-| 9 | Refactor `stripe.js` `/api/checkout` + handler `checkout.session.completed` | | |
+| 1 | Tracker + deps AWS SDK + envSchema + render.yaml | ✅ | e7441e0 |
+| 2 | `lib/r2-storage.js` : putObject / getSignedGetUrl / deleteObject + boot validation | ✅ | 19a9056 |
+| 3 | Refactor `scoring.js` `POST /api/score` : upload R2 deck + extras | ✅ | fd42360 |
+| 4 | Refactor `scoring.js` GET decks (`/:ref` + `/:ref/view` + `/:ref/extra/:index`) : signed URL + 302 | ✅ | c052362 |
+| 5 | Refactor `webhooks.js` `POST /api/webhooks/n8n/pdf` : upload R2 | ✅ | 255e88d |
+| 6 | Refactor `dashboard-api.js` GET `/:id/pdf` + `has_pdf`/`has_pitch_deck` | ✅ | 6b79721 |
+| 7 | bodyLimit `/api/score` 90MB → 25MB | ✅ | 567280e |
+| 8 | Smoke test E2E local (stub auth + vrai R2) | ✅ | 785938a |
+| 9 | Refactor `stripe.js` `/api/checkout` + handler `checkout.session.completed` | ✅ | b91b743 |
 
 ## Env vars nouvelles (Render, `sync: false`)
 
