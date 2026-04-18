@@ -53,7 +53,14 @@ const envSchema = z.object({
   STRIPE_PRICE_BA_SUBSCRIPTION: z.string().startsWith('price_').optional(),
   INTRO_TOKEN_SECRET: z.string().min(32, "INTRO_TOKEN_SECRET doit faire au moins 32 caractères.").optional(),
   ADMIN_EMAILS: z.string().optional(),
-  BA_PUBLIC_BASE_URL: z.string().url().default('https://flaynn.com')
+  BA_PUBLIC_BASE_URL: z.string().url().default('https://flaynn.com'),
+  // ARCHITECT-PRIME: Delta 13 — stockage R2 Cloudflare (S3-compatible)
+  // Optional ici (pattern Stripe/N8N) ; validation stricte au 1er appel dans lib/r2-storage.js
+  R2_ACCOUNT_ID: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_BUCKET: z.string().min(1).optional(),
+  R2_ENDPOINT: z.string().url().optional()
 });
 
 let env;
