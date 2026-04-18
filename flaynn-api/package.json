@@ -12,6 +12,7 @@
     "dev": "node --watch-path=./src src/server.js",
     "test": "NODE_ENV=test node --test tests/**/*.test.js",
     "test:load": "NODE_ENV=test LOAD_TEST=true node scripts/load-test.js",
+    "test:smoke-delta-9": "node scripts/smoke-delta-9.mjs",
     "build:icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {

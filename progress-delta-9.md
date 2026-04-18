@@ -12,7 +12,7 @@ Fastify 5 ESM. Voir rapport de découverte pour divergences avec le doc.
 | 4 | Meta OG/Twitter/JSON-LD + sitemap dynamique + CSP nonce/hash JSON-LD | ✅ | e7f8527 |
 | 5 | CSS card publique (`public/css/score-card.css`) + responsive | ✅ | a25077c |
 | 6 | Toggle dashboard (3 états) injecté dans `app.js` (el() helper) | ✅ | e2c3f05 |
-| 7 | Polish copywriting + A11y + tests cross-platform partage | ⬜ | — |
+| 7 | Polish copywriting + A11y + smoke test end-to-end 14/14 | ✅ | — |
 
 ## Décisions prises (validées phase 1)
 
@@ -49,3 +49,29 @@ Fastify 5 ESM. Voir rapport de découverte pour divergences avec le doc.
 1. Génération slug — escape + unicité : [flaynn-api/src/lib/slug.js](flaynn-api/src/lib/slug.js)
 2. Génération OG Satori : [flaynn-api/src/lib/og-render.js](flaynn-api/src/lib/og-render.js) (J3)
 3. Warm-up Satori au boot : [flaynn-api/src/server.js](flaynn-api/src/server.js) (J3)
+
+## Smoke test end-to-end (J7)
+
+[flaynn-api/scripts/smoke-delta-9.mjs](flaynn-api/scripts/smoke-delta-9.mjs) — `npm run test:smoke-delta-9`
+
+Mocke `pool.query` (pattern-match SQL), monte une Fastify isolée avec helmet + routes
++ stub `authenticate`, exécute 14 scénarios via `fastify.inject()`. Le warm-up Satori
+et le render OG tournent en vrai (PNG 126 KB généré). Durée : ~3s incluant warm-up.
+
+Couverture : 403 Not yet, 403 insufficient content, 201 publish, 200 idempotent, 404
+slug inconnu, 200 HTML + CSP hash + JSON-LD, 301 trailing slash, 200 OG PNG,
+200 sitemap, 200 dashboard enrichi, 200 DELETE, 410 après unpublish, 200 DELETE
+idempotent, sitemap après unpublish.
+
+## Checklist post-deploy (à cocher après premier deploy Render)
+
+- [ ] [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) — 0 warning, image OG détectée
+- [ ] [Twitter Card Validator](https://cards-dev.twitter.com/validator) — summary_large_image rend correctement
+- [ ] [LinkedIn Post Inspector](https://www.linkedin.com/post-inspector/) — preview complet
+- [ ] Test partage réel WhatsApp mobile — rich preview
+- [ ] Test partage réel Slack — unfurl complet
+- [ ] Test partage réel Discord — embed
+- [ ] Lighthouse mobile sur `/score/<slug>` — Perf ≥ 90, A11y ≥ 95, SEO ≥ 95
+- [ ] Google Search Console — sitemap soumis, première card indexée sous 7 jours
+- [ ] Vérifier CSP header en prod : `curl -I https://flaynn.tech/score/<slug>` contient `'sha256-...'`
+- [ ] Lien CTA `https://flaynn.com/rejoindre` actif (dépendance delta 12)

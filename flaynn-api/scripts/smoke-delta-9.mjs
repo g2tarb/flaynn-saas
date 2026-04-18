@@ -40,17 +40,18 @@ function matchScoreBySlug(slug) {
   return state.publicCards.find((c) => c.slug === slug);
 }
 
-function mockQuery(sql, params = []) {
+async function mockQuery(sql, params = []) {
   const s = sql.replace(/\s+/g, ' ').trim().toLowerCase();
 
+  // ── public_cards ───────────────────────────────────────────────────────
   // GET /score/:slug — full card lookup
-  if (s.startsWith('select id, slug, reference_id, user_email, startup_name, snapshot_data, og_image_path, is_active, index_seo, view_count, created_at, unpublished_at from public_cards where slug =')) {
+  if (s.includes('from public_cards where slug =') && s.includes('view_count')) {
     const card = matchScoreBySlug(params[0]);
     return { rows: card ? [card] : [] };
   }
 
   // GET /og/:slug.png — lazy card lookup
-  if (s.startsWith('select id, slug, startup_name, snapshot_data, is_active from public_cards where slug =')) {
+  if (s.includes('from public_cards where slug =') && s.includes('snapshot_data') && !s.includes('view_count')) {
     const card = matchScoreBySlug(params[0]);
     if (!card) return { rows: [] };
     return { rows: [{
@@ -59,79 +60,18 @@ function mockQuery(sql, params = []) {
     }] };
   }
 
-  // view_count increment (fire-and-forget, no-op)
+  // view_count increment (fire-and-forget)
   if (s.startsWith('update public_cards set view_count = view_count + 1')) {
     const c = state.publicCards.find((x) => x.id === params[0]);
     if (c) c.view_count += 1;
     return { rows: [], rowCount: c ? 1 : 0 };
   }
 
-  // lazy render UPDATE og_image_path
+  // lazy render UPDATE og_image_path (sans RETURNING, conditionnel IS NULL)
   if (s.startsWith('update public_cards set og_image_path =') && s.includes('og_image_path is null')) {
     const c = state.publicCards.find((x) => x.id === params[1] && !x.og_image_path);
     if (c) c.og_image_path = params[0];
     return { rows: [], rowCount: c ? 1 : 0 };
-  }
-
-  // sitemap query
-  if (s.startsWith('select slug, created_at from public_cards where is_active = true and index_seo = true')) {
-    const rows = state.publicCards
-      .filter((c) => c.is_active && c.index_seo)
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .map((c) => ({ slug: c.slug, created_at: c.created_at }));
-    return { rows };
-  }
-
-  // Publish — load scoring row
-  if (s.startsWith('select reference_id, startup_name, data, created_at from scores where reference_id =')) {
-    const sc = state.scores.find((x) => x.reference_id === params[0] && x.user_email === params[1]);
-    return { rows: sc ? [sc] : [] };
-  }
-
-  // Publish — idempotence check
-  if (s.startsWith('select id, slug, og_image_path, index_seo, created_at, snapshot_data from public_cards where reference_id =')) {
-    const c = state.publicCards.find(
-      (x) => x.reference_id === params[0] && x.user_email === params[1] && x.is_active
-    );
-    if (!c) return { rows: [] };
-    return { rows: [{
-      id: c.id, slug: c.slug, og_image_path: c.og_image_path,
-      index_seo: c.index_seo, created_at: c.created_at, snapshot_data: c.snapshot_data
-    }] };
-  }
-
-  // Slug uniqueness probe
-  if (s.startsWith('select 1 from public_cards where slug =')) {
-    const exists = !!matchScoreBySlug(params[0]);
-    return { rows: exists ? [{ '?column?': 1 }] : [] };
-  }
-
-  // INSERT public_cards
-  if (s.startsWith('insert into public_cards')) {
-    const [slug, reference_id, user_email, startup_name, snapshot_data_json, _og, , index_seo] = params;
-    // Actually INSERT positional : (slug, reference_id, user_email, startup_name, snapshot_data::jsonb, NULL, TRUE, index_seo)
-    // Params sent: [slug, referenceId, userEmail, startupName, JSON.stringify(snapshot), indexSeo]
-    const [p1, p2, p3, p4, p5_json, p6_indexSeo] = params;
-    const snapshot_data = typeof p5_json === 'string' ? JSON.parse(p5_json) : p5_json;
-    const card = {
-      id: state.nextCardId++,
-      slug: p1,
-      reference_id: p2,
-      user_email: p3,
-      startup_name: p4,
-      snapshot_data,
-      og_image_path: null,
-      is_active: true,
-      index_seo: p6_indexSeo,
-      view_count: 0,
-      created_at: new Date(),
-      unpublished_at: null
-    };
-    state.publicCards.push(card);
-    return { rows: [{
-      id: card.id, slug: card.slug, og_image_path: card.og_image_path,
-      index_seo: card.index_seo, created_at: card.created_at
-    }] };
   }
 
   // UPDATE og_image_path RETURNING (après render OG dans publish)
@@ -144,6 +84,63 @@ function mockQuery(sql, params = []) {
     }] : [] };
   }
 
+  // sitemap query
+  if (s.includes('from public_cards where is_active = true and index_seo = true')) {
+    const rows = state.publicCards
+      .filter((c) => c.is_active && c.index_seo)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .map((c) => ({ slug: c.slug, created_at: c.created_at }));
+    return { rows };
+  }
+
+  // Publish — idempotence check (lit le snapshot_data existant)
+  if (s.includes('from public_cards where reference_id =') && s.includes('and is_active = true') && s.includes('snapshot_data')) {
+    const c = state.publicCards.find(
+      (x) => x.reference_id === params[0] && x.user_email === params[1] && x.is_active
+    );
+    if (!c) return { rows: [] };
+    return { rows: [{
+      id: c.id, slug: c.slug, og_image_path: c.og_image_path,
+      index_seo: c.index_seo, created_at: c.created_at, snapshot_data: c.snapshot_data
+    }] };
+  }
+
+  // Dashboard enrichissement publicCard (is_active = TRUE, pas de snapshot_data)
+  if (s.includes('from public_cards where reference_id =') && s.includes('and is_active = true') && !s.includes('snapshot_data')) {
+    const c = state.publicCards.find(
+      (x) => x.reference_id === params[0] && x.user_email === params[1] && x.is_active
+    );
+    if (!c) return { rows: [] };
+    return { rows: [{
+      id: c.id, slug: c.slug, view_count: c.view_count,
+      created_at: c.created_at, og_image_path: c.og_image_path
+    }] };
+  }
+
+  // Slug uniqueness probe
+  if (s.startsWith('select 1 from public_cards where slug =')) {
+    const exists = !!matchScoreBySlug(params[0]);
+    return { rows: exists ? [{ '?column?': 1 }] : [] };
+  }
+
+  // INSERT public_cards
+  if (s.startsWith('insert into public_cards')) {
+    const [p1, p2, p3, p4, p5_json, p6_indexSeo] = params;
+    const snapshot_data = typeof p5_json === 'string' ? JSON.parse(p5_json) : p5_json;
+    const card = {
+      id: state.nextCardId++,
+      slug: p1, reference_id: p2, user_email: p3, startup_name: p4,
+      snapshot_data, og_image_path: null,
+      is_active: true, index_seo: p6_indexSeo,
+      view_count: 0, created_at: new Date(), unpublished_at: null
+    };
+    state.publicCards.push(card);
+    return { rows: [{
+      id: card.id, slug: card.slug, og_image_path: card.og_image_path,
+      index_seo: card.index_seo, created_at: card.created_at
+    }] };
+  }
+
   // Unpublish — ownership check
   if (s.startsWith('select id, is_active, unpublished_at from public_cards where id =')) {
     const c = state.publicCards.find(
@@ -153,13 +150,31 @@ function mockQuery(sql, params = []) {
   }
 
   // Unpublish — mutation
-  if (s.startsWith('update public_cards set is_active = false, unpublished_at = now()')) {
+  if (s.startsWith('update public_cards set is_active = false')) {
     const c = state.publicCards.find((x) => x.id === params[0]);
     if (c) { c.is_active = false; c.unpublished_at = new Date(); }
     return { rows: c ? [{ id: c.id, unpublished_at: c.unpublished_at }] : [] };
   }
 
-  throw new Error(`mockQuery: SQL non géré → ${s.slice(0, 120)}`);
+  // ── scores ─────────────────────────────────────────────────────────────
+  // Publish/dashboard — load score by reference_id + user_email
+  // Deux variantes de SELECT (dashboard = `data, startup_name, created_at` ;
+  // publish = `reference_id, startup_name, data, created_at`). WHERE identique.
+  if (s.includes('from scores where reference_id = $1 and user_email = $2')) {
+    const sc = state.scores.find((x) => x.reference_id === params[0] && x.user_email === params[1]);
+    return { rows: sc ? [{
+      reference_id: sc.reference_id, startup_name: sc.startup_name,
+      data: sc.data, created_at: sc.created_at
+    }] : [] };
+  }
+
+  // Dashboard prev-scoring query (pattern : WHERE user_email = $1 AND startup_name = $2 AND reference_id !=)
+  if (s.includes('from scores where user_email = $1 and startup_name = $2 and reference_id !=')) {
+    // Pas de scoring précédent dans nos fixtures → rows vides.
+    return { rows: [] };
+  }
+
+  throw new Error(`mockQuery: SQL non géré → ${s.slice(0, 140)}`);
 }
 
 // ─── Setup Fastify ────────────────────────────────────────────────────────
@@ -173,7 +188,7 @@ const publicCardsRoutes = (await import('../src/routes/public-cards.js')).defaul
 const dashboardApiRoutes = (await import('../src/routes/dashboard-api.js')).default;
 const { warmUpOgRender } = await import('../src/lib/og-render.js');
 
-const fastify = Fastify({ logger: false });
+const fastify = Fastify({ logger: { level: 'error', transport: { target: 'pino-pretty' } } });
 fastify.decorateRequest('user', null);
 fastify.decorate('authenticate', async (request) => {
   request.user = { email: 'test@flaynn.tech', sub: '1' };
