@@ -27,10 +27,13 @@ services:
         sync: false
       - key: APP_URL
         value: https://flaynn.io
-      # Delta 12: CSV des origines autorisees (parser src/config/security.js).
-      # Inclure flaynn.com pour la landing /rejoindre du repo flaynn-investors.
+      # Les origines canoniques (flaynn.io, flaynn.tech, flaynn.com, flaynn.fr) sont
+      # hardcodées dans src/config/security.js (CANONICAL_PROD_ORIGINS) et garanties
+      # quel que soit l'état de l'env (anti-typo post-incident avril 2026).
+      # CORS_ORIGIN sert uniquement à AJOUTER des origines non-canoniques :
+      # URL Render interne (monitoring, health checks), previews staging, etc.
       - key: CORS_ORIGIN
-        value: https://flaynn.io,https://flaynn.tech,https://flaynn.com,https://flaynn.fr
+        value: https://flaynn-saas.onrender.com
       - key: N8N_WEBHOOK_URL
         sync: false
       - key: N8N_SECRET_TOKEN
