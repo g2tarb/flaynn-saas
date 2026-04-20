@@ -533,10 +533,9 @@ MONTANT_LEVE → LEVEE_AMOUNT (renommé + assoupli) :
   - Nouveau champ : levee_amount, z.string().regex(/^\d+(\.\d+)?(K|M|Md)?€?$/)
   - Saisie libre : idem TAM
 
-Rétro-compat n8n : webhook backend injecte tam_usd et montant_leve dans
-le payload bridge avant appel n8n (voir scoring.js:232 et stripe.js:331).
-Le workflow n8n V6 continue de lire b.tam_usd et b.montant_leve dans
-Prep Gemini, Format Data, Prep Sonar Benchmark — ne pas casser ce contrat.
+Le workflow n8n V6 lit directement b.tam_amount et b.levee_amount dans
+Prep Gemini, Format Data, Prep Sonar Benchmark. Plus de bridge rétro-compat
+côté backend (retiré dans le commit "remove n8n retro-compat bridge").
 
 SECTEUR (ouvert) :
   - Ancien : z.enum(22 valeurs) + champ secteur_autre conditionnel
