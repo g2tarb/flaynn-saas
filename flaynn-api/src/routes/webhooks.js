@@ -14,6 +14,10 @@ const PdfPayloadSchema = z.object({
   pdf_base64: z.string()
 }).strict();
 
+const CertifyPayloadSchema = z.object({
+  reference: z.string().min(1).max(64)
+}).strict();
+
 function verifySignature(signature, expected) {
   if (!signature || !expected || signature.length !== expected.length) return false;
   return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
@@ -171,5 +175,44 @@ export default async function webhookRoutes(fastify) {
       key: meta.key,
       size: meta.size,
     });
+  });
+
+  // Endpoint 3 : Certification analyste (flip status 'under_review' → 'completed').
+  // Appelé par le workflow n8n V5 Link après validation humaine (GO Telegram).
+  // Idempotent : un double-call reste sans effet (status déjà 'completed').
+  fastify.post('/api/webhooks/n8n/certify', {
+    config: { rateLimit: { max: 50, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const signature = request.headers['x-flaynn-signature'];
+    if (!verifySignature(signature, process.env.N8N_SECRET_TOKEN)) {
+      request.log.warn('[SECOPS] Tentative d\'acces non autorisee au webhook n8n/certify');
+      return reply.code(401).send({ error: 'UNAUTHORIZED', message: 'Signature invalide.' });
+    }
+
+    let parsed;
+    try {
+      parsed = CertifyPayloadSchema.parse(request.body);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return reply.code(422).send({
+          error: 'VALIDATION_FAILED',
+          details: err.flatten().fieldErrors,
+        });
+      }
+      throw err;
+    }
+
+    const result = await pool.query(
+      `UPDATE scores SET data = jsonb_set(data, '{status}', '"completed"')
+       WHERE reference_id = $1 RETURNING reference_id`,
+      [parsed.reference]
+    );
+
+    if (result.rowCount === 0) {
+      request.log.warn(`[SECOPS] Webhook n8n/certify reçu pour référence inexistante: ${parsed.reference}`);
+      return reply.code(404).send({ error: 'NOT_FOUND', message: 'Référence inconnue.' });
+    }
+
+    return reply.code(200).send({ success: true, message: 'Scoring certifié.' });
   });
 }

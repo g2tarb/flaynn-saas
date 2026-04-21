@@ -767,23 +767,30 @@ function buildRoutes(data) {
         backLink.addEventListener('click', () => { history.pushState(null, '', '/dashboard/'); window.dispatchEvent(new PopStateEvent('popstate')); });
         section.appendChild(backLink);
 
-        // ARCHITECT-PRIME : Gestion des états asynchrones (En cours / Erreur)
-        if (data.status === 'pending_analysis' || data.status === 'pending_webhook') {
-          section.appendChild(el('h2', 'heading-section', { textContent: 'Analyse en cours...' }));
-          const leadText = el('p', 'dashboard-app__lead', { textContent: 'Notre IA est en train d\'évaluer vos données. Cela prend généralement moins de 30 secondes.' });
-          section.appendChild(leadText);
+        // ARCHITECT-PRIME : Gestion des états asynchrones (En cours / Certification / Erreur)
+        const isAiPending = data.status === 'pending_analysis' || data.status === 'pending_webhook';
+        const isUnderReview = data.status === 'under_review';
+        if (isAiPending || isUnderReview) {
+          const heading = isUnderReview ? 'Certification en cours' : 'Analyse en cours...';
+          const leadMsg = isUnderReview
+            ? 'Votre scoring IA est terminé. Un analyste Flaynn valide actuellement le dossier avant publication. Délai habituel : moins de 24h.'
+            : 'Notre IA est en train d\'évaluer vos données. Cela prend généralement moins de 30 secondes.';
+          const spinnerMsg = isUnderReview ? 'Validation humaine en cours...' : 'Évaluation en cours...';
+          const pollIntervalMs = isUnderReview ? 15000 : 3000;
+          const pollMaxCount = isUnderReview ? 240 : 60;
 
-          // Indicateur de progression pulsant
+          section.appendChild(el('h2', 'heading-section', { textContent: heading }));
+          section.appendChild(el('p', 'dashboard-app__lead', { textContent: leadMsg }));
+
           const spinner = el('div', 'polling-spinner');
           const spinnerDot = el('span', 'polling-spinner__dot');
-          const spinnerLabel = el('span', 'polling-spinner__label', { textContent: 'Évaluation en cours...' });
+          const spinnerLabel = el('span', 'polling-spinner__label', { textContent: spinnerMsg });
           spinner.appendChild(spinnerDot);
           spinner.appendChild(spinnerLabel);
           section.appendChild(spinner);
 
           root.appendChild(section);
 
-          // Polling silencieux avec notification
           let pollCount = 0;
           const pollInterval = setInterval(async () => {
             if (!document.body.contains(section)) {
@@ -791,24 +798,27 @@ function buildRoutes(data) {
               return;
             }
             pollCount++;
-            if (pollCount > 60) {
+            if (pollCount > pollMaxCount) {
               clearInterval(pollInterval);
-              spinnerLabel.textContent = 'L\'analyse prend plus de temps que prévu. Rafraîchissez la page dans quelques minutes.';
+              spinnerLabel.textContent = isUnderReview
+                ? 'La certification prend plus de temps que prévu. Vous recevrez un email dès que votre rapport sera disponible.'
+                : 'L\'analyse prend plus de temps que prévu. Rafraîchissez la page dans quelques minutes.';
               return;
             }
             try {
               const res = await fetch(`/api/dashboard/${encodeURIComponent(data.id)}`, { credentials: 'same-origin' });
               if (res.ok) {
                 const newData = await res.json();
-                if (newData.status !== 'pending_analysis' && newData.status !== 'pending_webhook') {
+                const stillPending = newData.status === 'pending_analysis' || newData.status === 'pending_webhook' || newData.status === 'under_review';
+                if (!stillPending) {
                   clearInterval(pollInterval);
-                  spinnerLabel.textContent = 'Analyse terminée - chargement des résultats...';
+                  spinnerLabel.textContent = 'Analyse certifiée - chargement des résultats...';
                   spinnerDot.classList.add('polling-spinner__dot--done');
                   window.setTimeout(() => window.location.reload(), 800);
                 }
               }
             } catch (err) {}
-          }, 3000);
+          }, pollIntervalMs);
 
           return;
         }
@@ -999,7 +1009,7 @@ function buildRoutes(data) {
           root.appendChild(section);
           return;
         }
-        if (data.status === 'pending_analysis' || data.status === 'pending_webhook' || data.status === 'error') {
+        if (data.status === 'pending_analysis' || data.status === 'pending_webhook' || data.status === 'under_review' || data.status === 'error') {
           section.style.color = 'var(--text-primary)';
           section.appendChild(el('p', 'dashboard-meta', { textContent: 'Données indisponibles. Consultez l\'onglet Overview pour voir le statut de l\'analyse.' }));
           root.appendChild(section);
@@ -1073,7 +1083,7 @@ function buildRoutes(data) {
           root.appendChild(section);
           return;
         }
-        if (data.status === 'pending_analysis' || data.status === 'pending_webhook' || data.status === 'error') {
+        if (data.status === 'pending_analysis' || data.status === 'pending_webhook' || data.status === 'under_review' || data.status === 'error') {
           section.style.color = 'var(--text-primary)';
           section.appendChild(el('p', 'dashboard-meta', { textContent: 'Données indisponibles. Consultez l\'onglet Overview pour voir le statut de l\'analyse.' }));
           root.appendChild(section);

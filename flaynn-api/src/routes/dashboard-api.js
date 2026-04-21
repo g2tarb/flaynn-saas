@@ -20,7 +20,10 @@ function isR2Storage(v) {
 function adaptN8nToDashboard(raw, startupName, referenceId, createdAt, previousData) {
   if (Array.isArray(raw.pillars)) return raw;
 
-  if (raw.status === 'pending_analysis' || raw.status === 'pending_webhook' || raw.status === 'error') {
+  // 'under_review' = scoring IA reçu mais en attente de certification analyste humain.
+  // Le dashboard n'expose pas les données tant que /api/webhooks/n8n/certify n'a pas
+  // flip le status à 'completed'. Cf. webhooks.js (endpoint certify).
+  if (raw.status === 'pending_analysis' || raw.status === 'pending_webhook' || raw.status === 'under_review' || raw.status === 'error') {
     return raw;
   }
 
