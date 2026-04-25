@@ -643,7 +643,8 @@ function buildPublicShareSection(data) {
           {
             method: 'POST',
             credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
           }
         );
         if (!res.ok) {
