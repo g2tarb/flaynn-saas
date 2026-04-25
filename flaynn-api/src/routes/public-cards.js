@@ -360,8 +360,7 @@ ${robotsTag}
 <main id="main" class="score-card__container">
   <header class="score-card__header">
     <a class="score-card__logo" href="/" aria-label="Flaynn — accueil">
-      <img src="/logo.svg" alt="" width="48" height="48" class="score-card__logo-img">
-      <span class="score-card__logo-text">Flaynn</span>
+      <img src="/logo.svg" alt="Flaynn" width="160" height="36" class="score-card__logo-img">
     </a>
     ${verdict ? `<span class="score-card__verdict score-card__verdict--${escapeHtml(verdictCssClass)}">${escapeHtml(verdict)}</span>` : ''}
   </header>

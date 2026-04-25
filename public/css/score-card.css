@@ -63,25 +63,15 @@
 .score-card__logo {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
   text-decoration: none;
-  color: var(--text-primary);
+  transition: opacity 0.2s ease;
 }
+.score-card__logo:hover { opacity: 0.85; }
 .score-card__logo-img {
-  width: 40px;
-  height: 40px;
+  width: auto;
+  height: 36px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 4px 18px rgba(232, 101, 26, 0.35));
-}
-.score-card__logo-text {
-  font-weight: 700;
-  font-size: 22px;
-  letter-spacing: -0.02em;
-  background: var(--gradient-violet-rose);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 .score-card__verdict {
   padding: 8px 20px;
