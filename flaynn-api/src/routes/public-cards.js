@@ -266,7 +266,7 @@ function renderCardPage(card) {
   const pillarsHtml = buildPillarsHtml(snapshot.pillars);
   const shareUrls = buildShareUrls(pageUrl, title);
   const verdictCssClass = verdictClass(verdict);
-  const methodologyUrl = '/manifesto';
+  const methodologyUrl = '/#pillars';
   const founderSignupUrl = '/#scoring';
 
   // ARCHITECT-PRIME — Delta 9 J4 : JSON-LD structured data pour SEO (Article +
@@ -359,7 +359,10 @@ ${robotsTag}
 <canvas id="canvas-bg" class="score-card__starfield" aria-hidden="true"></canvas>
 <main id="main" class="score-card__container">
   <header class="score-card__header">
-    <a class="score-card__logo" href="/" aria-label="Flaynn — accueil">FLAYNN</a>
+    <a class="score-card__logo" href="/" aria-label="Flaynn — accueil">
+      <img src="/logo.svg" alt="" width="48" height="48" class="score-card__logo-img">
+      <span class="score-card__logo-text">Flaynn</span>
+    </a>
     ${verdict ? `<span class="score-card__verdict score-card__verdict--${escapeHtml(verdictCssClass)}">${escapeHtml(verdict)}</span>` : ''}
   </header>
 
