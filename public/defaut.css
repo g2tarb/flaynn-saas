@@ -84,6 +84,34 @@
     --glass-surface: rgba(3, 4, 7, 0.82);
     --glass-blur: 24px;
 
+    /* ARCHITECT-PRIME Delta 15 — Glassmorphism étendu (cards/strip dashboard).
+       Additif aux tokens ci-dessus : --glass-surface reste l'opaque navbar,
+       ces nouveaux tokens couvrent les surfaces translucides empilables. */
+    --glass-bg-primary:  rgba(255, 255, 255, 0.03);
+    --glass-bg-elevated: rgba(255, 255, 255, 0.05);
+    --glass-border:      rgba(255, 255, 255, 0.08);
+
+    /* Variation chips (deltas score, KPIs). Sémantiquement séparés des
+       --accent-* pour permettre des bg légers (12% alpha) + fg saturé. */
+    --variation-positive-bg: rgba(16, 185, 129, 0.12);
+    --variation-positive-fg: #10b981;
+    --variation-negative-bg: rgba(244, 63, 94, 0.12);
+    --variation-negative-fg: #f43f5e;
+    --variation-neutral-bg:  rgba(148, 163, 184, 0.10);
+    --variation-neutral-fg:  #94a3b8;
+
+    /* Glass shadows — renommés (vs --shadow-elevated existant) pour ne pas
+       écraser l'usage landing/.card-glass. Combinent ombre portée + ring inset. */
+    --shadow-glass-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--glass-border) inset;
+    --shadow-glass-2: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--glass-border) inset;
+
+    /* Ambient gradient — appliqué uniquement sur .dashboard-body et page publique
+       via .ambient-bg. Aurore violet/orange/bleu, opacités basses (0.05–0.08). */
+    --ambient-gradient:
+      radial-gradient(ellipse 80% 50% at 20% 0%,   rgba(var(--accent-violet-rgb), 0.08), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 30%, rgba(232, 101, 26, 0.06),             transparent 50%),
+      radial-gradient(ellipse 50% 30% at 50% 100%, rgba(59, 130, 246, 0.05),             transparent 50%);
+
     /* Noise texture (1px SVG inline) */
     --noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
   }

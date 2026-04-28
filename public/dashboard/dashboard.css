@@ -1,12 +1,25 @@
 /* Dashboard membre — complète defaut.css (Dark Clarity) */
 .dashboard-body {
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  position: relative;
+  overflow-x: hidden;
 }
 
 @media (min-width: 900px) {
   .dashboard-body {
     padding-bottom: env(safe-area-inset-bottom);
   }
+}
+
+/* ARCHITECT-PRIME Delta 15 — Ambient gradient en arrière-plan fixed.
+   Symétrique au pattern .auth-body .ambient-bg (auth.css L14-23).
+   .ambient-bg existe déjà dans dashboard/index.html L29 (aria-hidden). */
+.dashboard-body .ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--ambient-gradient);
+  pointer-events: none;
 }
 
 .dashboard-topbar .nav-content {
@@ -56,6 +69,9 @@
   padding-top: calc(7rem + max(0px, env(safe-area-inset-top)));
   gap: var(--space-6);
   letter-spacing: 0.01em;
+  /* Au-dessus de .ambient-bg (fixed z:0) — Delta 15 */
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 900px) {
