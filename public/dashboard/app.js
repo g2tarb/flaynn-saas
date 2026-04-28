@@ -326,6 +326,31 @@ function renderDonutScore(score, color = 'var(--accent-violet)', size = 60) {
 }
 
 /**
+ * Icône SVG outline 16×16 (Heroicons MIT). Pas de librairie.
+ * Retourne un nœud SVG avec stroke="currentColor" → la couleur est
+ * pilotée par le CSS de l'élément parent (pattern hérité Heroicons).
+ */
+const DASHBOARD_ICON_PATHS = {
+  user: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z',
+  logout: 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75',
+};
+function dashboardIcon(name) {
+  const d = DASHBOARD_ICON_PATHS[name];
+  if (!d) return null;
+  const svg = svgEl('svg', {
+    xmlns: 'http://www.w3.org/2000/svg',
+    fill: 'none', viewBox: '0 0 24 24',
+    'stroke-width': '1.5', stroke: 'currentColor',
+    class: 'dashboard-user-menu__item-icon',
+    'aria-hidden': 'true',
+  });
+  svg.appendChild(svgEl('path', {
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round', d,
+  }));
+  return svg;
+}
+
+/**
  * Annote chaque item avec ses deltas vs l'analyse précédente du MÊME
  * startup_name (option A validée Q4). Mute in-place :
  *   item._scoreDelta = curr.score - prev.score (ou absent si indispo)
@@ -2121,11 +2146,16 @@ function initTopbar(auth) {
       href: '/dashboard/account',
       'data-route': '/dashboard/account',
       role: 'menuitem',
-      textContent: 'Mon compte',
     });
+    const userIcon = dashboardIcon('user');
+    if (userIcon) accountLink.appendChild(userIcon);
+    accountLink.appendChild(el('span', 'dashboard-user-menu__item-label', { textContent: 'Mon compte' }));
+
     const logoutBtn = el('button', 'dashboard-user-menu__item dashboard-user-menu__item--danger', { type: 'button' });
     logoutBtn.setAttribute('role', 'menuitem');
-    logoutBtn.textContent = 'Déconnexion';
+    const logoutIcon = dashboardIcon('logout');
+    if (logoutIcon) logoutBtn.appendChild(logoutIcon);
+    logoutBtn.appendChild(el('span', 'dashboard-user-menu__item-label', { textContent: 'Déconnexion' }));
     logoutBtn.addEventListener('click', async () => {
       try {
         await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });

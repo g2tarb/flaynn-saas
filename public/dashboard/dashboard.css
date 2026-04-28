@@ -101,7 +101,9 @@
 }
 
 .dashboard-nav-side__link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: var(--space-3) var(--space-4);
   border-radius: 10px;
   font-size: 0.9375rem;
@@ -118,17 +120,47 @@
   min-height: 44px;
 }
 
+/* Delta 15 Pass 4 — icônes SVG outline (Heroicons), 16×16 fixe.
+   Couleur héritée par stroke="currentColor" → définie par variantes
+   --violet/--orange/--blue ci-dessous, allumée seulement en hover/active. */
+.dashboard-nav-side__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out-expo);
+}
+.dashboard-nav-side__label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .dashboard-nav-side__link:hover {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.04);
   transform: translateY(-2px);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
 }
+.dashboard-nav-side__link--violet:hover .dashboard-nav-side__icon,
+.dashboard-nav-side__link--violet.is-active .dashboard-nav-side__icon {
+  color: var(--accent-violet);
+}
+.dashboard-nav-side__link--orange:hover .dashboard-nav-side__icon,
+.dashboard-nav-side__link--orange.is-active .dashboard-nav-side__icon {
+  color: var(--accent-rose); /* (--accent-rose vaut #E8651A — orange identitaire Flaynn) */
+}
+.dashboard-nav-side__link--blue:hover .dashboard-nav-side__icon,
+.dashboard-nav-side__link--blue.is-active .dashboard-nav-side__icon {
+  color: var(--accent-blue);
+}
 
 .dashboard-nav-side__link.is-active {
   color: var(--text-primary);
   border-color: var(--border-focus);
   background: rgba(139, 92, 246, 0.08);
+  /* Glassmorphism subtil sur l'état actif */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .dashboard-main {
@@ -319,7 +351,7 @@
 .dashboard-nav-mobile__item {
   flex: 1;
   text-align: center;
-  padding: 10px 6px;
+  padding: 6px 6px;
   font-size: 0.5625rem;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -327,14 +359,26 @@
   color: var(--text-tertiary);
   text-decoration: none;
   min-height: 44px;
+  /* Delta 15 Pass 4 — icon au-dessus du label */
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-full);
+  gap: 3px;
+  border-radius: var(--radius-md);
   transition:
     color 0.25s var(--ease-out-expo),
     background 0.25s var(--ease-out-expo),
     transform 0.35s var(--ease-out-back);
+}
+
+.dashboard-nav-mobile__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.dashboard-nav-mobile__label {
+  display: block;
 }
 
 .dashboard-nav-mobile__item.is-active {
@@ -342,6 +386,9 @@
   background: rgba(139, 92, 246, 0.12);
   font-weight: 700;
 }
+/* Delta 15 Pass 4 — colorisation icône par section sur active */
+.dashboard-nav-mobile__item--orange.is-active { color: var(--accent-rose); background: rgba(232, 101, 26, 0.12); }
+.dashboard-nav-mobile__item--blue.is-active   { color: var(--accent-blue); background: rgba(59, 130, 246, 0.12); }
 
 .dashboard-card-title {
   font-family: var(--font-display);
@@ -1819,18 +1866,21 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 180px;
-  background: var(--surface-overlay, var(--surface-raised));
-  border: 1px solid var(--border-default);
+  min-width: 200px;
+  /* Delta 15 Pass 4 — glassmorphism (override Delta 14 fond plat) */
+  background: var(--glass-surface);
+  backdrop-filter: blur(var(--glass-blur, 24px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-elevated, 0 12px 28px rgba(0, 0, 0, 0.45));
+  box-shadow: var(--shadow-glass-2);
   padding: 4px;
   display: flex;
   flex-direction: column;
+  gap: 2px;
   z-index: 60;
 }
 .dashboard-user-menu__item {
-  display: block;
   width: 100%;
   min-height: 40px;
   padding: 0 12px;
@@ -1845,14 +1895,33 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  gap: 10px; /* Delta 15 Pass 4 — gap pour icône + label */
+}
+.dashboard-user-menu__item-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out-expo);
+}
+.dashboard-user-menu__item-label {
+  flex: 1 1 auto;
 }
 .dashboard-user-menu__item:hover,
 .dashboard-user-menu__item:focus-visible {
-  background: var(--surface-raised);
+  background: rgba(255, 255, 255, 0.06);
   outline: none;
+}
+.dashboard-user-menu__item:hover .dashboard-user-menu__item-icon,
+.dashboard-user-menu__item:focus-visible .dashboard-user-menu__item-icon {
+  color: var(--text-primary);
 }
 .dashboard-user-menu__item--danger {
   color: var(--accent-rose);
+}
+.dashboard-user-menu__item--danger .dashboard-user-menu__item-icon {
+  color: var(--accent-rose);
+  opacity: 0.85;
 }
 
 /* ── Vue Account ──────────────────────────────────────────────────────── */
