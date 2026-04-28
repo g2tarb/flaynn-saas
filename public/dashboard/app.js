@@ -211,6 +211,237 @@ function el(tag, className, attrs = {}) {
 
 function clearEl(node) { node.replaceChildren(); }
 
+/* ── ARCHITECT-PRIME Delta 15 — Helpers SVG/sparkline/variation ──────────── */
+
+/** Sentinel reduced-motion : true si l'utilisateur a activé la préférence
+    système. Utilisé pour skip les animations dashoffset (Pass 6). */
+const PREFERS_REDUCED_MOTION = (() => {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch { return false; }
+})();
+
+/** Crée un nœud SVG via createElementNS (pas d'innerHTML, conformité §4.1). */
+function svgEl(tag, attrs = {}) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    node.setAttribute(k, v);
+  }
+  return node;
+}
+
+/**
+ * Sparkline inline (60×20). Retourne null si <2 valeurs (le KPI affiche
+ * alors juste la valeur sans courbe). titleText rend le SVG accessible.
+ */
+function renderSparkline(values, color = 'currentColor', titleText = '') {
+  if (!Array.isArray(values) || values.length < 2) return null;
+  const w = 60, h = 20, p = 2;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const step = (w - p * 2) / (values.length - 1);
+  const points = values.map((v, i) => {
+    const x = p + i * step;
+    const y = h - p - ((v - min) / range) * (h - p * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const svg = svgEl('svg', {
+    width: String(w), height: String(h),
+    viewBox: `0 0 ${w} ${h}`, class: 'sparkline',
+  });
+  if (titleText) {
+    const t = svgEl('title');
+    t.textContent = titleText;
+    svg.appendChild(t);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', titleText);
+  } else {
+    svg.setAttribute('aria-hidden', 'true');
+  }
+  /* Delta 15 Pass 6 — draw progressif via pathLength=100 (SVG2 normalisation) :
+     dasharray="100" + dashoffset 100→0 sur transition CSS .sparkline__line. */
+  const line = svgEl('polyline', {
+    points, fill: 'none', stroke: color, 'stroke-width': '1.5',
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+    pathLength: '100',
+    'stroke-dasharray': '100',
+    'stroke-dashoffset': PREFERS_REDUCED_MOTION ? '0' : '100',
+    class: 'sparkline__line',
+  });
+  svg.appendChild(line);
+  if (!PREFERS_REDUCED_MOTION) {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => { line.setAttribute('stroke-dashoffset', '0'); });
+    });
+  }
+  return svg;
+}
+
+/**
+ * Chip de variation (+5 / -3 / 0). Retourne null si delta non-fini.
+ * Couleur conditionnelle (positive/negative/neutral) + flèche pour
+ * daltonisme (cf §13). `suffix` ex : ' pts' pour scores, '' pour counts.
+ */
+function renderVariationChip(delta, options = {}) {
+  if (delta == null || !Number.isFinite(delta)) return null;
+  const suffix = options.suffix || '';
+  const round = options.round !== false;
+  const value = round ? Math.round(delta) : delta;
+  const sign = value > 0 ? '+' : '';
+  const tone = value > 0 ? 'positive' : (value < 0 ? 'negative' : 'neutral');
+  const arrow = value > 0 ? '↑' : (value < 0 ? '↓' : '·');
+  const chip = el('span', `dashboard-variation dashboard-variation--${tone}`);
+  chip.appendChild(el('span', 'dashboard-variation__arrow', {
+    textContent: arrow, 'aria-hidden': 'true',
+  }));
+  chip.appendChild(el('span', 'dashboard-variation__value', {
+    textContent: `${sign}${value}${suffix}`,
+  }));
+  return chip;
+}
+
+/**
+ * Donut score (Delta 15 Pass 3). SVG inline, taille paramétrable.
+ * Track gris + arc coloré + valeur centrée. font-family/size via classe CSS
+ * (var(--font-mono) ne se résout pas dans un attribut SVG).
+ */
+function renderDonutScore(score, color = 'var(--accent-violet)', size = 60) {
+  const safe = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  const r = Math.floor(size / 2 - 4);
+  const cx = size / 2;
+  const circumference = 2 * Math.PI * r;
+  const offset = circumference - (safe / 100) * circumference;
+
+  const svg = svgEl('svg', {
+    width: String(size), height: String(size),
+    viewBox: `0 0 ${size} ${size}`,
+    class: 'score-donut',
+    role: 'img',
+    'aria-label': `Score ${safe} sur 100`,
+  });
+  svg.appendChild(svgEl('circle', {
+    cx: String(cx), cy: String(cx), r: String(r),
+    fill: 'none', stroke: 'var(--glass-border)', 'stroke-width': '3',
+  }));
+  /* Delta 15 Pass 6 — animation dashoffset full→target (1s ease-out CSS).
+     Initial = circumference (rien dessiné), RAF×2 → target. */
+  const arc = svgEl('circle', {
+    cx: String(cx), cy: String(cx), r: String(r),
+    fill: 'none', stroke: color, 'stroke-width': '3',
+    'stroke-dasharray': String(circumference),
+    'stroke-dashoffset': PREFERS_REDUCED_MOTION ? String(offset) : String(circumference),
+    'stroke-linecap': 'round',
+    transform: `rotate(-90 ${cx} ${cx})`,
+    class: 'score-donut__arc',
+  });
+  svg.appendChild(arc);
+  if (!PREFERS_REDUCED_MOTION) {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => { arc.setAttribute('stroke-dashoffset', String(offset)); });
+    });
+  }
+  const text = svgEl('text', {
+    x: String(cx), y: String(cx),
+    'text-anchor': 'middle',
+    'dominant-baseline': 'central',
+    class: 'score-donut__value',
+    fill: 'currentColor',
+  });
+  text.textContent = String(safe);
+  svg.appendChild(text);
+  return svg;
+}
+
+/**
+ * Icône SVG outline 16×16 (Heroicons MIT). Pas de librairie.
+ * Retourne un nœud SVG avec stroke="currentColor" → la couleur est
+ * pilotée par le CSS de l'élément parent (pattern hérité Heroicons).
+ */
+const DASHBOARD_ICON_PATHS = {
+  user: 'M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z',
+  logout: 'M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75',
+};
+function dashboardIcon(name) {
+  const d = DASHBOARD_ICON_PATHS[name];
+  if (!d) return null;
+  const svg = svgEl('svg', {
+    xmlns: 'http://www.w3.org/2000/svg',
+    fill: 'none', viewBox: '0 0 24 24',
+    'stroke-width': '1.5', stroke: 'currentColor',
+    class: 'dashboard-user-menu__item-icon',
+    'aria-hidden': 'true',
+  });
+  svg.appendChild(svgEl('path', {
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round', d,
+  }));
+  return svg;
+}
+
+/**
+ * Annote chaque item avec ses deltas vs l'analyse précédente du MÊME
+ * startup_name (option A validée Q4). Mute in-place :
+ *   item._scoreDelta = curr.score - prev.score (ou absent si indispo)
+ *   item._pillarDeltas[pillar_key] = curr.pillar_pct[k] - prev.pillar_pct[k]
+ * Premier item d'un groupe → aucune annotation (pas de précédent).
+ */
+function annotateItemsWithDeltas(items) {
+  const byName = new Map();
+  items.forEach((it) => {
+    const key = (it.startup_name || it.reference_id || '').toLowerCase().trim();
+    if (!key) return;
+    if (!byName.has(key)) byName.set(key, []);
+    byName.get(key).push(it);
+  });
+  byName.forEach((arr) => {
+    arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    for (let i = 1; i < arr.length; i++) {
+      const prev = arr[i - 1];
+      const curr = arr[i];
+      if (typeof curr.score === 'number' && typeof prev.score === 'number') {
+        curr._scoreDelta = curr.score - prev.score;
+      }
+      if (curr.pillar_pct && prev.pillar_pct) {
+        curr._pillarDeltas = {};
+        Object.keys(curr.pillar_pct).forEach((k) => {
+          const c = curr.pillar_pct[k];
+          const p = prev.pillar_pct[k];
+          if (typeof c === 'number' && typeof p === 'number') {
+            curr._pillarDeltas[k] = Math.round(c - p);
+          }
+        });
+      }
+    }
+  });
+  return items;
+}
+
+/** Counts d'analyses par mois sur N mois (chronologique ASC, index 0 = +ancien). */
+function monthlyAnalysisCounts(items, monthsBack = 6) {
+  const buckets = new Array(monthsBack).fill(0);
+  const now = new Date();
+  items.forEach((it) => {
+    if (!it.created_at) return;
+    const d = new Date(it.created_at);
+    if (Number.isNaN(d.getTime())) return;
+    const monthsAgo = (now.getFullYear() - d.getFullYear()) * 12
+                    + (now.getMonth() - d.getMonth());
+    if (monthsAgo >= 0 && monthsAgo < monthsBack) {
+      buckets[monthsBack - 1 - monthsAgo]++;
+    }
+  });
+  return buckets;
+}
+
+/** Série des scores triés par created_at ASC, filtrés sur scores valides. */
+function scoreSeriesByDate(items) {
+  return items
+    .filter((it) => typeof it.score === 'number' && it.score > 0 && it.created_at)
+    .slice()
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .map((it) => it.score);
+}
+
 let activeForceSimulation = null;
 function stopForceSimulation() {
   if (activeForceSimulation) { activeForceSimulation.stop(); activeForceSimulation = null; }
@@ -861,7 +1092,14 @@ function buildListHeader() {
   return wrap;
 }
 
-/** Bandeau KPI : total · score moyen · dernier verdict (calculs sur scores non-null uniquement) */
+/**
+ * Bandeau KPI premium (Delta 15 Pass 2) : 3 cards glassmorphism avec
+ * sparklines inline + variation chips. Calculs locaux uniquement (pas de
+ * backend touché, cf brief §11 Q3).
+ *
+ * Seuil de pertinence stats : si <4 analyses, on n'affiche ni delta ni
+ * sparkline (signal trop bruité). Le KPI affiche alors juste sa valeur.
+ */
 function buildKpiStrip(items) {
   const total = items.length;
   const scored = items.filter((it) => typeof it.score === 'number' && it.score > 0);
@@ -869,38 +1107,113 @@ function buildKpiStrip(items) {
     ? Math.round(scored.reduce((acc, it) => acc + it.score, 0) / scored.length)
     : null;
   // items déjà triés DESC par created_at côté backend → [0] = le plus récent.
-  // On préfère le dernier qui a un verdict, sinon "—".
   const lastWithVerdict = items.find((it) => it.verdict);
-  const lastVerdict = lastWithVerdict ? VERDICT_LABELS_FR[lastWithVerdict.verdict] || lastWithVerdict.verdict : '—';
-  const lastVerdictColor = lastWithVerdict ? VERDICT_COLORS[lastWithVerdict.verdict] || 'var(--text-secondary)' : 'var(--text-secondary)';
+  const lastVerdictKey = lastWithVerdict ? lastWithVerdict.verdict : null;
+  const lastVerdict = lastVerdictKey
+    ? (VERDICT_LABELS_FR[lastVerdictKey] || lastVerdictKey)
+    : '—';
+  const lastVerdictColor = lastVerdictKey
+    ? (VERDICT_COLORS[lastVerdictKey] || 'var(--text-secondary)')
+    : 'var(--text-secondary)';
+  const lastTrack = lastWithVerdict ? (lastWithVerdict.track || '') : '';
+
+  const enoughData = total >= 4;
+  let totalDelta = null, totalSeries = null;
+  let scoreDelta = null, scoreSeries = null;
+  if (enoughData) {
+    const counts = monthlyAnalysisCounts(items, 6);
+    totalSeries = counts;
+    // Delta = nb d'analyses du dernier mois - mois précédent.
+    totalDelta = counts[counts.length - 1] - counts[counts.length - 2];
+
+    const series = scoreSeriesByDate(items);
+    if (series.length >= 4) {
+      scoreSeries = series;
+      const mid = Math.floor(series.length / 2);
+      const oldAvg = series.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+      const newAvg = series.slice(mid).reduce((a, b) => a + b, 0) / (series.length - mid);
+      scoreDelta = Math.round(newAvg - oldAvg);
+    }
+  }
 
   const strip = el('div', 'dashboard-kpi-strip');
 
-  const kTotal = el('div', 'dashboard-kpi');
-  kTotal.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Analyses totales' }));
-  kTotal.appendChild(el('p',    'dashboard-kpi__value', { textContent: String(total) }));
-  strip.appendChild(kTotal);
+  // KPI 1 : Analyses totales
+  strip.appendChild(buildKpiCard({
+    label: 'Analyses totales',
+    value: String(total),
+    variation: renderVariationChip(totalDelta),
+    sparkline: totalSeries
+      ? renderSparkline(totalSeries, 'var(--accent-violet)',
+          `Évolution sur 6 mois : ${totalSeries.join(', ')}`)
+      : null,
+  }));
 
-  const kAvg = el('div', 'dashboard-kpi');
-  kAvg.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Score moyen' }));
-  const avgVal = el('p', 'dashboard-kpi__value', { textContent: avgScore != null ? `${avgScore}/100` : '—' });
-  kAvg.appendChild(avgVal);
-  strip.appendChild(kAvg);
+  // KPI 2 : Score moyen
+  strip.appendChild(buildKpiCard({
+    label: 'Score moyen',
+    value: avgScore != null ? `${avgScore}/100` : '—',
+    variation: renderVariationChip(scoreDelta, { suffix: ' pts' }),
+    sparkline: scoreSeries
+      ? renderSparkline(scoreSeries, 'var(--accent-rose)',
+          `Évolution des scores : ${scoreSeries.join(', ')}`)
+      : null,
+  }));
 
-  const kLast = el('div', 'dashboard-kpi');
-  kLast.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Dernier verdict' }));
-  const lastVal = el('p', 'dashboard-kpi__value', { textContent: lastVerdict });
-  lastVal.style.color = lastVerdictColor;
-  kLast.appendChild(lastVal);
-  strip.appendChild(kLast);
+  // KPI 3 : Dernier verdict (catégoriel — badge coloré + track, pas de sparkline)
+  const verdictBadge = el('span', 'dashboard-kpi__verdict-badge', { textContent: lastVerdict });
+  verdictBadge.style.color = lastVerdictColor;
+  verdictBadge.style.borderColor = lastVerdictColor;
+  strip.appendChild(buildKpiCard({
+    label: 'Dernier verdict',
+    valueNode: verdictBadge,
+    sublabel: lastTrack ? `Track · ${lastTrack}` : null,
+    variant: 'verdict',
+  }));
 
   return strip;
 }
 
-/** Card enrichie d'une analyse (verdict badge, métadonnées, mini-bars 5 piliers, footer score+track) */
+/** Construit une card KPI individuelle (factorisation des 3 KPIs ci-dessus). */
+function buildKpiCard({ label, value, valueNode, variation, sparkline, sublabel, variant }) {
+  const card = el('div', `dashboard-kpi${variant ? ` dashboard-kpi--${variant}` : ''}`);
+  const header = el('div', 'dashboard-kpi__header');
+  header.appendChild(el('span', 'dashboard-kpi__label', { textContent: label }));
+  if (variation) header.appendChild(variation);
+  card.appendChild(header);
+  if (valueNode) {
+    card.appendChild(valueNode);
+  } else {
+    card.appendChild(el('p', 'dashboard-kpi__value', { textContent: value }));
+  }
+  if (sublabel) {
+    card.appendChild(el('span', 'dashboard-kpi__sublabel', { textContent: sublabel }));
+  }
+  if (sparkline) {
+    const wrap = el('div', 'dashboard-kpi__sparkline-wrap');
+    wrap.appendChild(sparkline);
+    card.appendChild(wrap);
+  }
+  return card;
+}
+
+/**
+ * Card analyse premium (Delta 15 Pass 3) :
+ *   ┌──────────────────────────────────────────┐
+ *   │  ┌────┐  Startup name        [Almost]    │  ← __top : donut + content
+ *   │  │ 48 │  saas · pre-seed · 21 avril       │
+ *   │  └────┘                                    │
+ *   │  Market    ████████░░  65%  [+8]           │  ← pillars + variation
+ *   │  ...                                       │
+ *   │  ─────────────────────────────────         │
+ *   │  Track : De-risk         [● Publiée]       │  ← footer : track + pub
+ *   └──────────────────────────────────────────┘
+ *
+ * Variations piliers : item._pillarDeltas (rempli par annotateItemsWithDeltas).
+ * Indicateur publié : déplacé du badges header vers le footer (clarité).
+ */
 function buildAnalysisCard(item) {
   const card = el('article', 'card-glass dashboard-analysis-card');
-  // Click n'importe où sur la card → naviguer vers le détail.
   card.tabIndex = 0;
   card.setAttribute('role', 'link');
   card.setAttribute('aria-label', `Ouvrir l'analyse ${item.startup_name || item.reference_id}`);
@@ -913,73 +1226,82 @@ function buildAnalysisCard(item) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goDetail(); }
   });
 
-  /* Header : nom startup + (verdict badge | status badge | published indicator) */
-  const header = el('div', 'dashboard-analysis-card__header');
-  const title  = el('h3', 'dashboard-analysis-card__title', { textContent: item.startup_name || item.reference_id });
-  header.appendChild(title);
-
-  const badges = el('div', 'dashboard-analysis-card__badges');
   const isPending = item.status === 'pending_analysis' || item.status === 'pending_webhook' || item.status === 'under_review';
   const isError = item.status === 'error';
+  const hasScore = typeof item.score === 'number' && item.score > 0;
+
+  /* Top : (donut score à gauche si scoré) + (titre + verdict/status badge + meta) */
+  const top = el('div', 'dashboard-analysis-card__top');
+
+  if (hasScore) {
+    const donutWrap = el('div', 'dashboard-analysis-card__donut');
+    donutWrap.appendChild(renderDonutScore(item.score, scoreColorFromValue(item.score), 60));
+    donutWrap.style.color = scoreColorFromValue(item.score);
+    top.appendChild(donutWrap);
+  }
+
+  const topContent = el('div', 'dashboard-analysis-card__top-content');
+  const header = el('div', 'dashboard-analysis-card__header');
+  header.appendChild(el('h3', 'dashboard-analysis-card__title', {
+    textContent: item.startup_name || item.reference_id,
+  }));
+
+  const badges = el('div', 'dashboard-analysis-card__badges');
   if (isPending) {
-    const b = el('span', 'dashboard-analysis-card__status dashboard-analysis-card__status--pending');
-    b.textContent = item.status === 'under_review' ? 'Certification' : 'En cours';
+    const b = el('span', 'dashboard-analysis-card__status dashboard-analysis-card__status--pending', {
+      textContent: item.status === 'under_review' ? 'Certification' : 'En cours',
+    });
     b.setAttribute('aria-label', 'Analyse en cours');
     badges.appendChild(b);
   } else if (isError) {
-    const b = el('span', 'dashboard-analysis-card__status dashboard-analysis-card__status--error');
-    b.textContent = 'Erreur';
-    badges.appendChild(b);
+    badges.appendChild(el('span', 'dashboard-analysis-card__status dashboard-analysis-card__status--error', {
+      textContent: 'Erreur',
+    }));
   } else if (item.verdict) {
     const verdictColor = VERDICT_COLORS[item.verdict] || 'var(--accent-violet)';
-    const b = el('span', 'dashboard-analysis-card__verdict');
-    b.textContent = VERDICT_LABELS_FR[item.verdict] || item.verdict;
+    const b = el('span', 'dashboard-analysis-card__verdict', {
+      textContent: VERDICT_LABELS_FR[item.verdict] || item.verdict,
+    });
     b.style.color = verdictColor;
     b.style.borderColor = verdictColor;
     badges.appendChild(b);
   }
-  if (item.is_published) {
-    const pub = el('span', 'dashboard-analysis-card__published', {
-      textContent: 'Publiée',
-    });
-    pub.setAttribute('aria-label', 'Cette analyse est publiée publiquement');
-    pub.title = 'Carte publique active';
-    badges.appendChild(pub);
-  }
   header.appendChild(badges);
-  card.appendChild(header);
+  topContent.appendChild(header);
 
-  /* Métadonnées : sector · stage · date */
   const metaParts = [];
   if (item.sector) metaParts.push(item.sector);
   if (item.stage) metaParts.push(item.stage);
   metaParts.push(new Date(item.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }));
-  card.appendChild(el('p', 'dashboard-analysis-card__meta', { textContent: metaParts.join(' · ') }));
+  topContent.appendChild(el('p', 'dashboard-analysis-card__meta', { textContent: metaParts.join(' · ') }));
 
-  /* Body : mini-bars piliers OU message d'état */
+  top.appendChild(topContent);
+  card.appendChild(top);
+
+  /* Body : mini-bars piliers (+ variation chips) OU message d'état */
   if (isPending) {
-    const msg = el('p', 'dashboard-analysis-card__state-msg', {
+    card.appendChild(el('p', 'dashboard-analysis-card__state-msg', {
       textContent: item.status === 'under_review'
         ? 'Certification analyste en cours…'
         : 'Analyse IA en cours…',
-    });
-    card.appendChild(msg);
+    }));
     card.classList.add('dashboard-analysis-card--muted');
   } else if (isError) {
-    const msg = el('p', 'dashboard-analysis-card__state-msg', {
+    card.appendChild(el('p', 'dashboard-analysis-card__state-msg', {
       textContent: 'Une erreur est survenue lors du scoring. Ouvrez l\'analyse pour plus d\'infos.',
-    });
-    card.appendChild(msg);
+    }));
     card.classList.add('dashboard-analysis-card--error');
   } else if (item.pillar_pct) {
     const bars = el('div', 'dashboard-analysis-card__pillars');
-    LIST_PILLARS.forEach((p) => {
+    LIST_PILLARS.forEach((p, i) => {
       const raw = item.pillar_pct[p.key];
       const pct = (typeof raw === 'number' && Number.isFinite(raw))
         ? Math.max(0, Math.min(100, Math.round(raw)))
         : 0;
       const row = el('div', 'dashboard-analysis-card__pillar-row');
-      const lbl = el('span', 'dashboard-analysis-card__pillar-label', { textContent: p.label });
+      // Stagger Delta 15 Pass 6 — décale chaque pilier de 80ms via CSS var.
+      row.style.setProperty('--pillar-i', String(i));
+      row.appendChild(el('span', 'dashboard-analysis-card__pillar-label', { textContent: p.label }));
       const track = el('div', 'dashboard-analysis-card__pillar-track');
       track.setAttribute('role', 'progressbar');
       track.setAttribute('aria-valuemin', '0');
@@ -989,20 +1311,30 @@ function buildAnalysisCard(item) {
       const fill = el('div', 'dashboard-analysis-card__pillar-fill');
       fill.style.background = p.color;
       track.appendChild(fill);
+      row.appendChild(track);
       const val = el('span', 'dashboard-analysis-card__pillar-value', { textContent: `${pct}%` });
       val.style.color = p.color;
-      row.appendChild(lbl);
-      row.appendChild(track);
       row.appendChild(val);
+
+      // Variation chip (Delta 15) : depuis _pillarDeltas[k] si renseigné par
+      // annotateItemsWithDeltas. Absent pour la 1re analyse d'un dossier.
+      const delta = item._pillarDeltas ? item._pillarDeltas[p.key] : null;
+      const chip = renderVariationChip(delta);
+      if (chip) {
+        chip.classList.add('dashboard-analysis-card__pillar-variation');
+        row.appendChild(chip);
+      } else {
+        // Placeholder vide pour conserver l'alignement de la grille.
+        row.appendChild(el('span', 'dashboard-analysis-card__pillar-variation-empty'));
+      }
+
       bars.appendChild(row);
-      // Animation différée (2 RAF) — alignée sur buildPillarRows.
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
       });
     });
     card.appendChild(bars);
   } else {
-    // Legacy : pas de pillar_pct (vieux dossier pré-V6.1)
     const msg = el('p', 'dashboard-analysis-card__state-msg', {
       textContent: 'Détail piliers indisponible — re-scorez pour voir la ventilation.',
     });
@@ -1010,18 +1342,24 @@ function buildAnalysisCard(item) {
     card.appendChild(msg);
   }
 
-  /* Footer : score + track (uniquement si dispo) */
-  if (typeof item.score === 'number' && item.score > 0) {
+  /* Footer : track (gauche) + indicateur publié (droite). Visible si scoré. */
+  if (hasScore || item.is_published) {
     const footer = el('div', 'dashboard-analysis-card__footer');
-    const scoreWrap = el('div', 'dashboard-analysis-card__score-wrap');
-    const scoreNum = el('span', 'dashboard-analysis-card__score', { textContent: String(item.score) });
-    scoreNum.style.color = scoreColorFromValue(item.score);
-    scoreWrap.appendChild(scoreNum);
-    scoreWrap.appendChild(el('span', 'dashboard-analysis-card__score-max', { textContent: '/100' }));
-    footer.appendChild(scoreWrap);
     if (item.track) {
-      const trackBadge = el('span', 'dashboard-analysis-card__track', { textContent: `Track : ${item.track}` });
-      footer.appendChild(trackBadge);
+      footer.appendChild(el('span', 'dashboard-analysis-card__track', {
+        textContent: `Track · ${item.track}`,
+      }));
+    } else {
+      // Spacer pour pousser l'indicateur publié à droite si pas de track.
+      footer.appendChild(el('span', 'dashboard-analysis-card__track-spacer'));
+    }
+    if (item.is_published) {
+      const pub = el('span', 'dashboard-analysis-card__published', {
+        textContent: 'Publiée',
+      });
+      pub.setAttribute('aria-label', 'Cette analyse est publiée publiquement');
+      pub.title = 'Carte publique active';
+      footer.appendChild(pub);
     }
     card.appendChild(footer);
   }
@@ -1233,6 +1571,10 @@ function buildRoutes(data) {
             root.appendChild(section);
             return;
           }
+
+          /* Pre-process : annoter chaque item avec ses deltas vs analyse précédente
+             du même startup_name (Delta 15 Pass 3, option A frontend-only). */
+          annotateItemsWithDeltas(data.items);
 
           /* KPI strip (toujours visible si N≥1) */
           section.appendChild(buildKpiStrip(data.items));
@@ -1834,11 +2176,16 @@ function initTopbar(auth) {
       href: '/dashboard/account',
       'data-route': '/dashboard/account',
       role: 'menuitem',
-      textContent: 'Mon compte',
     });
+    const userIcon = dashboardIcon('user');
+    if (userIcon) accountLink.appendChild(userIcon);
+    accountLink.appendChild(el('span', 'dashboard-user-menu__item-label', { textContent: 'Mon compte' }));
+
     const logoutBtn = el('button', 'dashboard-user-menu__item dashboard-user-menu__item--danger', { type: 'button' });
     logoutBtn.setAttribute('role', 'menuitem');
-    logoutBtn.textContent = 'Déconnexion';
+    const logoutIcon = dashboardIcon('logout');
+    if (logoutIcon) logoutBtn.appendChild(logoutIcon);
+    logoutBtn.appendChild(el('span', 'dashboard-user-menu__item-label', { textContent: 'Déconnexion' }));
     logoutBtn.addEventListener('click', async () => {
       try {
         await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });

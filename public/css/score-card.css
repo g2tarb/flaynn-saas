@@ -647,3 +647,117 @@
 .score-card__trust-link:focus-visible {
   text-decoration: underline;
 }
+
+/* ============================================================
+   DELTA 15 PASS 5 — Polish visuel CSS pur (pas de HTML SSR touché)
+   Additif aux règles Delta 9/14 ci-dessus.
+   ============================================================ */
+
+/* (A) Ambient gradient sur le body (.score-card body) — derrière starfield */
+.score-card::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--ambient-gradient);
+}
+
+/* (B) Hero — verdict badge polish (backdrop-filter + glow conditionnel) */
+.score-card__verdict {
+  backdrop-filter: blur(var(--glass-blur, 24px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px));
+}
+.score-card__verdict--strong-yes,
+.score-card__verdict--yes,
+.score-card__verdict--ready {
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.25);
+}
+.score-card__verdict--almost {
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.22);
+}
+.score-card__verdict--not-yet {
+  box-shadow: 0 0 18px rgba(244, 63, 94, 0.18);
+}
+
+/* Score number — taille augmentée + glow violet subtil */
+.score-card__score-value {
+  text-shadow: 0 0 32px rgba(var(--accent-violet-rgb), 0.25);
+}
+
+/* (C) Pillar bars — gradient subtil sur le track + fill gradient par pilier.
+   Ordre canonique SSR (cf PILLAR_ORDER public-cards.js) :
+     1=Marché (violet)  2=Produit (blue)  3=Traction (emerald)
+     4=Team (violet)    5=Exécution (amber/orange) */
+.score-card__pillar-bar {
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid var(--glass-border);
+}
+.score-card__pillars-list .score-card__pillar:nth-child(1) .score-card__pillar-fill {
+  background: linear-gradient(90deg, #7B2D8E, #9333ea); /* Marché — violet */
+}
+.score-card__pillars-list .score-card__pillar:nth-child(2) .score-card__pillar-fill {
+  background: linear-gradient(90deg, #3b82f6, #6366f1); /* Produit — blue */
+}
+.score-card__pillars-list .score-card__pillar:nth-child(3) .score-card__pillar-fill {
+  background: linear-gradient(90deg, #10b981, #34d399); /* Traction — emerald */
+}
+.score-card__pillars-list .score-card__pillar:nth-child(4) .score-card__pillar-fill {
+  background: linear-gradient(90deg, #7B2D8E, #c084fc); /* Team — violet light */
+}
+.score-card__pillars-list .score-card__pillar:nth-child(5) .score-card__pillar-fill {
+  background: linear-gradient(90deg, #f59e0b, #E8651A); /* Exécution — amber→orange */
+}
+
+/* (D) Trust block premium — glass elevated + blur plus marqué */
+.score-card__trust {
+  background: var(--glass-bg-elevated);
+  backdrop-filter: blur(var(--glass-blur, 24px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass-2);
+}
+.score-card__trust-chip {
+  /* Override fond plat → glass micro pour densité visuelle */
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  /* Delta 15 Pass 6 — micro hover (neutralisé par reduced-motion master reset) */
+  transition:
+    background 0.2s var(--ease-out-expo),
+    border-color 0.2s var(--ease-out-expo),
+    transform 0.2s var(--ease-out-expo);
+}
+.score-card__trust-chip:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(var(--accent-violet-rgb), 0.25);
+  transform: translateY(-1px);
+}
+
+/* Delta 15 Pass 6 — transition explicite sur CTA primary (cohérence dashboard).
+   Le hover/active états sont déjà définis Pass 5, mais sans transition ils
+   sautent visuellement. Master reduced-motion neutralise. */
+.score-card__cta--primary {
+  transition:
+    box-shadow 0.25s var(--ease-out-expo),
+    transform 0.25s var(--ease-out-expo);
+}
+
+/* (E) CTA primary — gradient orange→magenta + glow */
+.score-card__cta--primary {
+  background: linear-gradient(135deg, #E8651A 0%, #C13584 60%, #7B2D8E 100%);
+  border-color: transparent;
+  box-shadow: 0 8px 24px rgba(232, 101, 26, 0.30);
+}
+.score-card__cta--primary:hover,
+.score-card__cta--primary:focus-visible {
+  box-shadow: 0 12px 32px rgba(232, 101, 26, 0.42);
+  transform: translateY(-1px);
+}
+.score-card__cta--primary:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(232, 101, 26, 0.25);
+}
