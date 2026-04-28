@@ -1561,10 +1561,60 @@
   flex-direction: column;
   gap: var(--space-3);
   outline: none;
+  /* Delta 15 Pass 3 — glassmorphism marqué (override card-glass de defaut.css) */
+  background: var(--glass-bg-primary);
+  backdrop-filter: blur(var(--glass-blur, 24px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-glass-1);
+  transition:
+    transform 200ms var(--ease-out-expo),
+    box-shadow 200ms var(--ease-out-expo),
+    border-color 200ms var(--ease-out-expo);
+}
+.dashboard-analysis-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    var(--shadow-glass-2),
+    0 0 24px rgba(var(--accent-violet-rgb), 0.15);
+  border-color: rgba(var(--accent-violet-rgb), 0.18);
 }
 .dashboard-analysis-card:focus-visible {
   outline: 2px solid var(--accent-violet);
   outline-offset: 3px;
+}
+
+/* Top : donut score + content (titre/badges/meta) — Delta 15 Pass 3 */
+.dashboard-analysis-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.dashboard-analysis-card__donut {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dashboard-analysis-card__top-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Donut SVG — text font-family/size injectés via classe (var() ne résout pas en attr SVG) */
+.score-donut {
+  display: block;
+}
+.score-donut__value {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  fill: currentColor;
 }
 .dashboard-analysis-card--muted {
   opacity: 0.85;
@@ -1654,9 +1704,20 @@
 }
 .dashboard-analysis-card__pillar-row {
   display: grid;
-  grid-template-columns: 80px 1fr 44px;
+  /* Delta 15 Pass 3 — colonne supplémentaire pour variation chip (auto = fit-content). */
+  grid-template-columns: 72px 1fr 40px auto;
   align-items: center;
   gap: 10px;
+}
+.dashboard-analysis-card__pillar-variation {
+  /* Override des padding/font de .dashboard-variation pour rester compact dans les rows. */
+  padding: 2px 6px;
+  font-size: 0.6875rem;
+}
+.dashboard-analysis-card__pillar-variation-empty {
+  /* Préserve la 4e colonne sans rendu visuel. min-width pour stabilité visuelle. */
+  display: inline-block;
+  min-width: 28px;
 }
 .dashboard-analysis-card__pillar-label {
   font-size: 0.75rem;
@@ -1697,27 +1758,14 @@
   padding-top: var(--space-3);
   border-top: 1px solid var(--border-subtle);
 }
-.dashboard-analysis-card__score-wrap {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-}
-.dashboard-analysis-card__score {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-weight: 700;
-  font-size: 1.5rem;
-  line-height: 1;
-}
-.dashboard-analysis-card__score-max {
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 0.875rem;
-  color: var(--text-tertiary);
-  font-weight: 500;
-}
 .dashboard-analysis-card__track {
   font-size: 0.75rem;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
+}
+.dashboard-analysis-card__track-spacer {
+  /* Delta 15 Pass 3 — pousse l'indicateur publié à droite quand pas de track */
+  flex: 1;
 }
 
 /* ── Empty state ──────────────────────────────────────────────────────── */
