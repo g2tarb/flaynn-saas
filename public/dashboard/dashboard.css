@@ -1343,7 +1343,7 @@
   gap: 8px;
 }
 
-/* ── KPI strip : 3 indicateurs au-dessus du grid ──────────────────────── */
+/* ── KPI strip : 3 indicateurs au-dessus du grid (Delta 15 Pass 2) ────── */
 .dashboard-kpi-strip {
   display: grid;
   grid-template-columns: 1fr;
@@ -1355,29 +1355,125 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* Glassmorphism (Delta 15) — remplace le surface-raised opaque de Delta 14. */
 .dashboard-kpi {
-  background: var(--surface-raised);
-  border: 1px solid var(--border-subtle);
+  background: var(--glass-bg-elevated);
+  backdrop-filter: blur(var(--glass-blur, 24px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 24px));
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-glass-1);
+  transition:
+    transform 200ms var(--ease-out-expo),
+    box-shadow 200ms var(--ease-out-expo);
+  min-height: 140px;
 }
+
+.dashboard-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass-2);
+}
+
+.dashboard-kpi__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .dashboard-kpi__label {
   font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-tertiary);
 }
+
 .dashboard-kpi__value {
   margin: 0;
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-family: var(--font-mono);
   font-weight: 700;
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  line-height: 1.1;
+  font-size: clamp(1.875rem, 4vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
+}
+
+.dashboard-kpi__sublabel {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.dashboard-kpi__verdict-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.125rem;
+  background: rgba(255, 255, 255, 0.02);
+  width: fit-content;
+}
+
+.dashboard-kpi__sparkline-wrap {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  padding-top: var(--space-2);
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  max-width: 80px;
+  height: auto;
+  opacity: 0.85;
+}
+
+@media (min-width: 600px) {
+  .sparkline { max-width: 100px; }
+}
+
+/* ── Variation chip (réutilisable : KPI strip + cards d'analyse Pass 3) ── */
+.dashboard-variation {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.dashboard-variation--positive {
+  background: var(--variation-positive-bg);
+  color: var(--variation-positive-fg);
+}
+
+.dashboard-variation--negative {
+  background: var(--variation-negative-bg);
+  color: var(--variation-negative-fg);
+}
+
+.dashboard-variation--neutral {
+  background: var(--variation-neutral-bg);
+  color: var(--variation-neutral-fg);
+}
+
+.dashboard-variation__arrow {
+  font-size: 0.875em;
+  font-weight: 700;
 }
 
 /* ── Filtres + recherche (visibles si N≥4) ────────────────────────────── */

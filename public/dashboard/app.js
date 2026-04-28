@@ -211,6 +211,102 @@ function el(tag, className, attrs = {}) {
 
 function clearEl(node) { node.replaceChildren(); }
 
+/* ── ARCHITECT-PRIME Delta 15 — Helpers SVG/sparkline/variation ──────────── */
+
+/** Crée un nœud SVG via createElementNS (pas d'innerHTML, conformité §4.1). */
+function svgEl(tag, attrs = {}) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    node.setAttribute(k, v);
+  }
+  return node;
+}
+
+/**
+ * Sparkline inline (60×20). Retourne null si <2 valeurs (le KPI affiche
+ * alors juste la valeur sans courbe). titleText rend le SVG accessible.
+ */
+function renderSparkline(values, color = 'currentColor', titleText = '') {
+  if (!Array.isArray(values) || values.length < 2) return null;
+  const w = 60, h = 20, p = 2;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const step = (w - p * 2) / (values.length - 1);
+  const points = values.map((v, i) => {
+    const x = p + i * step;
+    const y = h - p - ((v - min) / range) * (h - p * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const svg = svgEl('svg', {
+    width: String(w), height: String(h),
+    viewBox: `0 0 ${w} ${h}`, class: 'sparkline',
+  });
+  if (titleText) {
+    const t = svgEl('title');
+    t.textContent = titleText;
+    svg.appendChild(t);
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', titleText);
+  } else {
+    svg.setAttribute('aria-hidden', 'true');
+  }
+  svg.appendChild(svgEl('polyline', {
+    points, fill: 'none', stroke: color, 'stroke-width': '1.5',
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+  }));
+  return svg;
+}
+
+/**
+ * Chip de variation (+5 / -3 / 0). Retourne null si delta non-fini.
+ * Couleur conditionnelle (positive/negative/neutral) + flèche pour
+ * daltonisme (cf §13). `suffix` ex : ' pts' pour scores, '' pour counts.
+ */
+function renderVariationChip(delta, options = {}) {
+  if (delta == null || !Number.isFinite(delta)) return null;
+  const suffix = options.suffix || '';
+  const round = options.round !== false;
+  const value = round ? Math.round(delta) : delta;
+  const sign = value > 0 ? '+' : '';
+  const tone = value > 0 ? 'positive' : (value < 0 ? 'negative' : 'neutral');
+  const arrow = value > 0 ? '↑' : (value < 0 ? '↓' : '·');
+  const chip = el('span', `dashboard-variation dashboard-variation--${tone}`);
+  chip.appendChild(el('span', 'dashboard-variation__arrow', {
+    textContent: arrow, 'aria-hidden': 'true',
+  }));
+  chip.appendChild(el('span', 'dashboard-variation__value', {
+    textContent: `${sign}${value}${suffix}`,
+  }));
+  return chip;
+}
+
+/** Counts d'analyses par mois sur N mois (chronologique ASC, index 0 = +ancien). */
+function monthlyAnalysisCounts(items, monthsBack = 6) {
+  const buckets = new Array(monthsBack).fill(0);
+  const now = new Date();
+  items.forEach((it) => {
+    if (!it.created_at) return;
+    const d = new Date(it.created_at);
+    if (Number.isNaN(d.getTime())) return;
+    const monthsAgo = (now.getFullYear() - d.getFullYear()) * 12
+                    + (now.getMonth() - d.getMonth());
+    if (monthsAgo >= 0 && monthsAgo < monthsBack) {
+      buckets[monthsBack - 1 - monthsAgo]++;
+    }
+  });
+  return buckets;
+}
+
+/** Série des scores triés par created_at ASC, filtrés sur scores valides. */
+function scoreSeriesByDate(items) {
+  return items
+    .filter((it) => typeof it.score === 'number' && it.score > 0 && it.created_at)
+    .slice()
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .map((it) => it.score);
+}
+
 let activeForceSimulation = null;
 function stopForceSimulation() {
   if (activeForceSimulation) { activeForceSimulation.stop(); activeForceSimulation = null; }
@@ -861,7 +957,14 @@ function buildListHeader() {
   return wrap;
 }
 
-/** Bandeau KPI : total · score moyen · dernier verdict (calculs sur scores non-null uniquement) */
+/**
+ * Bandeau KPI premium (Delta 15 Pass 2) : 3 cards glassmorphism avec
+ * sparklines inline + variation chips. Calculs locaux uniquement (pas de
+ * backend touché, cf brief §11 Q3).
+ *
+ * Seuil de pertinence stats : si <4 analyses, on n'affiche ni delta ni
+ * sparkline (signal trop bruité). Le KPI affiche alors juste sa valeur.
+ */
 function buildKpiStrip(items) {
   const total = items.length;
   const scored = items.filter((it) => typeof it.score === 'number' && it.score > 0);
@@ -869,32 +972,94 @@ function buildKpiStrip(items) {
     ? Math.round(scored.reduce((acc, it) => acc + it.score, 0) / scored.length)
     : null;
   // items déjà triés DESC par created_at côté backend → [0] = le plus récent.
-  // On préfère le dernier qui a un verdict, sinon "—".
   const lastWithVerdict = items.find((it) => it.verdict);
-  const lastVerdict = lastWithVerdict ? VERDICT_LABELS_FR[lastWithVerdict.verdict] || lastWithVerdict.verdict : '—';
-  const lastVerdictColor = lastWithVerdict ? VERDICT_COLORS[lastWithVerdict.verdict] || 'var(--text-secondary)' : 'var(--text-secondary)';
+  const lastVerdictKey = lastWithVerdict ? lastWithVerdict.verdict : null;
+  const lastVerdict = lastVerdictKey
+    ? (VERDICT_LABELS_FR[lastVerdictKey] || lastVerdictKey)
+    : '—';
+  const lastVerdictColor = lastVerdictKey
+    ? (VERDICT_COLORS[lastVerdictKey] || 'var(--text-secondary)')
+    : 'var(--text-secondary)';
+  const lastTrack = lastWithVerdict ? (lastWithVerdict.track || '') : '';
+
+  const enoughData = total >= 4;
+  let totalDelta = null, totalSeries = null;
+  let scoreDelta = null, scoreSeries = null;
+  if (enoughData) {
+    const counts = monthlyAnalysisCounts(items, 6);
+    totalSeries = counts;
+    // Delta = nb d'analyses du dernier mois - mois précédent.
+    totalDelta = counts[counts.length - 1] - counts[counts.length - 2];
+
+    const series = scoreSeriesByDate(items);
+    if (series.length >= 4) {
+      scoreSeries = series;
+      const mid = Math.floor(series.length / 2);
+      const oldAvg = series.slice(0, mid).reduce((a, b) => a + b, 0) / mid;
+      const newAvg = series.slice(mid).reduce((a, b) => a + b, 0) / (series.length - mid);
+      scoreDelta = Math.round(newAvg - oldAvg);
+    }
+  }
 
   const strip = el('div', 'dashboard-kpi-strip');
 
-  const kTotal = el('div', 'dashboard-kpi');
-  kTotal.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Analyses totales' }));
-  kTotal.appendChild(el('p',    'dashboard-kpi__value', { textContent: String(total) }));
-  strip.appendChild(kTotal);
+  // KPI 1 : Analyses totales
+  strip.appendChild(buildKpiCard({
+    label: 'Analyses totales',
+    value: String(total),
+    variation: renderVariationChip(totalDelta),
+    sparkline: totalSeries
+      ? renderSparkline(totalSeries, 'var(--accent-violet)',
+          `Évolution sur 6 mois : ${totalSeries.join(', ')}`)
+      : null,
+  }));
 
-  const kAvg = el('div', 'dashboard-kpi');
-  kAvg.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Score moyen' }));
-  const avgVal = el('p', 'dashboard-kpi__value', { textContent: avgScore != null ? `${avgScore}/100` : '—' });
-  kAvg.appendChild(avgVal);
-  strip.appendChild(kAvg);
+  // KPI 2 : Score moyen
+  strip.appendChild(buildKpiCard({
+    label: 'Score moyen',
+    value: avgScore != null ? `${avgScore}/100` : '—',
+    variation: renderVariationChip(scoreDelta, { suffix: ' pts' }),
+    sparkline: scoreSeries
+      ? renderSparkline(scoreSeries, 'var(--accent-rose)',
+          `Évolution des scores : ${scoreSeries.join(', ')}`)
+      : null,
+  }));
 
-  const kLast = el('div', 'dashboard-kpi');
-  kLast.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Dernier verdict' }));
-  const lastVal = el('p', 'dashboard-kpi__value', { textContent: lastVerdict });
-  lastVal.style.color = lastVerdictColor;
-  kLast.appendChild(lastVal);
-  strip.appendChild(kLast);
+  // KPI 3 : Dernier verdict (catégoriel — badge coloré + track, pas de sparkline)
+  const verdictBadge = el('span', 'dashboard-kpi__verdict-badge', { textContent: lastVerdict });
+  verdictBadge.style.color = lastVerdictColor;
+  verdictBadge.style.borderColor = lastVerdictColor;
+  strip.appendChild(buildKpiCard({
+    label: 'Dernier verdict',
+    valueNode: verdictBadge,
+    sublabel: lastTrack ? `Track · ${lastTrack}` : null,
+    variant: 'verdict',
+  }));
 
   return strip;
+}
+
+/** Construit une card KPI individuelle (factorisation des 3 KPIs ci-dessus). */
+function buildKpiCard({ label, value, valueNode, variation, sparkline, sublabel, variant }) {
+  const card = el('div', `dashboard-kpi${variant ? ` dashboard-kpi--${variant}` : ''}`);
+  const header = el('div', 'dashboard-kpi__header');
+  header.appendChild(el('span', 'dashboard-kpi__label', { textContent: label }));
+  if (variation) header.appendChild(variation);
+  card.appendChild(header);
+  if (valueNode) {
+    card.appendChild(valueNode);
+  } else {
+    card.appendChild(el('p', 'dashboard-kpi__value', { textContent: value }));
+  }
+  if (sublabel) {
+    card.appendChild(el('span', 'dashboard-kpi__sublabel', { textContent: sublabel }));
+  }
+  if (sparkline) {
+    const wrap = el('div', 'dashboard-kpi__sparkline-wrap');
+    wrap.appendChild(sparkline);
+    card.appendChild(wrap);
+  }
+  return card;
 }
 
 /** Card enrichie d'une analyse (verdict badge, métadonnées, mini-bars 5 piliers, footer score+track) */
