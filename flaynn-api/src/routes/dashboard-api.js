@@ -135,6 +135,16 @@ function adaptN8nToDashboard(raw, startupName, referenceId, createdAt, previousD
     resume_executif: raw.resume_executif || raw.one_liner || '',
     score_context: raw.score_context || '',
     confidence_level: raw.confidence_level || '',
+    // ARCHITECT-PRIME: Delta 14 — exposition des signaux V6.1 (additifs, non-breaking).
+    // Frontend Pass 3 consomme : pillar_pct (cascade fallback), consensus_confidence
+    // (chip transparence), methodology_version + benchmark_* (trust block).
+    // Tous fallback à '' / null si dossier pré-V6.1 → frontend skip l'affichage.
+    pillar_pct: (raw.pillar_pct && typeof raw.pillar_pct === 'object') ? raw.pillar_pct : null,
+    consensus_confidence: raw.consensus_confidence || raw.confidence_level || '',
+    methodology_version: raw.methodology_version || '',
+    benchmark_snapshot_date: raw.benchmark_snapshot_date || '',
+    benchmark_coverage: raw.benchmark_coverage || '',
+    flaynn_intelligence_version: raw.flaynn_intelligence_version || '',
     resubmission_intro: raw.resubmission_intro || '',
     resubmission_condition: raw.resubmission_condition || '',
     recommended_resubmission_date: raw.recommended_resubmission_date || '',
