@@ -66,7 +66,8 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--space-5);
-  padding-top: calc(7rem + max(0px, env(safe-area-inset-top)));
+  /* Delta 15 fix — densité SaaS Linear (7rem → 5.5rem) */
+  padding-top: calc(5.5rem + max(0px, env(safe-area-inset-top)));
   gap: var(--space-6);
   letter-spacing: 0.01em;
   /* Au-dessus de .ambient-bg (fixed z:0) — Delta 15 */
@@ -78,7 +79,8 @@
   .dashboard-shell {
     grid-template-columns: 220px 1fr;
     align-items: start;
-    padding-top: calc(8rem + max(0px, env(safe-area-inset-top)));
+    /* Delta 15 fix — aligné sur le bloc principal pour densité desktop */
+    padding-top: calc(5.5rem + max(0px, env(safe-area-inset-top)));
   }
 }
 
@@ -242,7 +244,8 @@
 .dashboard-app__section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  /* Delta 15 fix — densité (var(--space-8) → var(--space-5)) */
+  gap: var(--space-5);
 }
 
 /* ARCHITECT-PRIME: dashboard heading tighter than landing for SaaS density */
@@ -1021,11 +1024,13 @@
 
   .dashboard-shell {
     padding: 0 var(--space-5);
-    padding-top: calc(8rem + max(0px, env(safe-area-inset-top)));
+    /* Delta 15 fix — aligné sur le bloc principal pour densité (8rem → 5.5rem) */
+    padding-top: calc(5.5rem + max(0px, env(safe-area-inset-top)));
     gap: var(--space-5);
   }
 
-  .dashboard-app__section { gap: var(--space-6); }
+  /* Delta 15 fix — aligné sur le bloc principal var(--space-5) */
+  .dashboard-app__section { gap: var(--space-5); }
 
   /* Cards : même radius que desktop, padding réduit */
   .dashboard-app__section .card-glass {
@@ -1395,7 +1400,8 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-3);
-  margin-bottom: var(--space-6);
+  /* Delta 15 fix — densité (var(--space-6) → var(--space-4)) */
+  margin-bottom: var(--space-4);
 }
 @media (min-width: 600px) {
   .dashboard-kpi-strip {
@@ -1403,9 +1409,14 @@
   }
 }
 
-/* Glassmorphism (Delta 15) — remplace le surface-raised opaque de Delta 14. */
+/* Glassmorphism (Delta 15) — remplace le surface-raised opaque de Delta 14.
+   Delta 15 fix : double-layer linear-gradient(glass) sur surface-glass pour
+   recréer une matière sombre derrière le voile translucide (sinon le texte
+   flotte dans le vide sur l'ambient gradient). */
 .dashboard-kpi {
-  background: var(--glass-bg-elevated);
+  background:
+    linear-gradient(var(--glass-bg-primary), var(--glass-bg-primary)),
+    var(--surface-glass);
   backdrop-filter: blur(var(--glass-blur, 24px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 24px));
   border: 1px solid var(--glass-border);
@@ -1602,14 +1613,18 @@
 
 /* ── Card analyse enrichie ────────────────────────────────────────────── */
 .dashboard-analysis-card {
-  padding: var(--space-5);
+  /* Delta 15 fix — densité (var(--space-5) → var(--space-4)) */
+  padding: var(--space-4);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   outline: none;
-  /* Delta 15 Pass 3 — glassmorphism marqué (override card-glass de defaut.css) */
-  background: var(--glass-bg-primary);
+  /* Delta 15 Pass 3 — glassmorphism marqué (override card-glass de defaut.css).
+     Delta 15 fix : double-layer pour matière sombre derrière le voile (cf .dashboard-kpi). */
+  background:
+    linear-gradient(var(--glass-bg-primary), var(--glass-bg-primary)),
+    var(--surface-glass);
   backdrop-filter: blur(var(--glass-blur, 24px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 24px));
   border: 1px solid var(--glass-border);

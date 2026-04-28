@@ -106,11 +106,13 @@
     --shadow-glass-2: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--glass-border) inset;
 
     /* Ambient gradient — appliqué uniquement sur .dashboard-body et page publique
-       via .ambient-bg. Aurore violet/orange/bleu, opacités basses (0.05–0.08). */
+       via .ambient-bg. Aurore violet/orange/bleu.
+       Delta 15 fix — opacités remontées (0.05–0.08 → 0.10–0.15) pour que l'aurore
+       soit réellement perceptible (au lieu d'invisible sur fond noir). */
     --ambient-gradient:
-      radial-gradient(ellipse 80% 50% at 20% 0%,   rgba(var(--accent-violet-rgb), 0.08), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 100% 30%, rgba(232, 101, 26, 0.06),             transparent 50%),
-      radial-gradient(ellipse 50% 30% at 50% 100%, rgba(59, 130, 246, 0.05),             transparent 50%);
+      radial-gradient(ellipse 80% 50% at 20% 0%,   rgba(var(--accent-violet-rgb), 0.15), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 30%, rgba(232, 101, 26, 0.12),             transparent 50%),
+      radial-gradient(ellipse 50% 30% at 50% 100%, rgba(59, 130, 246, 0.10),             transparent 50%);
 
     /* Noise texture (1px SVG inline) */
     --noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
@@ -1107,22 +1109,32 @@
     transition: width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo);
   }
 
-  /* ARCHITECT-PRIME: conflit de classes — .logo-img sert ailleurs pour /icons/logo.png
-     (carré, ~95×95) où width:56px est correct. Sur la nav landing on a /logo.svg
-     (lockup horizontal, ratio 4.23:1). Sélecteur profond pour gagner toute la cascade. */
-  header.nav-glass .logo-container .logo-img {
+  /* ARCHITECT-PRIME Delta 15 — Isolation landing vs dashboard.
+     Landing  → /logo.svg (lockup horizontal, ratio 4.23:1) → 180×40
+     Dashboard → /icons/logo.png (carré ~95×95) → height-only 36px
+
+     Le scope body:not(.dashboard-body) empêche les règles landing
+     d'écraser le logo carré du dashboard (qui était déformé en 180×40). */
+
+  /* Logo Landing (Horizontal) */
+  body:not(.dashboard-body) header.nav-glass .logo-container .logo-img {
     width: 180px;
     height: 40px;
     object-fit: contain;
-    max-width: 100%;
   }
-
-  /* ARCHITECT-PRIME: .logo-container avait flex:1 (donc flex-shrink:1) → écrasé
-     par les flex siblings (nav-actions). On le sort du flex grow/shrink. */
-  header.nav-glass .logo-container {
+  body:not(.dashboard-body) header.nav-glass .logo-container {
     flex: 0 0 auto;
     width: auto;
-    min-width: 180px;
+    min-width: max-content;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Logo Dashboard (Carré) */
+  .dashboard-body header.nav-glass .logo-container .logo-img {
+    width: auto;
+    height: 36px;
+    object-fit: contain;
   }
 
   .nav-links-desktop {
@@ -4474,12 +4486,13 @@
   }
 
   .logo-img { width: 48px; }
-  /* ARCHITECT-PRIME: nav landing — sélecteur profond (cf. desktop), dimensions mobile */
-  header.nav-glass .logo-container .logo-img {
+  /* ARCHITECT-PRIME Delta 15 — landing only (le dashboard garde son
+     logo carré height:36px du bloc desktop, pas de surcharge mobile). */
+  body:not(.dashboard-body) header.nav-glass .logo-container .logo-img {
     width: 140px;
     height: 32px;
   }
-  header.nav-glass .logo-container { min-width: 140px; }
+  body:not(.dashboard-body) header.nav-glass .logo-container { min-width: 140px; }
 
   .nav-glass.is-scrolled { padding-top: 0; }
   .nav-glass.is-scrolled .nav-content { min-height: 3rem; }
@@ -4487,8 +4500,10 @@
     width: 22px; height: 22px;
     transition: all 0.3s var(--ease-out-expo);
   }
-  /* ARCHITECT-PRIME: même sélecteur profond pour battre la cascade des règles globales */
-  header.nav-glass.is-scrolled .logo-container .logo-img {
+  /* ARCHITECT-PRIME Delta 15 — is-scrolled n'existe que sur la landing,
+     mais on scope explicitement pour aligner sur le pattern des autres
+     règles logo (cohérence + zéro chance de fuite vers le dashboard). */
+  body:not(.dashboard-body) header.nav-glass.is-scrolled .logo-container .logo-img {
     width: 130px;
     height: 30px;
   }
