@@ -725,6 +725,25 @@
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
+  /* Delta 15 Pass 6 — micro hover (neutralisé par reduced-motion master reset) */
+  transition:
+    background 0.2s var(--ease-out-expo),
+    border-color 0.2s var(--ease-out-expo),
+    transform 0.2s var(--ease-out-expo);
+}
+.score-card__trust-chip:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(var(--accent-violet-rgb), 0.25);
+  transform: translateY(-1px);
+}
+
+/* Delta 15 Pass 6 — transition explicite sur CTA primary (cohérence dashboard).
+   Le hover/active états sont déjà définis Pass 5, mais sans transition ils
+   sautent visuellement. Master reduced-motion neutralise. */
+.score-card__cta--primary {
+  transition:
+    box-shadow 0.25s var(--ease-out-expo),
+    transform 0.25s var(--ease-out-expo);
 }
 
 /* (E) CTA primary — gradient orange→magenta + glow */

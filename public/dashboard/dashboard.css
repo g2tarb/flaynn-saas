@@ -1663,6 +1663,17 @@
   font-weight: 700;
   fill: currentColor;
 }
+
+/* Delta 15 Pass 6 — micro-interactions SVG (transitions sur dashoffset).
+   Reduced-motion neutralisé globalement par le master reset
+   defaut.css:145 (* { transition-duration: 0.01ms !important }) — pas
+   besoin de @media local ici. */
+.score-donut__arc {
+  transition: stroke-dashoffset 1s var(--ease-out-expo);
+}
+.sparkline__line {
+  transition: stroke-dashoffset 1.2s var(--ease-out-expo);
+}
 .dashboard-analysis-card--muted {
   opacity: 0.85;
 }
@@ -1782,7 +1793,9 @@
   height: 100%;
   width: 0;
   border-radius: var(--radius-full);
+  /* Delta 15 Pass 6 — stagger 80ms par pilier via --pillar-i injecté en JS */
   transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition-delay: calc(var(--pillar-i, 0) * 80ms);
 }
 .dashboard-analysis-card__pillar-value {
   font-family: var(--font-mono, 'JetBrains Mono', monospace);

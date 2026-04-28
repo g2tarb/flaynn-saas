@@ -213,6 +213,14 @@ function clearEl(node) { node.replaceChildren(); }
 
 /* ── ARCHITECT-PRIME Delta 15 — Helpers SVG/sparkline/variation ──────────── */
 
+/** Sentinel reduced-motion : true si l'utilisateur a activé la préférence
+    système. Utilisé pour skip les animations dashoffset (Pass 6). */
+const PREFERS_REDUCED_MOTION = (() => {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch { return false; }
+})();
+
 /** Crée un nœud SVG via createElementNS (pas d'innerHTML, conformité §4.1). */
 function svgEl(tag, attrs = {}) {
   const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
@@ -251,10 +259,22 @@ function renderSparkline(values, color = 'currentColor', titleText = '') {
   } else {
     svg.setAttribute('aria-hidden', 'true');
   }
-  svg.appendChild(svgEl('polyline', {
+  /* Delta 15 Pass 6 — draw progressif via pathLength=100 (SVG2 normalisation) :
+     dasharray="100" + dashoffset 100→0 sur transition CSS .sparkline__line. */
+  const line = svgEl('polyline', {
     points, fill: 'none', stroke: color, 'stroke-width': '1.5',
     'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-  }));
+    pathLength: '100',
+    'stroke-dasharray': '100',
+    'stroke-dashoffset': PREFERS_REDUCED_MOTION ? '0' : '100',
+    class: 'sparkline__line',
+  });
+  svg.appendChild(line);
+  if (!PREFERS_REDUCED_MOTION) {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => { line.setAttribute('stroke-dashoffset', '0'); });
+    });
+  }
   return svg;
 }
 
@@ -304,15 +324,23 @@ function renderDonutScore(score, color = 'var(--accent-violet)', size = 60) {
     cx: String(cx), cy: String(cx), r: String(r),
     fill: 'none', stroke: 'var(--glass-border)', 'stroke-width': '3',
   }));
-  svg.appendChild(svgEl('circle', {
+  /* Delta 15 Pass 6 — animation dashoffset full→target (1s ease-out CSS).
+     Initial = circumference (rien dessiné), RAF×2 → target. */
+  const arc = svgEl('circle', {
     cx: String(cx), cy: String(cx), r: String(r),
     fill: 'none', stroke: color, 'stroke-width': '3',
     'stroke-dasharray': String(circumference),
-    'stroke-dashoffset': String(offset),
+    'stroke-dashoffset': PREFERS_REDUCED_MOTION ? String(offset) : String(circumference),
     'stroke-linecap': 'round',
     transform: `rotate(-90 ${cx} ${cx})`,
     class: 'score-donut__arc',
-  }));
+  });
+  svg.appendChild(arc);
+  if (!PREFERS_REDUCED_MOTION) {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => { arc.setAttribute('stroke-dashoffset', String(offset)); });
+    });
+  }
   const text = svgEl('text', {
     x: String(cx), y: String(cx),
     'text-anchor': 'middle',
@@ -1265,12 +1293,14 @@ function buildAnalysisCard(item) {
     card.classList.add('dashboard-analysis-card--error');
   } else if (item.pillar_pct) {
     const bars = el('div', 'dashboard-analysis-card__pillars');
-    LIST_PILLARS.forEach((p) => {
+    LIST_PILLARS.forEach((p, i) => {
       const raw = item.pillar_pct[p.key];
       const pct = (typeof raw === 'number' && Number.isFinite(raw))
         ? Math.max(0, Math.min(100, Math.round(raw)))
         : 0;
       const row = el('div', 'dashboard-analysis-card__pillar-row');
+      // Stagger Delta 15 Pass 6 — décale chaque pilier de 80ms via CSS var.
+      row.style.setProperty('--pillar-i', String(i));
       row.appendChild(el('span', 'dashboard-analysis-card__pillar-label', { textContent: p.label }));
       const track = el('div', 'dashboard-analysis-card__pillar-track');
       track.setAttribute('role', 'progressbar');
