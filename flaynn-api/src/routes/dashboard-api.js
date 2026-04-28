@@ -153,6 +153,9 @@ function adaptN8nToDashboard(raw, startupName, referenceId, createdAt, previousD
 
 export default async function dashboardApiRoutes(fastify) {
   // Route 1 : Récupérer la liste des analyses d'un utilisateur
+  // ARCHITECT-PRIME: Delta 14 — payload enrichi (score, verdict, track, pillar_pct, is_published)
+  // pour que le dashboard liste affiche cards riches sans avoir à fetch /api/dashboard/:id par item.
+  // LEFT JOIN public_cards (is_active=TRUE) pour matérialiser le statut publié/privé.
   fastify.get('/api/dashboard/list', {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
     onRequest: [fastify.authenticate]
@@ -160,10 +163,46 @@ export default async function dashboardApiRoutes(fastify) {
     try {
       const userEmail = request.user.email;
       const { rows } = await pool.query(
-        'SELECT reference_id, startup_name, created_at FROM scores WHERE user_email = $1 ORDER BY created_at DESC',
+        `SELECT
+           s.reference_id,
+           s.startup_name,
+           s.created_at,
+           s.data->>'overall_score' AS overall_score_raw,
+           s.data->>'score'         AS score_raw,
+           s.data->>'verdict'       AS verdict,
+           s.data->>'track'         AS track,
+           s.data->>'sector'        AS sector,
+           s.data->>'stage_estimate' AS stage,
+           s.data->'pillar_pct'     AS pillar_pct,
+           s.data->>'status'        AS status,
+           (pc.id IS NOT NULL)      AS is_published
+         FROM scores s
+         LEFT JOIN public_cards pc
+           ON pc.reference_id = s.reference_id
+          AND pc.user_email   = s.user_email
+          AND pc.is_active    = TRUE
+         WHERE s.user_email = $1
+         ORDER BY s.created_at DESC`,
         [userEmail]
       );
-      return reply.code(200).send(rows);
+
+      // Cast JS robuste : Number(raw) ⇒ NaN si malformé ⇒ ramené à null via `|| null`.
+      // Aligné sur le pattern adaptN8nToDashboard (Number(raw.score) || Number(raw.overall_score)).
+      const items = rows.map((r) => ({
+        reference_id:  r.reference_id,
+        startup_name:  r.startup_name,
+        created_at:    r.created_at,
+        score:         Number(r.overall_score_raw) || Number(r.score_raw) || null,
+        verdict:       r.verdict || null,
+        track:         r.track || null,
+        sector:        r.sector || null,
+        stage:         r.stage || null,
+        pillar_pct:    r.pillar_pct || null,
+        status:        r.status || 'completed',
+        is_published:  !!r.is_published,
+      }));
+
+      return reply.code(200).send(items);
     } catch (err) {
       request.log.error(err);
       return reply.code(500).send({ error: 'INTERNAL_ERROR', message: 'Erreur lors de la récupération des analyses.' });
