@@ -51,43 +51,60 @@ function initMorph(el) {
       // Vider le conteneur
       el.replaceChildren();
 
-      // Phase 2 : créer les nouvelles lettres + particules
-      for (let c = 0; c < text.length; c++) {
-        const ch = text[c];
-        const span = document.createElement('span');
-        span.className = 'morph-letter';
-        span.textContent = ch === ' ' ? '\u00A0' : ch;
-        span.style.animationDelay = `${c * 30}ms`;
-        el.appendChild(span);
+      // ARCHITECT-PRIME: chaque .morph-letter est en display:inline-block — sans
+      // groupement, le navigateur peut couper entre n'importe quelles lettres
+      // (cf. bug "votre" coupé en "vo / tre"). On enveloppe chaque mot dans
+      // .morph-word (white-space:nowrap), avec de vrais espaces entre les mots.
+      const totalChars = text.length;
+      const segments = text.split(/(\s+)/);
+      let charIdx = 0;
 
-        // Particules (2-3 par lettre, sauf espaces)
-        if (ch !== ' ' && ch !== '.') {
-          const count = Math.floor(Math.random() * 2) + 2;
-          for (let p = 0; p < count; p++) {
-            const particle = document.createElement('span');
-            particle.className = 'morph-particle';
-            // Position de départ aléatoire autour de la lettre
-            const px = (Math.random() - 0.5) * 60;
-            const py = (Math.random() - 0.5) * 40 - 10;
-            particle.style.setProperty('--px', `${px}px`);
-            particle.style.setProperty('--py', `${py}px`);
-            particle.style.left = `${(c / text.length) * 100}%`;
-            particle.style.top = '50%';
-            particle.style.animationDelay = `${c * 25 + p * 40}ms`;
-            // Couleur aléatoire parmi les accents
-            const colors = ['var(--accent-violet)', 'var(--accent-blue)', 'rgba(255,255,255,0.7)'];
-            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-            particle.style.boxShadow = `0 0 6px ${colors[Math.floor(Math.random() * colors.length)]}`;
-            el.appendChild(particle);
-          }
+      for (const segment of segments) {
+        if (segment === '') continue;
+        if (/^\s+$/.test(segment)) {
+          el.appendChild(document.createTextNode(segment));
+          charIdx += segment.length;
+          continue;
         }
+        const wordSpan = document.createElement('span');
+        wordSpan.className = 'morph-word';
+        for (let c = 0; c < segment.length; c++) {
+          const ch = segment[c];
+          const span = document.createElement('span');
+          span.className = 'morph-letter';
+          span.textContent = ch;
+          span.style.animationDelay = `${charIdx * 30}ms`;
+          wordSpan.appendChild(span);
+
+          // Particules (2-3 par lettre, hors ponctuation finale)
+          if (ch !== '.') {
+            const count = Math.floor(Math.random() * 2) + 2;
+            for (let p = 0; p < count; p++) {
+              const particle = document.createElement('span');
+              particle.className = 'morph-particle';
+              const px = (Math.random() - 0.5) * 60;
+              const py = (Math.random() - 0.5) * 40 - 10;
+              particle.style.setProperty('--px', `${px}px`);
+              particle.style.setProperty('--py', `${py}px`);
+              particle.style.left = `${(charIdx / totalChars) * 100}%`;
+              particle.style.top = '50%';
+              particle.style.animationDelay = `${charIdx * 25 + p * 40}ms`;
+              const colors = ['var(--accent-violet)', 'var(--accent-blue)', 'rgba(255,255,255,0.7)'];
+              particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+              particle.style.boxShadow = `0 0 6px ${colors[Math.floor(Math.random() * colors.length)]}`;
+              el.appendChild(particle); // position:absolute relative à el
+            }
+          }
+          charIdx++;
+        }
+        el.appendChild(wordSpan);
       }
 
       // Nettoyage particules après animation
       setTimeout(() => {
         el.querySelectorAll('.morph-particle').forEach(p => p.remove());
         running = false;
-      }, text.length * 30 + 600);
+      }, totalChars * 30 + 600);
 
     }, fadeOutTime);
   }

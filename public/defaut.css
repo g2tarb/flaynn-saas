@@ -247,6 +247,14 @@
     }
   }
 
+  /* ARCHITECT-PRIME: chaque mot reste insécable — seuls les espaces
+     servent de points de retour à la ligne (sinon "votre" peut être
+     coupé en "vo/tre" puisque chaque .morph-letter est inline-block) */
+  .morph-word {
+    display: inline-block;
+    white-space: nowrap;
+  }
+
   /* Lettres individuelles animées */
   .morph-letter {
     display: inline-block;
@@ -446,7 +454,10 @@
   }
 
   /* Hero — respiration canvas / orbit, contenu au premier plan */
+  /* ARCHITECT-PRIME: top-padding piloté uniquement par .hero-layout pour éviter
+     l'empilement section padding-top + hero-layout padding-top */
   .hero.section {
+    padding-top: 0;
     padding-bottom: var(--space-10);
   }
 
@@ -454,8 +465,11 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 80px;
-    align-items: center;
+    /* ARCHITECT-PRIME: start (et non center) — le min-height + centrage poussait
+       le H1 ~115px plus bas que la nav. Le contenu commence directement sous la nav. */
+    align-items: start;
     min-height: min(80vh, 780px);
+    /* nav-content min-height = 4rem ; +1.5rem de respiration = 5.5rem */
     padding-top: calc(5.5rem + env(safe-area-inset-top));
     padding-bottom: var(--space-6);
     position: relative;
@@ -487,7 +501,10 @@
   .hero__title.text-display {
     text-wrap: balance;
     min-width: 0;
+    /* ARCHITECT-PRIME: pas de césure intra-mot (mot complet ou rien) */
+    word-break: normal;
     overflow-wrap: break-word;
+    hyphens: none;
     overflow: visible;
     padding-bottom: 0.2em;
     line-height: 1.15;
@@ -1060,6 +1077,14 @@
     object-fit: contain;
     display: block;
     transition: width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo);
+  }
+
+  /* ARCHITECT-PRIME: la nav landing utilise /logo.svg (lockup horizontal, ratio 4.23:1) —
+     piloter par hauteur pour préserver le wordmark + flame, sans truncature */
+  .nav-glass .logo-img {
+    width: auto;
+    height: 32px;
+    max-width: 180px;
   }
 
   .nav-links-desktop {
@@ -3656,7 +3681,9 @@
    HERO VISUAL (mockup card 3D)
 ───────────────────────────────────────── */
 @layer components {
-  .hero-visual { position: relative; perspective: 800px; }
+  /* ARCHITECT-PRIME: align-items:start sur .hero-layout glue le H1 sous la nav ;
+     on recentre uniquement le mockup pour conserver l'équilibre visuel desktop. */
+  .hero-visual { position: relative; perspective: 800px; align-self: center; }
 
   .mockup-card {
     background: rgba(255,255,255,.038);
@@ -4409,6 +4436,8 @@
   }
 
   .logo-img { width: 48px; }
+  /* ARCHITECT-PRIME: nav landing — lockup horizontal pilote par hauteur (ratio 4.23:1) */
+  .nav-glass .logo-img { width: auto; height: 28px; max-width: 160px; }
 
   .nav-glass.is-scrolled { padding-top: 0; }
   .nav-glass.is-scrolled .nav-content { min-height: 3rem; }
@@ -4417,7 +4446,9 @@
     transition: all 0.3s var(--ease-out-expo);
   }
   .nav-glass.is-scrolled .logo-img {
-    width: 40px;
+    width: auto;
+    height: 22px;
+    max-width: 132px;
   }
   .nav-glass.is-scrolled .logo-text {
     font-size: 0.95rem;
@@ -4457,7 +4488,8 @@
     min-height: auto;
     grid-template-columns: 1fr;
     gap: var(--space-4);
-    padding-top: calc(8rem + env(safe-area-inset-top));
+    /* ARCHITECT-PRIME: nav mobile ≈ 4rem + 2rem breathing = 6rem (au lieu de 8rem qui ajoutait ~32px de vide superflu) */
+    padding-top: calc(6rem + env(safe-area-inset-top));
     padding-bottom: var(--space-4);
     text-align: center;
   }
