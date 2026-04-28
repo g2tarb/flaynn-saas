@@ -27,6 +27,66 @@ function getPillarMax(p) {
   return PILLAR_MAX[p.name] || 100;
 }
 
+/* ── Mapping nom pilier → clé pillar_pct (V6.1) ───────────────────────── */
+const PILLAR_NAME_TO_KEY = {
+  'Market':            'market',
+  'Solution/Product':  'solution_product',
+  'Product':           'solution_product',
+  'Traction':          'traction',
+  'Team':              'team',
+  'Execution':         'execution_ask',
+};
+
+/**
+ * Pourcentage canonique d'un pilier (Delta 14, fix S1).
+ * Cascade : pillar_pct (V6.1+) → score/max legacy → null.
+ * Renvoie { pct: number|null, source: 'v6.1'|'legacy'|'unavailable' }.
+ */
+function getPillarPct(pillar, pillarPctMap) {
+  const key = PILLAR_NAME_TO_KEY[pillar.name];
+  // Cascade niveau 1 : V6.1+ pillar_pct
+  if (key && pillarPctMap && typeof pillarPctMap[key] === 'number' && Number.isFinite(pillarPctMap[key])) {
+    return { pct: Math.max(0, Math.min(100, Math.round(pillarPctMap[key]))), source: 'v6.1' };
+  }
+  // Cascade niveau 2 (validée Q2 utilisateur) : `score_breakdown_raw` avec PILLAR_MAX
+  // canonique. Champ ABSENT du contrat actuel (vérifié en codebase). Garde la branche
+  // pour une éventuelle V6.2 — décommenter si le workflow n8n l'expose un jour.
+  //
+  // const rawBreakdown = pillar.scoreBreakdownRaw;  // injecté depuis data.score_breakdown_raw[key]
+  // const canonMax = { market: 25, solution_product: 20, traction: 25, team: 20, execution_ask: 10 }[key];
+  // if (typeof rawBreakdown === 'number' && canonMax) {
+  //   return { pct: Math.round((rawBreakdown / canonMax) * 100), source: 'legacy-raw' };
+  // }
+  //
+  // Cascade niveau 3 : "—" + tooltip. On n'utilise PAS score_breakdown post-adjustRatio
+  // en fallback (cf. brief §3 et bug d'affichage S1 sur Execution).
+  return { pct: null, source: 'unavailable' };
+}
+
+/* ── Couleurs verdict & ordre piliers (Delta 14) ──────────────────────── */
+const VERDICT_COLORS = {
+  'Strong Yes': 'var(--accent-emerald)',
+  'Yes':        'var(--accent-emerald)',
+  'Almost':     'var(--accent-amber)',
+  'Not yet':    'var(--accent-rose)',
+  'Ready':      'var(--accent-emerald)',
+};
+const VERDICT_LABELS_FR = {
+  'Strong Yes': 'Strong Yes',
+  'Yes':        'Yes',
+  'Almost':     'Almost',
+  'Not yet':    'Not yet',
+};
+// ARCHITECT-PRIME: Delta 14 — clés JSONB depuis pillar_pct (V6.1+).
+// Ordre figé : aligné sur PILLAR_ORDER de public-cards.js + buildPillarRows ordering.
+const LIST_PILLARS = [
+  { key: 'market',           label: 'Marché',    color: 'var(--accent-violet)'  },
+  { key: 'solution_product', label: 'Produit',   color: 'var(--accent-blue)'    },
+  { key: 'traction',         label: 'Traction',  color: 'var(--accent-emerald)' },
+  { key: 'team',             label: 'Team',      color: 'var(--accent-violet)'  },
+  { key: 'execution_ask',    label: 'Exécution', color: 'var(--accent-amber)'   },
+];
+
 /* ── Auth ──────────────────────────────────────────────────────────────── */
 function getAuth() {
   try { return JSON.parse(localStorage.getItem('flaynn_auth') || 'null'); }
@@ -198,7 +258,7 @@ function renderScoreRadial(container, score, d3) {
 }
 
 /** Radar 5 piliers */
-function renderPillarRadar(container, pillars, d3) {
+function renderPillarRadar(container, pillars, d3, pillarPctMap) {
   const size = 300, center = size / 2, maxR = 110;
   const angle = (i) => ((2 * Math.PI) / pillars.length) * i - Math.PI / 2;
 
@@ -226,8 +286,16 @@ function renderPillarRadar(container, pillars, d3) {
       .attr('class', 'pillar-radar__label').text(p.name);
   });
 
+  // Delta 14 : rayon basé sur pillar_pct V6.1 si dispo (fix S1), fallback score/max legacy.
+  const radiusFor = (p) => {
+    const { pct } = getPillarPct(p, pillarPctMap);
+    if (pct != null) return (pct / 100) * maxR;
+    // Si pillar_pct indispo, fallback legacy pour ne pas casser le radar (sinon polygone à 0).
+    return (p.score / getPillarMax(p)) * maxR;
+  };
+
   const pts = pillars.map((p, i) => {
-    const a = angle(i), r = (p.score / getPillarMax(p)) * maxR;
+    const a = angle(i), r = radiusFor(p);
     return `${center + r * Math.cos(a)},${center + r * Math.sin(a)}`;
   }).join(' ');
 
@@ -240,7 +308,7 @@ function renderPillarRadar(container, pillars, d3) {
 
   /* Dots sur les sommets */
   pillars.forEach((p, i) => {
-    const a = angle(i), r = (p.score / getPillarMax(p)) * maxR;
+    const a = angle(i), r = radiusFor(p);
     const dot = svg.append('circle')
       .attr('cx', center).attr('cy', center).attr('r', 4)
       .attr('fill', 'var(--accent-violet)').attr('stroke', 'var(--surface-void)').attr('stroke-width', 2);
@@ -441,30 +509,38 @@ function buildRecommendations(list) {
   return reco;
 }
 
-/** Barres piliers (overview) */
-function buildPillarRows(pillars) {
+/** Barres piliers (overview) — Delta 14 : pillar_pct V6.1 prioritaire, fallback "—" */
+function buildPillarRows(pillars, pillarPctMap) {
   const wrap = el('div', 'pillar-rows');
   pillars.forEach(p => {
     const max = getPillarMax(p);
-    const pct = Math.round((p.score / max) * 100);
+    const { pct, source } = getPillarPct(p, pillarPctMap);
     const row = el('div', 'pillar-row');
     const nameEl = el('span', 'pillar-row__name', { textContent: p.name });
     const track  = el('div', 'pillar-row__track');
     const fill   = el('div', 'pillar-row__fill');
     fill.style.background = p.color;
     track.appendChild(fill);
+    // Score brut conservé (info utile en absolu) ; pct affiché à droite uniquement si dispo.
     const scoreEl = el('span', 'pillar-row__score', { textContent: `${p.score}/${max}` });
     scoreEl.style.color = p.color;
     row.appendChild(nameEl);
     row.appendChild(track);
     row.appendChild(scoreEl);
+    if (source === 'unavailable') {
+      // Fallback visuel : barre vide + tooltip légende.
+      track.title = 'Détail pourcentage indisponible — re-scorez pour la ventilation V6.1';
+      row.classList.add('pillar-row--legacy');
+    }
     row.appendChild(buildTrendChip(p.score, p.prev));
     wrap.appendChild(row);
 
-    /* Animate bar après insertion */
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
-    });
+    /* Animate bar après insertion (uniquement si pct dispo) */
+    if (pct != null) {
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
+      });
+    }
   });
   return wrap;
 }
@@ -535,8 +611,85 @@ function sanitizeDetailData(data) {
   };
 }
 
+/* ── Delta 14 : Chip consensus IA + Trust block méthodologie ─────────── */
+
+/**
+ * Chip discrète qui matérialise le niveau de consensus IA (V6.1).
+ * Mapping high/medium/low → label FR + couleur. Tolère le legacy `confidence_level`
+ * (string vide ou non-canonique) en passant par alias backend.
+ * Renvoie null si le signal est absent → frontend skip l'affichage.
+ */
+function buildConsensusChip(rawConfidence) {
+  if (!rawConfidence || typeof rawConfidence !== 'string') return null;
+  const lvl = rawConfidence.toLowerCase().trim();
+  const map = {
+    high:   { label: 'Consensus IA solide',                          color: 'var(--accent-emerald)' },
+    medium: { label: 'Consensus IA partiel',                         color: 'var(--accent-amber)'   },
+    low:    { label: 'Consensus IA divisé — analyste a tranché',     color: 'var(--accent-rose)'    },
+  };
+  const conf = map[lvl];
+  if (!conf) return null;
+  const chip = el('span', 'verdict-banner__consensus');
+  chip.textContent = conf.label;
+  chip.style.color = conf.color;
+  chip.style.borderColor = `color-mix(in srgb, ${conf.color} 35%, transparent)`;
+  chip.title = 'Niveau d\'accord entre les agents IA Flaynn lors du scoring V6.1.';
+  return chip;
+}
+
+/**
+ * Trust block méthodologie (Delta 14) : carte sobre en bas du détail.
+ * Affiche methodology_version + benchmark_snapshot_date + benchmark_coverage si dispo.
+ * Renvoie null si AUCUN signal présent (pré-V6.1) → ne pas polluer la vue.
+ */
+function buildTrustBlock(data) {
+  const methodo = data.methodology_version || data.flaynn_intelligence_version || '';
+  const bSnap = data.benchmark_snapshot_date || '';
+  const bCov = data.benchmark_coverage || '';
+  if (!methodo && !bSnap && !bCov) return null;
+
+  const card = el('article', 'card-glass dashboard-trust-block');
+  card.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Méthodologie Flaynn Intelligence' }));
+
+  const list = el('dl', 'dashboard-trust-block__list');
+  if (methodo) {
+    list.appendChild(el('dt', 'dashboard-trust-block__label', { textContent: 'Version' }));
+    list.appendChild(el('dd', 'dashboard-trust-block__value', { textContent: methodo }));
+  }
+  if (bSnap) {
+    let formatted = bSnap;
+    try {
+      const d = new Date(bSnap);
+      if (!Number.isNaN(d.getTime())) {
+        formatted = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+    } catch { /* keep raw */ }
+    list.appendChild(el('dt', 'dashboard-trust-block__label', { textContent: 'Benchmark' }));
+    list.appendChild(el('dd', 'dashboard-trust-block__value', { textContent: `Snapshot ${formatted}` }));
+  }
+  if (bCov) {
+    const covLabel = ({ high: 'Couverture solide', medium: 'Couverture partielle', low: 'Couverture limitée' })[String(bCov).toLowerCase()] || `Couverture ${bCov}`;
+    list.appendChild(el('dt', 'dashboard-trust-block__label', { textContent: 'Couverture' }));
+    list.appendChild(el('dd', 'dashboard-trust-block__value', { textContent: covLabel }));
+  }
+  card.appendChild(list);
+
+  // Anchor /methodology — page non encore créée (out of scope Delta 14).
+  // Lien fallback vers /#methodology sur la home (anchor existant ou à venir).
+  const link = el('a', 'dashboard-trust-block__link', {
+    href: '/#methodology',
+    textContent: 'Comprendre la méthodologie →',
+  });
+  card.appendChild(link);
+
+  return card;
+}
+
 /* ── Delta 9 : section Partage public (Flaynn Card publique) ──────────── */
-const PUBLISHABLE_VERDICTS = new Set(['Ready', 'Almost', 'Yes', 'Strong Yes']);
+// Delta 14 : Almost retiré du set côté frontend (brief Pass 3.D + §3 contrat de données).
+// Backend public-cards.js conserve Almost pour rétrocompat des cards déjà publiées,
+// mais le frontend ne propose plus la publication d'un dossier Almost.
+const PUBLISHABLE_VERDICTS = new Set(['Ready', 'Yes', 'Strong Yes']);
 
 function buildPublicShareSection(data) {
   const canPublish = PUBLISHABLE_VERDICTS.has(data.verdict);
@@ -662,18 +815,365 @@ function buildPublicShareSection(data) {
     wrap.appendChild(publishBtn);
 
   } else {
-    /* État 1 : verrouillé (verdict Not yet ou absent) */
+    /* État 1 : verrouillé (verdict Almost / Not yet / Error / absent) — Delta 14 */
     wrap.classList.add('dashboard-public-share--disabled');
     wrap.appendChild(titleRow);
     wrap.appendChild(el('p', 'dashboard-public-share__lead', {
-      textContent: 'Votre Flaynn Card publique permet de partager votre scoring en un lien.'
+      textContent: 'Votre Flaynn Card publique permet de partager votre scoring en un lien.',
     }));
-    wrap.appendChild(el('p', 'dashboard-public-share__hint', {
-      textContent: 'Débloquez le partage public en améliorant votre score par un nouveau scoring.'
-    }));
+
+    // Hint contextualisé selon le verdict (brief Pass 3.D).
+    let hintText;
+    if (data.verdict === 'Almost') {
+      hintText = 'Publication réservée aux verdicts Yes ou Strong Yes. Re-scorez pour faire évoluer votre dossier.';
+    } else if (data.verdict === 'Not yet') {
+      hintText = 'Verdict "Not yet" — la publication est désactivée. Renforcez votre dossier puis re-scorez.';
+    } else {
+      hintText = 'Débloquez le partage public en améliorant votre score par un nouveau scoring.';
+    }
+    wrap.appendChild(el('p', 'dashboard-public-share__hint', { textContent: hintText }));
+
+    // Bouton désactivé visible (signal de l'action verrouillée + tooltip explicatif).
+    const lockedBtn = el('button', 'btn-primary dashboard-public-share__publish-btn', {
+      type: 'button',
+      textContent: 'Publier ma Flaynn Card',
+      disabled: 'disabled',
+      'aria-disabled': 'true',
+    });
+    lockedBtn.title = 'Publication réservée aux verdicts Yes ou Strong Yes';
+    wrap.appendChild(lockedBtn);
   }
 
   return wrap;
+}
+
+/* ── Liste : helpers Delta 14 ──────────────────────────────────────────── */
+
+/** Header de la liste : titre + CTA "Nouveau scoring" persistant (toujours visible) */
+function buildListHeader() {
+  const wrap = el('div', 'dashboard-list-header');
+  wrap.appendChild(el('h2', 'heading-section dashboard-list-header__title', { textContent: 'Mes Analyses' }));
+  const cta = el('a', 'btn-primary dashboard-list-header__cta', {
+    href: '/scoring/',
+    textContent: 'Nouveau scoring',
+  });
+  wrap.appendChild(cta);
+  return wrap;
+}
+
+/** Bandeau KPI : total · score moyen · dernier verdict (calculs sur scores non-null uniquement) */
+function buildKpiStrip(items) {
+  const total = items.length;
+  const scored = items.filter((it) => typeof it.score === 'number' && it.score > 0);
+  const avgScore = scored.length
+    ? Math.round(scored.reduce((acc, it) => acc + it.score, 0) / scored.length)
+    : null;
+  // items déjà triés DESC par created_at côté backend → [0] = le plus récent.
+  // On préfère le dernier qui a un verdict, sinon "—".
+  const lastWithVerdict = items.find((it) => it.verdict);
+  const lastVerdict = lastWithVerdict ? VERDICT_LABELS_FR[lastWithVerdict.verdict] || lastWithVerdict.verdict : '—';
+  const lastVerdictColor = lastWithVerdict ? VERDICT_COLORS[lastWithVerdict.verdict] || 'var(--text-secondary)' : 'var(--text-secondary)';
+
+  const strip = el('div', 'dashboard-kpi-strip');
+
+  const kTotal = el('div', 'dashboard-kpi');
+  kTotal.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Analyses totales' }));
+  kTotal.appendChild(el('p',    'dashboard-kpi__value', { textContent: String(total) }));
+  strip.appendChild(kTotal);
+
+  const kAvg = el('div', 'dashboard-kpi');
+  kAvg.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Score moyen' }));
+  const avgVal = el('p', 'dashboard-kpi__value', { textContent: avgScore != null ? `${avgScore}/100` : '—' });
+  kAvg.appendChild(avgVal);
+  strip.appendChild(kAvg);
+
+  const kLast = el('div', 'dashboard-kpi');
+  kLast.appendChild(el('span', 'dashboard-kpi__label', { textContent: 'Dernier verdict' }));
+  const lastVal = el('p', 'dashboard-kpi__value', { textContent: lastVerdict });
+  lastVal.style.color = lastVerdictColor;
+  kLast.appendChild(lastVal);
+  strip.appendChild(kLast);
+
+  return strip;
+}
+
+/** Card enrichie d'une analyse (verdict badge, métadonnées, mini-bars 5 piliers, footer score+track) */
+function buildAnalysisCard(item) {
+  const card = el('article', 'card-glass dashboard-analysis-card');
+  // Click n'importe où sur la card → naviguer vers le détail.
+  card.tabIndex = 0;
+  card.setAttribute('role', 'link');
+  card.setAttribute('aria-label', `Ouvrir l'analyse ${item.startup_name || item.reference_id}`);
+  const goDetail = () => {
+    history.pushState(null, '', `/dashboard/?id=${encodeURIComponent(item.reference_id)}`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+  card.addEventListener('click', goDetail);
+  card.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goDetail(); }
+  });
+
+  /* Header : nom startup + (verdict badge | status badge | published indicator) */
+  const header = el('div', 'dashboard-analysis-card__header');
+  const title  = el('h3', 'dashboard-analysis-card__title', { textContent: item.startup_name || item.reference_id });
+  header.appendChild(title);
+
+  const badges = el('div', 'dashboard-analysis-card__badges');
+  const isPending = item.status === 'pending_analysis' || item.status === 'pending_webhook' || item.status === 'under_review';
+  const isError = item.status === 'error';
+  if (isPending) {
+    const b = el('span', 'dashboard-analysis-card__status dashboard-analysis-card__status--pending');
+    b.textContent = item.status === 'under_review' ? 'Certification' : 'En cours';
+    b.setAttribute('aria-label', 'Analyse en cours');
+    badges.appendChild(b);
+  } else if (isError) {
+    const b = el('span', 'dashboard-analysis-card__status dashboard-analysis-card__status--error');
+    b.textContent = 'Erreur';
+    badges.appendChild(b);
+  } else if (item.verdict) {
+    const verdictColor = VERDICT_COLORS[item.verdict] || 'var(--accent-violet)';
+    const b = el('span', 'dashboard-analysis-card__verdict');
+    b.textContent = VERDICT_LABELS_FR[item.verdict] || item.verdict;
+    b.style.color = verdictColor;
+    b.style.borderColor = verdictColor;
+    badges.appendChild(b);
+  }
+  if (item.is_published) {
+    const pub = el('span', 'dashboard-analysis-card__published', {
+      textContent: 'Publiée',
+    });
+    pub.setAttribute('aria-label', 'Cette analyse est publiée publiquement');
+    pub.title = 'Carte publique active';
+    badges.appendChild(pub);
+  }
+  header.appendChild(badges);
+  card.appendChild(header);
+
+  /* Métadonnées : sector · stage · date */
+  const metaParts = [];
+  if (item.sector) metaParts.push(item.sector);
+  if (item.stage) metaParts.push(item.stage);
+  metaParts.push(new Date(item.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }));
+  card.appendChild(el('p', 'dashboard-analysis-card__meta', { textContent: metaParts.join(' · ') }));
+
+  /* Body : mini-bars piliers OU message d'état */
+  if (isPending) {
+    const msg = el('p', 'dashboard-analysis-card__state-msg', {
+      textContent: item.status === 'under_review'
+        ? 'Certification analyste en cours…'
+        : 'Analyse IA en cours…',
+    });
+    card.appendChild(msg);
+    card.classList.add('dashboard-analysis-card--muted');
+  } else if (isError) {
+    const msg = el('p', 'dashboard-analysis-card__state-msg', {
+      textContent: 'Une erreur est survenue lors du scoring. Ouvrez l\'analyse pour plus d\'infos.',
+    });
+    card.appendChild(msg);
+    card.classList.add('dashboard-analysis-card--error');
+  } else if (item.pillar_pct) {
+    const bars = el('div', 'dashboard-analysis-card__pillars');
+    LIST_PILLARS.forEach((p) => {
+      const raw = item.pillar_pct[p.key];
+      const pct = (typeof raw === 'number' && Number.isFinite(raw))
+        ? Math.max(0, Math.min(100, Math.round(raw)))
+        : 0;
+      const row = el('div', 'dashboard-analysis-card__pillar-row');
+      const lbl = el('span', 'dashboard-analysis-card__pillar-label', { textContent: p.label });
+      const track = el('div', 'dashboard-analysis-card__pillar-track');
+      track.setAttribute('role', 'progressbar');
+      track.setAttribute('aria-valuemin', '0');
+      track.setAttribute('aria-valuemax', '100');
+      track.setAttribute('aria-valuenow', String(pct));
+      track.setAttribute('aria-label', `${p.label} : ${pct}%`);
+      const fill = el('div', 'dashboard-analysis-card__pillar-fill');
+      fill.style.background = p.color;
+      track.appendChild(fill);
+      const val = el('span', 'dashboard-analysis-card__pillar-value', { textContent: `${pct}%` });
+      val.style.color = p.color;
+      row.appendChild(lbl);
+      row.appendChild(track);
+      row.appendChild(val);
+      bars.appendChild(row);
+      // Animation différée (2 RAF) — alignée sur buildPillarRows.
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
+      });
+    });
+    card.appendChild(bars);
+  } else {
+    // Legacy : pas de pillar_pct (vieux dossier pré-V6.1)
+    const msg = el('p', 'dashboard-analysis-card__state-msg', {
+      textContent: 'Détail piliers indisponible — re-scorez pour voir la ventilation.',
+    });
+    msg.title = 'Re-scorez ce dossier pour voir les détails par pilier';
+    card.appendChild(msg);
+  }
+
+  /* Footer : score + track (uniquement si dispo) */
+  if (typeof item.score === 'number' && item.score > 0) {
+    const footer = el('div', 'dashboard-analysis-card__footer');
+    const scoreWrap = el('div', 'dashboard-analysis-card__score-wrap');
+    const scoreNum = el('span', 'dashboard-analysis-card__score', { textContent: String(item.score) });
+    scoreNum.style.color = scoreColorFromValue(item.score);
+    scoreWrap.appendChild(scoreNum);
+    scoreWrap.appendChild(el('span', 'dashboard-analysis-card__score-max', { textContent: '/100' }));
+    footer.appendChild(scoreWrap);
+    if (item.track) {
+      const trackBadge = el('span', 'dashboard-analysis-card__track', { textContent: `Track : ${item.track}` });
+      footer.appendChild(trackBadge);
+    }
+    card.appendChild(footer);
+  }
+
+  return card;
+}
+
+/** Couleur du score selon la convention Dark Clarity (§5 CLAUDE.md) */
+function scoreColorFromValue(score) {
+  if (score < 40) return 'var(--accent-rose)';
+  if (score < 70) return 'var(--accent-amber)';
+  return 'var(--accent-emerald)';
+}
+
+/**
+ * Filtres + recherche. Visibles uniquement si items.length >= 4 (cf. brief §5.2.D).
+ * Re-rend `gridEl` en place via `renderItems(filtered)`.
+ */
+function buildListFilters(items, gridEl, renderItems) {
+  const wrap = el('div', 'dashboard-list-filters');
+  wrap.setAttribute('role', 'toolbar');
+  wrap.setAttribute('aria-label', 'Filtrer et rechercher les analyses');
+
+  const state = { verdict: 'all', search: '' };
+
+  /* Toggles verdicts présents dans la liste (+ "Tous") */
+  const presentVerdicts = Array.from(new Set(items.map((it) => it.verdict).filter(Boolean)));
+  // Ordre canonique d'affichage
+  const canonicalOrder = ['Strong Yes', 'Yes', 'Almost', 'Not yet'];
+  const orderedVerdicts = canonicalOrder.filter((v) => presentVerdicts.includes(v));
+
+  const toggleGroup = el('div', 'dashboard-list-filters__verdicts');
+  const verdictButtons = [];
+
+  function makeVerdictBtn(verdictKey, label, color) {
+    const btn = el('button', 'dashboard-list-filters__btn', { type: 'button' });
+    btn.textContent = label;
+    btn.dataset.verdict = verdictKey;
+    if (color) btn.style.setProperty('--filter-accent', color);
+    btn.addEventListener('click', () => {
+      state.verdict = verdictKey;
+      verdictButtons.forEach((b) => b.classList.toggle('is-active', b.dataset.verdict === verdictKey));
+      apply();
+    });
+    return btn;
+  }
+  const allBtn = makeVerdictBtn('all', 'Tous');
+  allBtn.classList.add('is-active');
+  toggleGroup.appendChild(allBtn);
+  verdictButtons.push(allBtn);
+  orderedVerdicts.forEach((v) => {
+    const btn = makeVerdictBtn(v, VERDICT_LABELS_FR[v] || v, VERDICT_COLORS[v]);
+    toggleGroup.appendChild(btn);
+    verdictButtons.push(btn);
+  });
+  wrap.appendChild(toggleGroup);
+
+  /* Recherche texte */
+  const searchWrap = el('div', 'dashboard-list-filters__search-wrap');
+  const searchInput = el('input', 'dashboard-list-filters__search', {
+    type: 'search',
+    placeholder: 'Rechercher une startup…',
+    'aria-label': 'Rechercher une startup par nom',
+  });
+  let debounceTimer = null;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      state.search = searchInput.value.trim().toLowerCase();
+      apply();
+    }, 150);
+  });
+  searchWrap.appendChild(searchInput);
+  wrap.appendChild(searchWrap);
+
+  function apply() {
+    const filtered = items.filter((it) => {
+      if (state.verdict !== 'all' && it.verdict !== state.verdict) return false;
+      if (state.search) {
+        const name = (it.startup_name || '').toLowerCase();
+        if (!name.includes(state.search)) return false;
+      }
+      return true;
+    });
+    renderItems(filtered);
+  }
+
+  return wrap;
+}
+
+/** Vue compte : identité read-only + Zone de danger (déplacée depuis la liste, brief §5.2.E) */
+function buildAccountView(auth) {
+  const section = el('section', 'dashboard-app__section');
+  section.appendChild(el('h2', 'heading-section', { textContent: 'Mon compte' }));
+
+  const idCard = el('article', 'card-glass dashboard-account-card');
+  idCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Identité' }));
+  if (auth) {
+    const list = el('dl', 'dashboard-account-list');
+    if (auth.name) {
+      list.appendChild(el('dt', 'dashboard-account-list__label', { textContent: 'Nom' }));
+      list.appendChild(el('dd', 'dashboard-account-list__value', { textContent: auth.name }));
+    }
+    if (auth.email) {
+      list.appendChild(el('dt', 'dashboard-account-list__label', { textContent: 'Email' }));
+      list.appendChild(el('dd', 'dashboard-account-list__value', { textContent: auth.email }));
+    }
+    idCard.appendChild(list);
+  } else {
+    idCard.appendChild(el('p', 'dashboard-meta', { textContent: 'Mode démo : connectez-vous pour voir votre identité.' }));
+  }
+  section.appendChild(idCard);
+
+  if (auth) section.appendChild(buildDangerZone(auth));
+  return section;
+}
+
+/**
+ * Zone de danger (suppression compte). Extraite de la liste racine vers la vue Account.
+ * Double confirmation : (1) confirm() initial, (2) typer le nom du compte.
+ */
+function buildDangerZone(auth) {
+  const card = el('article', 'card-glass dashboard-danger-card');
+  const title = el('h3', 'dashboard-card-title', { textContent: 'Zone de danger' });
+  title.style.color = 'var(--accent-rose)';
+  card.appendChild(title);
+  card.appendChild(el('p', 'dashboard-meta', {
+    textContent: 'La suppression du compte est définitive. Toutes vos analyses, scorings publics et données associées seront effacés.',
+  }));
+
+  const deleteBtn = el('button', 'dashboard-logout-btn dashboard-danger-card__btn', { type: 'button' });
+  deleteBtn.textContent = 'Supprimer mon compte';
+  deleteBtn.addEventListener('click', async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) return;
+    const expectedName = (auth && auth.name) ? auth.name.trim() : (auth && auth.email) || '';
+    if (expectedName) {
+      const typed = window.prompt(`Pour confirmer, tapez exactement : ${expectedName}`);
+      if (!typed || typed.trim() !== expectedName) {
+        alert('Confirmation non valide — suppression annulée.');
+        return;
+      }
+    }
+    try {
+      const res = await fetch('/api/auth/account', { method: 'DELETE', credentials: 'same-origin' });
+      if (res.ok) { clearAuth(); window.location.replace('/'); }
+      else alert('Suppression impossible. Réessayez plus tard.');
+    } catch {
+      alert('Suppression impossible (réseau).');
+    }
+  });
+  card.appendChild(deleteBtn);
+  return card;
 }
 
 /* ── Handlers de routes ────────────────────────────────────────────────── */
@@ -713,52 +1213,50 @@ function buildRoutes(data) {
         const section = el('section', 'dashboard-app__section');
 
         if (data.isList) {
-          section.appendChild(el('h2', 'heading-section', { textContent: 'Mes Analyses' }));
-          
+          // ARCHITECT-PRIME: Delta 14 — refonte liste : header avec CTA persistant,
+          // KPI strip, cards enrichies, filtres conditionnels (N≥4). Zone de danger
+          // déplacée vers /dashboard/account (cf. buildAccountView / buildDangerZone).
+          section.appendChild(buildListHeader());
+
           if (!data.items || data.items.length === 0) {
-            const emptyMsg = el('p', 'dashboard-app__lead', { textContent: 'Vous n\'avez pas encore soumis de startup. Retournez à l\'accueil pour lancer une analyse.' });
-            const backBtn = el('a', 'btn-primary', { href: '/', textContent: 'Lancer un scoring' });
-            backBtn.style.display = 'inline-flex';
-            backBtn.style.marginTop = 'var(--space-4)';
-            section.appendChild(emptyMsg);
-            section.appendChild(backBtn);
+            // Empty state : illustration sobre + CTA primaire vers /scoring/ + lien démo
+            const emptyWrap = el('div', 'dashboard-empty-state');
+            emptyWrap.appendChild(el('p', 'dashboard-app__lead', {
+              textContent: 'Vous n\'avez pas encore soumis de startup. Lancez votre premier scoring pour obtenir un verdict en 24h.',
+            }));
+            const ctaPrimary = el('a', 'btn-primary dashboard-empty-state__cta', {
+              href: '/scoring/',
+              textContent: 'Lancer mon premier scoring',
+            });
+            emptyWrap.appendChild(ctaPrimary);
+            section.appendChild(emptyWrap);
             root.appendChild(section);
             return;
           }
 
-          const grid = el('div', 'dashboard-grid-2');
-          data.items.forEach(item => {
-            const card = el('article', 'card-glass');
-            card.style.padding = 'var(--space-5)';
-            card.style.cursor = 'pointer';
-            card.addEventListener('click', () => { history.pushState(null, '', `/dashboard/?id=${item.reference_id}`); window.dispatchEvent(new PopStateEvent('popstate')); });
-            const title = el('h3', 'dashboard-card-title', { textContent: item.startup_name || item.reference_id });
-            const date = el('p', 'dashboard-meta', { textContent: 'Analysée le ' + new Date(item.created_at).toLocaleDateString('fr-FR') });
-            card.appendChild(title);
-            card.appendChild(date);
-            grid.appendChild(card);
-          });
-          section.appendChild(grid);
+          /* KPI strip (toujours visible si N≥1) */
+          section.appendChild(buildKpiStrip(data.items));
 
-          /* Zone compte — suppression (deplacee depuis la topbar pour eviter l'encombrement mobile) */
-          const dangerZone = el('div', 'dashboard-danger-zone');
-          dangerZone.style.cssText = 'margin-top:var(--space-10);padding-top:var(--space-6);border-top:1px solid var(--border-subtle)';
-          const dangerTitle = el('p', 'dashboard-meta', { textContent: 'Zone de danger' });
-          dangerTitle.style.marginBottom = 'var(--space-3)';
-          const deleteBtn = el('button', 'dashboard-logout-btn', { type: 'button' });
-          deleteBtn.textContent = 'Supprimer mon compte';
-          deleteBtn.style.color = 'var(--accent-rose)';
-          deleteBtn.style.borderColor = 'rgba(244, 63, 94, 0.3)';
-          deleteBtn.addEventListener('click', async () => {
-            if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) return;
-            try {
-              const res = await fetch('/api/auth/account', { method: 'DELETE', credentials: 'same-origin' });
-              if (res.ok) { clearAuth(); window.location.replace('/'); }
-            } catch { /* silencieux */ }
-          });
-          dangerZone.appendChild(dangerTitle);
-          dangerZone.appendChild(deleteBtn);
-          section.appendChild(dangerZone);
+          /* Grid + filtres (filtres uniquement si N≥4) */
+          const grid = el('div', 'dashboard-analysis-grid');
+          const renderItems = (list) => {
+            clearEl(grid);
+            if (list.length === 0) {
+              const empty = el('p', 'dashboard-meta dashboard-analysis-grid__empty', {
+                textContent: 'Aucune analyse ne correspond à ces filtres.',
+              });
+              grid.appendChild(empty);
+              return;
+            }
+            list.forEach((item) => grid.appendChild(buildAnalysisCard(item)));
+          };
+
+          if (data.items.length >= 4) {
+            section.appendChild(buildListFilters(data.items, grid, renderItems));
+          }
+
+          renderItems(data.items);
+          section.appendChild(grid);
 
           root.appendChild(section);
           return;
@@ -881,6 +1379,10 @@ function buildRoutes(data) {
             trackBadge.textContent = `Track : ${data.track}`;
             verdictHeader.appendChild(trackBadge);
           }
+          // ARCHITECT-PRIME: Delta 14 — chip consensus IA (signal V6.1).
+          // Discrète, à droite du track. Skipée si champ absent (pré-V6.1).
+          const consensusChip = buildConsensusChip(data.consensus_confidence);
+          if (consensusChip) verdictHeader.appendChild(consensusChip);
           verdictCard.appendChild(verdictHeader);
 
           if (data.track_reason) {
@@ -895,7 +1397,7 @@ function buildRoutes(data) {
         /* Pillar rows */
         const pillarCard = el('article', 'card-glass');
         pillarCard.appendChild(el('h3', 'dashboard-card-title', { textContent: 'Cinq piliers - synthèse' }));
-        pillarCard.appendChild(buildPillarRows(data.pillars));
+        pillarCard.appendChild(buildPillarRows(data.pillars, data.pillar_pct));
         section.appendChild(pillarCard);
 
         /* Résumé exécutif */
@@ -993,6 +1495,10 @@ function buildRoutes(data) {
           section.appendChild(pdfRow);
         }
 
+        // ARCHITECT-PRIME: Delta 14 — trust block méthodologie en bas du détail.
+        // Renvoie null si aucun signal V6.1 disponible (dossier legacy) → pas de carte vide.
+        const trustBlock = buildTrustBlock(data);
+        if (trustBlock) section.appendChild(trustBlock);
 
         root.appendChild(section);
 
@@ -1033,11 +1539,11 @@ function buildRoutes(data) {
         radarCard.appendChild(radarViz);
         section.appendChild(radarCard);
 
-        /* Cards détail */
+        /* Cards détail — Delta 14 : pillar_pct V6.1 prioritaire pour la barre */
         const detailGrid = el('div', 'pillar-detail-grid');
         data.pillars.forEach(p => {
           const max = getPillarMax(p);
-          const pct = Math.round((p.score / max) * 100);
+          const { pct, source } = getPillarPct(p, data.pillar_pct);
           const card = el('article', 'card-glass pillar-detail-card');
 
           const header = el('div', 'pillar-detail-card__header');
@@ -1054,6 +1560,10 @@ function buildRoutes(data) {
           const fill  = el('div', 'pillar-detail-card__fill');
           fill.style.background = p.color;
           track.appendChild(fill);
+          if (source === 'unavailable') {
+            track.title = 'Détail pourcentage indisponible — re-scorez pour la ventilation V6.1';
+            card.classList.add('pillar-detail-card--legacy');
+          }
 
           const meta = el('div', '', { style: 'display:flex;align-items:center;gap:8px;margin-top:2px' });
           meta.appendChild(buildTrendChip(p.score, p.prev));
@@ -1065,14 +1575,16 @@ function buildRoutes(data) {
           card.appendChild(el('p', 'pillar-detail-card__insight', { textContent: p.insight }));
           detailGrid.appendChild(card);
 
-          window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
-          });
+          if (pct != null) {
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
+            });
+          }
         });
 
         section.appendChild(detailGrid);
         root.appendChild(section);
-        if (data.pillars.length > 0) renderPillarRadar(radarViz, data.pillars, d3);
+        if (data.pillars.length > 0) renderPillarRadar(radarViz, data.pillars, d3, data.pillar_pct);
       }
     },
 
@@ -1165,6 +1677,17 @@ function buildRoutes(data) {
         if (data.graph.nodes.length > 0) {
           renderCompetitiveGraph(graphViz, data.graph, d3);
         }
+      }
+    },
+
+    /* ── COMPTE (Delta 14) ── */
+    {
+      path: /^\/dashboard\/account\/?$/,
+      async handler(root) {
+        // ARCHITECT-PRIME: vue Settings minimaliste (identité + zone de danger).
+        // Auth lue à l'instant via getAuth() pour rester synchronisé après changement.
+        const auth = getAuth();
+        root.appendChild(buildAccountView(auth));
       }
     }
   ];
@@ -1265,6 +1788,18 @@ class FlaynnRouter {
     document.querySelectorAll('[data-route]').forEach(el => {
       el.classList.toggle('is-active', el.getAttribute('data-route') === p);
     });
+
+    // ARCHITECT-PRIME: Delta 14 — nav contextuelle.
+    // Liens Piliers + Marché n'ont de sens qu'en vue détail (?id=X présent dans l'URL).
+    // Sur la liste racine et /dashboard/account : on les masque pour éviter de cliquer
+    // dans le vide ("Veuillez sélectionner une analyse").
+    const hasDetailId = !!(new URLSearchParams(window.location.search).get('id'));
+    const isRootList = (p === '/dashboard/' || p === '/dashboard') && !hasDetailId;
+    const isAccount = /^\/dashboard\/account\/?$/.test(p);
+    const hideContextual = isRootList || isAccount;
+    document.querySelectorAll('[data-route="/dashboard/pillars"], [data-route="/dashboard/network"]').forEach((link) => {
+      link.classList.toggle('is-context-hidden', hideContextual);
+    });
   }
 }
 
@@ -1275,15 +1810,34 @@ function initTopbar(auth) {
   topbar.replaceChildren();
 
   if (auth) {
-    const userBtn = el('div', 'dashboard-topbar-actions');
+    // ARCHITECT-PRIME: Delta 14 — dropdown user menu (Mon compte + Déconnexion).
+    // Pattern a11y : aria-expanded, aria-haspopup="menu", Escape ferme, focus trap léger.
+    const wrap = el('div', 'dashboard-topbar-actions dashboard-user-menu');
 
-    const avatar = el('div', 'dashboard-avatar');
+    const trigger = el('button', 'dashboard-user-menu__trigger', { type: 'button' });
+    trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.setAttribute('aria-expanded', 'false');
+    const avatar = el('span', 'dashboard-avatar', { 'aria-hidden': 'true' });
     avatar.textContent = auth.name ? auth.name.charAt(0).toUpperCase() : '?';
-
     const firstName = (auth.name || '').split(' ')[0] || auth.email;
     const nameSpan = el('span', 'dashboard-topbar__title', { textContent: firstName });
+    const caret = el('span', 'dashboard-user-menu__caret', { 'aria-hidden': 'true', textContent: '▾' });
+    trigger.appendChild(avatar);
+    trigger.appendChild(nameSpan);
+    trigger.appendChild(caret);
 
-    const logoutBtn = el('button', 'dashboard-logout-btn', { type: 'button' });
+    const menu = el('div', 'dashboard-user-menu__panel');
+    menu.setAttribute('role', 'menu');
+    menu.hidden = true;
+
+    const accountLink = el('a', 'dashboard-user-menu__item', {
+      href: '/dashboard/account',
+      'data-route': '/dashboard/account',
+      role: 'menuitem',
+      textContent: 'Mon compte',
+    });
+    const logoutBtn = el('button', 'dashboard-user-menu__item dashboard-user-menu__item--danger', { type: 'button' });
+    logoutBtn.setAttribute('role', 'menuitem');
     logoutBtn.textContent = 'Déconnexion';
     logoutBtn.addEventListener('click', async () => {
       try {
@@ -1295,10 +1849,35 @@ function initTopbar(auth) {
       window.location.replace('/');
     });
 
-    userBtn.appendChild(avatar);
-    userBtn.appendChild(nameSpan);
-    userBtn.appendChild(logoutBtn);
-    topbar.appendChild(userBtn);
+    menu.appendChild(accountLink);
+    menu.appendChild(logoutBtn);
+
+    function close() {
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+    function open() {
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      // Focus premier item pour accessibilité clavier
+      accountLink.focus();
+    }
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (menu.hidden) open(); else close();
+    });
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) { close(); trigger.focus(); }
+    });
+    // Close menu after navigating via the data-route link
+    accountLink.addEventListener('click', () => close());
+
+    wrap.appendChild(trigger);
+    wrap.appendChild(menu);
+    topbar.appendChild(wrap);
   } else {
     const demoTag = el('span', 'hero-badge', { textContent: '● Mode démo' });
     const loginLink = el('a', 'btn-primary', { href: '/auth/', textContent: 'Se connecter' });
