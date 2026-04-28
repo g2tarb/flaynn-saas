@@ -455,9 +455,10 @@
 
   /* Hero — respiration canvas / orbit, contenu au premier plan */
   /* ARCHITECT-PRIME: .nav-glass est position:fixed (hors flux). La section DOIT
-     porter le padding-top qui dégage le contenu sous la nav (~64px nav + 56px breathing = 120px). */
+     porter le padding-top qui dégage le contenu sous la nav. var(--space-12)=80px
+     couvre 4rem nav + 16px breathing ; + env(safe-area-inset-top) pour iPhone à notch. */
   .hero.section {
-    padding-top: calc(7.5rem + env(safe-area-inset-top));
+    padding-top: calc(var(--space-12) + env(safe-area-inset-top));
     padding-bottom: var(--space-10);
   }
 
@@ -1078,18 +1079,19 @@
     transition: width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo);
   }
 
-  /* ARCHITECT-PRIME: la nav landing utilise /logo.svg (lockup horizontal, ratio 4.23:1) —
-     piloter par hauteur pour préserver le wordmark + flame, sans truncature */
-  .nav-glass .logo-img {
-    width: auto;
-    height: 32px;
-    max-width: 180px;
+  /* ARCHITECT-PRIME: conflit de classes — .logo-img sert ailleurs pour /icons/logo.png
+     (carré, ~95×95) où width:56px est correct. Sur la nav landing on a /logo.svg
+     (lockup horizontal, ratio 4.23:1). Sélecteur profond pour gagner toute la cascade. */
+  header.nav-glass .logo-container .logo-img {
+    width: 180px;
+    height: 40px;
+    object-fit: contain;
+    max-width: 100%;
   }
 
   /* ARCHITECT-PRIME: .logo-container avait flex:1 (donc flex-shrink:1) → écrasé
-     par les flex siblings (nav-actions). On le sort du flex grow/shrink et on
-     garantit une largeur min suffisante pour afficher le lockup horizontal. */
-  .nav-glass .logo-container {
+     par les flex siblings (nav-actions). On le sort du flex grow/shrink. */
+  header.nav-glass .logo-container {
     flex: 0 0 auto;
     width: auto;
     min-width: 180px;
@@ -4444,10 +4446,12 @@
   }
 
   .logo-img { width: 48px; }
-  /* ARCHITECT-PRIME: nav landing — lockup horizontal pilote par hauteur (ratio 4.23:1) */
-  .nav-glass .logo-img { width: auto; height: 28px; max-width: 160px; }
-  /* ARCHITECT-PRIME: viewport mobile étroit ≥ 320px → min-width plus modeste */
-  .nav-glass .logo-container { min-width: 140px; }
+  /* ARCHITECT-PRIME: nav landing — sélecteur profond (cf. desktop), dimensions mobile */
+  header.nav-glass .logo-container .logo-img {
+    width: 140px;
+    height: 32px;
+  }
+  header.nav-glass .logo-container { min-width: 140px; }
 
   .nav-glass.is-scrolled { padding-top: 0; }
   .nav-glass.is-scrolled .nav-content { min-height: 3rem; }
@@ -4455,10 +4459,10 @@
     width: 22px; height: 22px;
     transition: all 0.3s var(--ease-out-expo);
   }
-  .nav-glass.is-scrolled .logo-img {
-    width: auto;
-    height: 22px;
-    max-width: 132px;
+  /* ARCHITECT-PRIME: même sélecteur profond pour battre la cascade des règles globales */
+  header.nav-glass.is-scrolled .logo-container .logo-img {
+    width: 130px;
+    height: 30px;
   }
   .nav-glass.is-scrolled .logo-text {
     font-size: 0.95rem;
@@ -4494,9 +4498,9 @@
   .section--process { padding: var(--space-8) 0; }
   .section-header { margin-bottom: var(--space-6); }
 
-  /* ARCHITECT-PRIME: section hero porte la clearance sous la nav fixed (~64px + 56px breathing) */
+  /* ARCHITECT-PRIME: section hero porte la clearance sous la nav fixed */
   .hero.section {
-    padding-top: calc(7.5rem + env(safe-area-inset-top));
+    padding-top: calc(var(--space-12) + env(safe-area-inset-top));
   }
 
   .hero-layout {
