@@ -77,6 +77,15 @@ function buildSnapshotFromScoreData(data) {
     forces: forces.slice(0, 3),
     challenges: challenges.slice(0, 3),
     pillars,
+    // ARCHITECT-PRIME: Delta 14 — capture additive des signaux V6.1 dans le snapshot.
+    // Snapshot pattern préservé : ces champs sont gravés au moment du publish initial,
+    // les cards publiées avant cette version conservent un snapshot SANS pillar_pct
+    // (fallback canonical max par pilier côté buildPillarsHtml). Pas de migration.
+    pillar_pct: (data?.pillar_pct && typeof data.pillar_pct === 'object') ? data.pillar_pct : null,
+    consensus_confidence: data?.consensus_confidence || data?.confidence_level || '',
+    benchmark_snapshot_date: data?.benchmark_snapshot_date || '',
+    benchmark_coverage: data?.benchmark_coverage || '',
+    flaynn_intelligence_version: data?.flaynn_intelligence_version || '',
     confidence_level: data?.confidence_level || '',
     methodology_version: data?.methodology_version || '',
     scored_at: data?.generated_at || null
@@ -132,7 +141,17 @@ const PILLAR_LABELS_FR = {
   team: 'Équipe',
   execution_ask: 'Exécution'
 };
+// PILLAR_MAX (legacy uniforme) conservé pour rétrocompat. Delta 14 introduit
+// CANONICAL_PILLAR_MAX par pilier — corrige le bug S1 où Execution s'affichait
+// à 40% (8/20) au lieu de 80% (8/10). Le snapshot pre-Delta-14 utilise ce fallback.
 const PILLAR_MAX = 20;
+const CANONICAL_PILLAR_MAX = {
+  market: 25,
+  solution_product: 20,
+  traction: 25,
+  team: 20,
+  execution_ask: 10,
+};
 
 function verdictClass(verdict) {
   if (!verdict) return '';
@@ -144,22 +163,34 @@ function verdictClass(verdict) {
     .replace(/^-|-$/g, '');
 }
 
-function buildPillarsHtml(pillars) {
+function buildPillarsHtml(pillars, pillar_pct) {
   if (!pillars || typeof pillars !== 'object') return '';
   const items = PILLAR_ORDER.map((key) => {
     const raw = Number(pillars[key] ?? 0);
     const score = Number.isFinite(raw) ? raw : 0;
-    // Barres normalisées sur PILLAR_MAX (20) par convention Flaynn. Clamp [0,100]%.
-    const pct = Math.max(0, Math.min(100, (score / PILLAR_MAX) * 100));
+    const canonMax = CANONICAL_PILLAR_MAX[key] || PILLAR_MAX;
+
+    // ARCHITECT-PRIME: Delta 14 — Cascade pillar_pct (fix S1).
+    // 1) V6.1+ : pct stocké directement dans le snapshot (vraie %) → utilisé en priorité.
+    // 2) Legacy (cards publiées pré-Delta-14, snapshot sans pillar_pct) :
+    //    fallback score / canonMax (par pilier, plus uniformément /20) — moins faux.
+    let pct;
+    if (pillar_pct && typeof pillar_pct[key] === 'number' && Number.isFinite(pillar_pct[key])) {
+      pct = Math.max(0, Math.min(100, pillar_pct[key]));
+    } else {
+      pct = Math.max(0, Math.min(100, (score / canonMax) * 100));
+    }
+
     const label = PILLAR_LABELS_FR[key];
+    const pctRounded = Math.round(pct);
     return `
       <li class="score-card__pillar">
         <div class="score-card__pillar-head">
           <span class="score-card__pillar-name">${escapeHtml(label)}</span>
-          <span class="score-card__pillar-score">${score}<span class="score-card__pillar-max">/${PILLAR_MAX}</span></span>
+          <span class="score-card__pillar-score">${score}<span class="score-card__pillar-max">/${canonMax}</span></span>
         </div>
-        <div class="score-card__pillar-bar" role="progressbar" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="${PILLAR_MAX}" aria-label="${escapeHtml(label)}">
-          <div class="score-card__pillar-fill" data-target="${pct.toFixed(0)}" style="width:${pct.toFixed(1)}%"></div>
+        <div class="score-card__pillar-bar" role="progressbar" aria-valuenow="${score}" aria-valuemin="0" aria-valuemax="${canonMax}" aria-label="${escapeHtml(label)} : ${pctRounded}%">
+          <div class="score-card__pillar-fill" data-target="${pctRounded}" style="width:${pct.toFixed(1)}%"></div>
         </div>
       </li>`;
   }).join('');
@@ -220,15 +251,19 @@ function renderUnpublishedPage() {
 
 function renderCardPage(card) {
   const baseUrl = getPublicBaseUrl();
-  const baJoinUrl = getBaJoinUrl();
   const snapshot = card.snapshot_data || {};
 
   const startupName = card.startup_name || 'Startup';
   const score = Number(snapshot.score) || 0;
   const verdict = snapshot.verdict || '';
   const sector = snapshot.sector || 'Startup';
+  const stage = snapshot.stage || '';
   const track = snapshot.track || '';
-  const methodology = snapshot.methodology_version || '';
+  const trackReason = snapshot.track_reason || '';
+  const methodology = snapshot.methodology_version || snapshot.flaynn_intelligence_version || '';
+  const consensus = snapshot.consensus_confidence || snapshot.confidence_level || '';
+  const benchmarkCoverage = snapshot.benchmark_coverage || '';
+  const benchmarkSnapshotDate = snapshot.benchmark_snapshot_date || '';
   const scoredAtIso = snapshot.scored_at || card.created_at;
   const scoredAtFr = formatFrDate(scoredAtIso);
 
@@ -258,16 +293,38 @@ function renderCardPage(card) {
     ? `<ol class="score-card__list">${challenges.map((c) => `<li>${escapeHtml(c)}</li>`).join('')}</ol>`
     : '<p class="score-card__empty">Aucune zone listée.</p>';
 
-  const metaLine = [sector, track, scoredAtFr ? `Scoré le ${scoredAtFr}` : '']
+  // ARCHITECT-PRIME: Delta 14 — meta enrichie avec stage (était absent), ordre canonique.
+  const metaLine = [sector, stage, track, scoredAtFr ? `Scoré le ${scoredAtFr}` : '']
     .filter(Boolean)
     .map(escapeHtml)
     .join(' · ');
 
-  const pillarsHtml = buildPillarsHtml(snapshot.pillars);
+  const pillarsHtml = buildPillarsHtml(snapshot.pillars, snapshot.pillar_pct);
   const shareUrls = buildShareUrls(pageUrl, title);
   const verdictCssClass = verdictClass(verdict);
   const methodologyUrl = '/#pillars';
   const founderSignupUrl = '/#scoring';
+
+  // Trust block enrichi (Delta 14) : méthodologie + consensus IA + benchmark coverage.
+  // Skipée si AUCUN signal présent (cards pré-V6.1) → ne pas afficher de carte vide.
+  const consensusLabels = {
+    high:   "Consensus IA solide",
+    medium: "Consensus IA partiel",
+    low:    "Consensus IA divisé",
+  };
+  const benchmarkLabels = {
+    high:   "Couverture solide",
+    medium: "Couverture partielle",
+    low:    "Couverture limitée",
+  };
+  const consensusFr = consensus ? (consensusLabels[String(consensus).toLowerCase()] || `Consensus ${consensus}`) : '';
+  const benchmarkFr = benchmarkCoverage ? (benchmarkLabels[String(benchmarkCoverage).toLowerCase()] || `Benchmark ${benchmarkCoverage}`) : '';
+  const benchmarkDateFr = benchmarkSnapshotDate ? formatFrDate(benchmarkSnapshotDate) : '';
+  const trustChips = [consensusFr, benchmarkFr, benchmarkDateFr ? `Snapshot ${benchmarkDateFr}` : '']
+    .filter(Boolean)
+    .map((t) => `<span class="score-card__trust-chip">${escapeHtml(t)}</span>`)
+    .join('');
+  const hasTrustSignals = !!(methodology || consensusFr || benchmarkFr || benchmarkDateFr);
 
   // ARCHITECT-PRIME — Delta 9 J4 : JSON-LD structured data pour SEO (Article +
   // Review embeddé). Stable pour une card donnée : tous les champs proviennent
@@ -368,6 +425,7 @@ ${robotsTag}
   <section class="score-card__hero">
     ${metaLine ? `<p class="score-card__meta">${metaLine}</p>` : ''}
     <h1 class="score-card__title">${escapeHtml(startupName)}</h1>
+    ${trackReason ? `<p class="score-card__track-reason">${escapeHtml(trackReason)}</p>` : ''}
     <div class="score-card__score">
       <span class="score-card__score-label">Flaynn Score</span>
       <span class="score-card__score-value">${score}</span>
@@ -387,14 +445,23 @@ ${robotsTag}
     ${challengesHtml}
   </section>
 
+  ${hasTrustSignals ? `
+  <section class="score-card__trust" aria-labelledby="trust-title">
+    <h2 class="score-card__trust-title" id="trust-title">
+      Méthodologie Flaynn Intelligence${methodology ? ` <span class="score-card__trust-version">${escapeHtml(methodology)}</span>` : ''}
+    </h2>
+    ${trustChips ? `<div class="score-card__trust-chips">${trustChips}</div>` : ''}
+    <a class="score-card__trust-link" href="${escapeHtml(methodologyUrl)}">Comprendre la méthodologie →</a>
+  </section>
+  ` : `
   <section class="score-card__methodology">
-    <span class="score-card__badge"><span class="score-card__badge-dot" aria-hidden="true"></span>${methodology ? `Validé par l'analyste Flaynn · Méthodologie ${escapeHtml(methodology)}` : "Validé par l'analyste Flaynn"}</span>
+    <span class="score-card__badge"><span class="score-card__badge-dot" aria-hidden="true"></span>Validé par l'analyste Flaynn</span>
     <a class="score-card__methodology-link" href="${escapeHtml(methodologyUrl)}">Comprendre la méthodologie →</a>
   </section>
+  `}
 
   <section class="score-card__ctas">
     <a class="score-card__cta score-card__cta--primary" href="${escapeHtml(founderSignupUrl)}">Obtenir votre scoring · 29€</a>
-    <a class="score-card__cta score-card__cta--secondary" href="${escapeHtml(baJoinUrl)}">Vous êtes investisseur ? Rejoindre Flaynn →</a>
   </section>
 
   <footer class="score-card__footer">
@@ -403,7 +470,7 @@ ${robotsTag}
       <a class="score-card__share-btn" href="${escapeHtml(shareUrls.linkedin)}" target="_blank" rel="noopener">Partager sur LinkedIn</a>
       <a class="score-card__share-btn" href="${escapeHtml(shareUrls.x)}" target="_blank" rel="noopener">Partager sur X</a>
     </div>
-    <p class="score-card__signature">Flaynn · Infrastructure du capital sélectif francophone</p>
+    <p class="score-card__signature">Powered by Flaynn — scoring objectif de startups francophones</p>
   </footer>
 </main>
 <script src="/js/starfield.js" defer></script>
