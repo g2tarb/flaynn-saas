@@ -454,10 +454,10 @@
   }
 
   /* Hero — respiration canvas / orbit, contenu au premier plan */
-  /* ARCHITECT-PRIME: top-padding piloté uniquement par .hero-layout pour éviter
-     l'empilement section padding-top + hero-layout padding-top */
+  /* ARCHITECT-PRIME: .nav-glass est position:fixed (hors flux). La section DOIT
+     porter le padding-top qui dégage le contenu sous la nav (~64px nav + 56px breathing = 120px). */
   .hero.section {
-    padding-top: 0;
+    padding-top: calc(7.5rem + env(safe-area-inset-top));
     padding-bottom: var(--space-10);
   }
 
@@ -466,11 +466,10 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 80px;
     /* ARCHITECT-PRIME: start (et non center) — le min-height + centrage poussait
-       le H1 ~115px plus bas que la nav. Le contenu commence directement sous la nav. */
+       le H1 ~115px plus bas que prévu. Section gère déjà la clearance nav. */
     align-items: start;
     min-height: min(80vh, 780px);
-    /* nav-content min-height = 4rem ; +1.5rem de respiration = 5.5rem */
-    padding-top: calc(5.5rem + env(safe-area-inset-top));
+    padding-top: 0;
     padding-bottom: var(--space-6);
     position: relative;
     isolation: isolate;
@@ -1085,6 +1084,15 @@
     width: auto;
     height: 32px;
     max-width: 180px;
+  }
+
+  /* ARCHITECT-PRIME: .logo-container avait flex:1 (donc flex-shrink:1) → écrasé
+     par les flex siblings (nav-actions). On le sort du flex grow/shrink et on
+     garantit une largeur min suffisante pour afficher le lockup horizontal. */
+  .nav-glass .logo-container {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 180px;
   }
 
   .nav-links-desktop {
@@ -4438,6 +4446,8 @@
   .logo-img { width: 48px; }
   /* ARCHITECT-PRIME: nav landing — lockup horizontal pilote par hauteur (ratio 4.23:1) */
   .nav-glass .logo-img { width: auto; height: 28px; max-width: 160px; }
+  /* ARCHITECT-PRIME: viewport mobile étroit ≥ 320px → min-width plus modeste */
+  .nav-glass .logo-container { min-width: 140px; }
 
   .nav-glass.is-scrolled { padding-top: 0; }
   .nav-glass.is-scrolled .nav-content { min-height: 3rem; }
@@ -4484,12 +4494,16 @@
   .section--process { padding: var(--space-8) 0; }
   .section-header { margin-bottom: var(--space-6); }
 
+  /* ARCHITECT-PRIME: section hero porte la clearance sous la nav fixed (~64px + 56px breathing) */
+  .hero.section {
+    padding-top: calc(7.5rem + env(safe-area-inset-top));
+  }
+
   .hero-layout {
     min-height: auto;
     grid-template-columns: 1fr;
     gap: var(--space-4);
-    /* ARCHITECT-PRIME: nav mobile ≈ 4rem + 2rem breathing = 6rem (au lieu de 8rem qui ajoutait ~32px de vide superflu) */
-    padding-top: calc(6rem + env(safe-area-inset-top));
+    padding-top: 0;
     padding-bottom: var(--space-4);
     text-align: center;
   }
