@@ -1,0 +1,157 @@
+.pillars-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  height: 100%;
+  min-width: 0;
+}
+
+.pillars-scroll {
+  overflow-x: auto;
+  margin: 0 calc(var(--sp-5) * -1);
+  padding: 0 var(--sp-5);
+}
+
+.pillars {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--fs-sm);
+}
+
+.pillars__th {
+  text-align: left;
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  font-weight: 600;
+  padding: var(--sp-3) var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.pillars__th--num { text-align: right; }
+
+.pillars__row { transition: background var(--dur-fast) var(--ease-out); }
+.pillars__row:hover { background: var(--bg-surface-2); }
+
+.pillars__td {
+  padding: var(--sp-4) var(--sp-3);
+  color: var(--text-1);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.pillars__td--num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+}
+.pillars__row:last-child .pillars__td { border-bottom: 0; }
+
+.pillars__pillar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-weight: 500;
+}
+.pillars__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-secondary-soft);
+  color: var(--accent-secondary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.pillars__icon--market    { background: rgba(232, 101, 26, 0.12);  color: #E8651A; }
+.pillars__icon--product   { background: rgba(123, 45, 142, 0.18);   color: #7B2D8E; }
+.pillars__icon--traction  { background: rgba(16, 185, 129, 0.12);   color: #10b981; }
+.pillars__icon--team      { background: rgba(245, 158, 11, 0.12);   color: #f59e0b; }
+.pillars__icon--execution { background: rgba(59, 130, 246, 0.12);   color: #3b82f6; }
+.pillars__icon svg { width: 18px; height: 18px; }
+
+.pillars__score-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+  font-weight: 600;
+}
+.pillars__score-track {
+  width: 60px;
+  height: 6px;
+  background: var(--bg-surface-3);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pillars__score-fill {
+  height: 100%;
+  width: var(--w, 0%);
+  background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+  border-radius: var(--radius-pill);
+}
+
+.pillars__evol {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.pillars__evol--up   { background: var(--accent-success-soft); color: var(--accent-success); }
+.pillars__evol--down { background: var(--accent-danger-soft);  color: var(--accent-danger); }
+.pillars__evol-icon  { width: 10px; height: 10px; }
+
+.pillars__confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pillars__confidence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.pillars__confidence--high   { color: var(--accent-success); }
+.pillars__confidence--high   .pillars__confidence-dot { background: var(--accent-success); }
+.pillars__confidence--medium { color: var(--accent-amber); }
+.pillars__confidence--medium .pillars__confidence-dot { background: var(--accent-amber); }
+.pillars__confidence--low    { color: var(--accent-danger); }
+.pillars__confidence--low    .pillars__confidence-dot { background: var(--accent-danger); }
+
+.pillars__bench {
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+}
+.pillars__bench-delta {
+  margin-left: 6px;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.pillars__skeleton-row td {
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.pillars__skeleton-cell {
+  height: 18px;
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .pillars__th, .pillars__td { padding: var(--sp-2) var(--sp-2); }
+  .pillars__icon { width: 28px; height: 28px; }
+  .pillars__score-track { width: 40px; }
+}

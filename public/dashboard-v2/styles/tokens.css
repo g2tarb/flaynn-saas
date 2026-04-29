@@ -1,0 +1,89 @@
+/* Tokens dashboard-v2 — alignés sur la charte Flaynn (violet/rose + IBM Plex). */
+
+:root {
+  /* Surfaces — Flaynn dark stack */
+  --bg-page:      #05060a;
+  --bg-surface-1: #0a0d14;
+  --bg-surface-2: #0f1219;
+  --bg-surface-3: #14181f;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-medium: rgba(255, 255, 255, 0.08);
+
+  /* Accents Flaynn */
+  --accent-primary:        #E8651A;            /* rose-orange Flaynn */
+  --accent-primary-soft:   rgba(232, 101, 26, 0.15);
+  --accent-secondary:      #7B2D8E;            /* violet signature */
+  --accent-secondary-soft: rgba(123, 45, 142, 0.18);
+  --accent-success:        #10b981;            /* emerald */
+  --accent-success-soft:   rgba(16, 185, 129, 0.15);
+  --accent-danger:         #E8651A;
+  --accent-danger-soft:    rgba(232, 101, 26, 0.15);
+  --accent-amber:          #f59e0b;
+  --accent-blue:           #3b82f6;
+
+  /* Heatmap (vues card publique) — gradient violet → rose */
+  --heat-0: #0f1219;
+  --heat-1: #2a1530;
+  --heat-2: #4a1f4f;
+  --heat-3: #7B2D8E;
+  --heat-4: #E8651A;
+
+  /* Texte */
+  --text-1: #f0f0f3;   /* primary */
+  --text-2: #8b8fa3;   /* secondary */
+  --text-3: #787d8c;   /* tertiary */
+
+  /* Radii */
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+
+  /* Spacing */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+
+  /* Motion (alias Flaynn) */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+
+  /* Type scale */
+  --fs-xs:   11px;
+  --fs-sm:   13px;
+  --fs-base: 14px;
+  --fs-md:   16px;
+  --fs-lg:   20px;
+  --fs-xl:   28px;
+  --fs-2xl:  34px;
+
+  /* Layout */
+  --sidebar-w:   260px;
+  --topbar-h:    72px;
+  --content-max: 1440px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 40px rgba(123, 45, 142, 0.12);
+
+  /* Focus */
+  --focus-ring: 0 0 0 2px var(--bg-page), 0 0 0 4px var(--accent-primary);
+
+  /* Fonts */
+  --font-ui:   'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+}

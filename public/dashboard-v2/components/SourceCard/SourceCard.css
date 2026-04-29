@@ -1,0 +1,89 @@
+.sources {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  height: 100%;
+}
+
+.sources__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 1fr;
+  gap: var(--sp-3);
+}
+
+.source-card {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  transition: border-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+.source-card:hover {
+  border-color: var(--border-medium);
+  transform: translateY(-2px);
+}
+
+.source-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.source-card__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--bg-surface-3);
+  color: var(--accent-primary);
+}
+.source-card__icon--linkedin { color: #0a66c2; background: rgba(10, 102, 194, 0.12); }
+.source-card__icon--twitter  { color: #f0f0f3; background: rgba(255, 255, 255, 0.06); }
+.source-card__icon--direct   { color: var(--accent-secondary); background: var(--accent-secondary-soft); }
+.source-card__icon--email    { color: var(--accent-amber);    background: rgba(245, 158, 11, 0.12); }
+.source-card__icon--google   { color: #4285f4;                 background: rgba(66, 133, 244, 0.12); }
+.source-card__icon--other    { color: var(--text-2);           background: var(--bg-surface-3); }
+
+.source-card__icon svg { width: 18px; height: 18px; }
+
+.source-card__name {
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.source-card__value {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+.source-card__label {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.sources__skeleton-card {
+  height: 96px;
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: 1023px) {
+  .sources__grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 767px) {
+  .sources__grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .sources__grid { grid-template-columns: 1fr; }
+}

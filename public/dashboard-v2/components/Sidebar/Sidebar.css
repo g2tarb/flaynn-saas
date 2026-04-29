@@ -1,0 +1,105 @@
+.sidebar {
+  height: 100%;
+  background: var(--bg-page);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-5) var(--sp-4);
+  gap: var(--sp-6);
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+}
+.sidebar__logo {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-primary-soft);
+  display: grid;
+  place-items: center;
+}
+.sidebar__brand-name {
+  font-size: var(--fs-md);
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.sidebar__section-title {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  padding: 0 var(--sp-3);
+  margin-bottom: var(--sp-2);
+  font-weight: 600;
+}
+
+.sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--radius-md);
+  color: var(--text-2);
+  font-size: var(--fs-base);
+  font-weight: 500;
+  transition: background var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+  width: 100%;
+  text-align: left;
+}
+.sidebar__item:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-1);
+}
+.sidebar__item--active {
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
+}
+.sidebar__item--active:hover {
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
+}
+
+.sidebar__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Tablette : icônes seules */
+@media (max-width: 1023px) {
+  .sidebar { padding: var(--sp-4) var(--sp-2); align-items: center; }
+  .sidebar__brand-name,
+  .sidebar__section-title,
+  .sidebar__label { display: none; }
+  .sidebar__item { justify-content: center; padding: var(--sp-3); }
+}

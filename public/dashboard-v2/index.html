@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Flaynn — Dashboard fondateur</title>
+  <meta name="description" content="Suivez votre score Flaynn, vos vues publiques et vos demandes d'intro investisseurs." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+
+  <link rel="stylesheet" href="./styles/tokens.css" />
+  <link rel="stylesheet" href="./styles/base.css" />
+  <link rel="stylesheet" href="./styles/layout.css" />
+  <link rel="stylesheet" href="./components/Sidebar/Sidebar.css" />
+  <link rel="stylesheet" href="./components/TopBar/TopBar.css" />
+  <link rel="stylesheet" href="./components/KpiCard/KpiCard.css" />
+  <link rel="stylesheet" href="./components/HeatmapChart/HeatmapChart.css" />
+  <link rel="stylesheet" href="./components/LineChart/LineChart.css" />
+  <link rel="stylesheet" href="./components/SourceCard/SourceCard.css" />
+  <link rel="stylesheet" href="./components/PillarsTable/PillarsTable.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Aller au contenu</a>
+
+  <div class="app" id="app">
+    <aside class="app__sidebar" id="sidebar-root" aria-label="Navigation principale"></aside>
+    <header class="app__topbar" id="topbar-root" role="banner"></header>
+
+    <nav class="bottomnav" aria-label="Navigation mobile">
+      <button type="button" class="bottomnav__item bottomnav__item--active" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="bottomnav__icon">
+          <path d="M3 12 12 4l9 8M5 10v10h5v-6h4v6h5V10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="bottomnav__label">Dashboard</span>
+      </button>
+      <button type="button" class="bottomnav__item">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="bottomnav__icon">
+          <path d="M12 2 L3 7 v10 l9 5 9-5 V7 z M12 12 V22 M3 7 l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="bottomnav__label">Scorings</span>
+      </button>
+      <button type="button" class="bottomnav__item">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="bottomnav__icon">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m13-11a4 4 0 1 1 0 8m6 3v-2a4 4 0 0 0-3-3.87M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="bottomnav__label">Investisseurs</span>
+      </button>
+    </nav>
+
+    <main class="app__main main" id="main" role="main">
+      <section class="main__kpis" id="kpis-root" aria-label="Indicateurs clés" aria-live="polite" aria-busy="true"></section>
+
+      <section class="main__row-charts">
+        <article class="card" id="heatmap-root" aria-label="Vues publiques par jour et plage horaire" aria-live="polite" aria-busy="true"></article>
+        <article class="card" id="linechart-root" aria-label="Évolution du trafic et des demandes BA" aria-live="polite" aria-busy="true"></article>
+      </section>
+
+      <section class="main__row-bottom">
+        <article class="card" id="sources-root" aria-label="Sources de trafic" aria-live="polite" aria-busy="true"></article>
+        <article class="card" id="pillars-root" aria-label="Détail des piliers du score Flaynn" aria-live="polite" aria-busy="true"></article>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

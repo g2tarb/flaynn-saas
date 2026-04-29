@@ -1,0 +1,143 @@
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-rows: var(--topbar-h) 1fr;
+  grid-template-areas:
+    "sidebar topbar"
+    "sidebar main";
+  min-height: 100vh;
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.app__sidebar { grid-area: sidebar; }
+.app__topbar  { grid-area: topbar;  }
+.app__main    { grid-area: main; min-width: 0; }
+
+/* Bottom nav (mobile only) */
+.bottomnav {
+  display: none;
+  grid-area: bottomnav;
+  background: var(--bg-page);
+  border-top: 1px solid var(--border-subtle);
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 var(--sp-2);
+}
+.bottomnav__item {
+  flex: 1;
+  height: 64px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: color var(--dur-fast) var(--ease-out),
+              background var(--dur-fast) var(--ease-out);
+}
+.bottomnav__item:hover { color: var(--text-1); background: var(--bg-surface-2); }
+.bottomnav__item--active { color: var(--accent-primary); }
+.bottomnav__icon { width: 22px; height: 22px; }
+
+/* Card — conteneur partagé sections principales */
+.card {
+  background: var(--bg-surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.card__title {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-1);
+  letter-spacing: -0.01em;
+}
+.card__action {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  font-weight: 500;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.card__action:hover { color: var(--accent-primary); }
+
+.main {
+  padding: var(--sp-6);
+  display: grid;
+  gap: var(--sp-6);
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "kpis"
+    "row-charts"
+    "row-bottom";
+  align-content: start;
+}
+
+.main__kpis {
+  grid-area: kpis;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-4);
+}
+
+.main__row-charts {
+  grid-area: row-charts;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: var(--sp-6);
+  min-width: 0;
+}
+
+.main__row-bottom {
+  grid-area: row-bottom;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: var(--sp-6);
+  min-width: 0;
+}
+
+/* Tablette : sidebar collapse en icônes, KPI 2x2, charts stack */
+@media (max-width: 1023px) {
+  .app {
+    grid-template-columns: 80px 1fr;
+  }
+  .main__kpis { grid-template-columns: repeat(2, 1fr); }
+  .main__row-charts,
+  .main__row-bottom { grid-template-columns: 1fr; }
+}
+
+/* Mobile : sidebar disparait, bottom nav */
+@media (max-width: 767px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--topbar-h) 1fr 64px;
+    grid-template-areas:
+      "topbar"
+      "main"
+      "bottomnav";
+  }
+  .app__sidebar { display: none; }
+  .bottomnav    { display: flex; }
+  .main { padding: var(--sp-4); padding-bottom: calc(var(--sp-4) + 64px); }
+  .main__kpis { grid-template-columns: 1fr; }
+}
+
+/* Mobile XS */
+@media (max-width: 480px) {
+  .main { padding: var(--sp-3); padding-bottom: calc(var(--sp-3) + 64px); gap: var(--sp-4); }
+}
