@@ -57,10 +57,12 @@ function adaptN8nToDashboard(raw, startupName, referenceId, createdAt, previousD
 
   // Verdict → level
   const verdictLabels = {
-    'Ready':   'Investissable',
-    'Almost':  'Potentiel Élevé',
-    'Not yet': 'Prématuré',
-  };
+  'Strong Yes': 'Investissable — Priorité',
+  'Yes':        'Investissable',
+  'Ready':      'Investissable',
+  'Almost':     'Potentiel Élevé',
+  'Not yet':    'Prématuré',
+};
   const actionLabels = {
     high_priority: 'Priorité Haute',
     meeting:       'Meeting Programmé',
