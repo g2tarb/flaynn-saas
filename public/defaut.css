@@ -1111,10 +1111,10 @@
 
   /* ARCHITECT-PRIME Delta 15 — Isolation landing vs dashboard.
      Landing  → /logo.svg (lockup horizontal, ratio 4.23:1) → 180×40
-     Dashboard → /icons/logo.png (carré ~95×95) → height-only 36px
+     Dashboard → /favicon.svg (icône-aile verticale) → height-only 36px
 
      Le scope body:not(.dashboard-body) empêche les règles landing
-     d'écraser le logo carré du dashboard (qui était déformé en 180×40). */
+     d'écraser l'icône du dashboard (qui était déformée en 180×40). */
 
   /* Logo Landing (Horizontal) */
   body:not(.dashboard-body) header.nav-glass .logo-container .logo-img {
@@ -3165,7 +3165,9 @@
     padding: 0;
     margin: 0;
   }
-  .footer-logo .logo-img { width: 32px; }
+  /* ARCHITECT-PRIME: footer landing utilise /logo.svg (lockup horizontal 4.23:1).
+     height + width:auto pour préserver le ratio sans écraser le SVG. */
+  .footer-logo .logo-img { height: 28px; width: auto; }
 
   .footer-tagline {
     font-size: 0.875rem;
