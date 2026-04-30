@@ -1099,42 +1099,20 @@
 
   .logo-text { letter-spacing: -0.02em; }
 
-  /* ARCHITECT-PRIME: contraint le logo PNG dans la nav — l'attribut HTML width/height
-     sert de ratio hint, le CSS pilote la taille réelle */
+  /* ARCHITECT-PRIME: SVG vectoriel — height pilote la taille, width:auto suit le ratio intrinsèque. */
   .logo-img {
-    width: 56px;
-    height: auto;
+    height: 32px;
+    width: auto;
     object-fit: contain;
     display: block;
-    transition: width 0.3s var(--ease-out-expo), height 0.3s var(--ease-out-expo);
   }
 
-  /* ARCHITECT-PRIME Delta 15 — Isolation landing vs dashboard.
-     Landing  → /logo.svg (lockup horizontal, ratio 4.23:1) → 180×40
-     Dashboard → /favicon.svg (icône-aile verticale) → height-only 36px
-
-     Le scope body:not(.dashboard-body) empêche les règles landing
-     d'écraser l'icône du dashboard (qui était déformée en 180×40). */
-
-  /* Logo Landing (Horizontal) */
-  body:not(.dashboard-body) header.nav-glass .logo-container .logo-img {
-    width: 180px;
-    height: 40px;
-    object-fit: contain;
-  }
   body:not(.dashboard-body) header.nav-glass .logo-container {
     flex: 0 0 auto;
     width: auto;
     min-width: max-content;
     margin: 0;
     padding: 0;
-  }
-
-  /* Logo Dashboard (Carré) */
-  .dashboard-body header.nav-glass .logo-container .logo-img {
-    width: auto;
-    height: 36px;
-    object-fit: contain;
   }
 
   .nav-links-desktop {
@@ -3165,9 +3143,7 @@
     padding: 0;
     margin: 0;
   }
-  /* ARCHITECT-PRIME: footer landing utilise /logo.svg (lockup horizontal 4.23:1).
-     height + width:auto pour préserver le ratio sans écraser le SVG. */
-  .footer-logo .logo-img { height: 28px; width: auto; }
+  .footer-logo .logo-img { height: 24px; width: auto; }
 
   .footer-tagline {
     font-size: 0.875rem;
@@ -4487,27 +4463,13 @@
     transition: padding 0.3s var(--ease-out-expo), border-color 0.3s ease;
   }
 
-  .logo-img { width: 48px; }
-  /* ARCHITECT-PRIME Delta 15 — landing only (le dashboard garde son
-     logo carré height:36px du bloc desktop, pas de surcharge mobile). */
-  body:not(.dashboard-body) header.nav-glass .logo-container .logo-img {
-    width: 140px;
-    height: 32px;
-  }
-  body:not(.dashboard-body) header.nav-glass .logo-container { min-width: 140px; }
+  body:not(.dashboard-body) header.nav-glass .logo-container { min-width: max-content; }
 
   .nav-glass.is-scrolled { padding-top: 0; }
   .nav-glass.is-scrolled .nav-content { min-height: 3rem; }
   .nav-glass.is-scrolled .logo-container svg {
     width: 22px; height: 22px;
     transition: all 0.3s var(--ease-out-expo);
-  }
-  /* ARCHITECT-PRIME Delta 15 — is-scrolled n'existe que sur la landing,
-     mais on scope explicitement pour aligner sur le pattern des autres
-     règles logo (cohérence + zéro chance de fuite vers le dashboard). */
-  body:not(.dashboard-body) header.nav-glass.is-scrolled .logo-container .logo-img {
-    width: 130px;
-    height: 30px;
   }
   .nav-glass.is-scrolled .logo-text {
     font-size: 0.95rem;
@@ -4968,36 +4930,4 @@
     color: var(--text-secondary);
     font-size: 0.8125rem;
   }
-}
-
-/* ==========================================================================
-   ARCHITECT-PRIME — SVG LOGO HARD-OVERRIDE (hors @layer)
-   --------------------------------------------------------------------------
-   Override d'urgence demandé par l'utilisateur pour résoudre un débordement
-   visuel post-migration PNG → SVG (logos géants + bords coupés).
-   Bloc unlayered → bat tous les @layer. !important justifié sur ce périmètre
-   restreint pour cap dur des dimensions, malgré §4.1 de CLAUDE.md.
-   ========================================================================== */
-
-header .logo-img,
-.nav-glass .logo-img {
-  max-height: 32px !important;
-  width: auto !important;
-  height: auto !important;
-  object-fit: contain !important;
-  margin: 0;
-}
-
-.footer-logo .logo-img {
-  max-height: 24px !important;
-  width: auto !important;
-  height: auto !important;
-  object-fit: contain !important;
-}
-
-.auth-wrap .logo-img {
-  max-height: 60px !important;
-  width: auto !important;
-  height: auto !important;
-  object-fit: contain !important;
 }

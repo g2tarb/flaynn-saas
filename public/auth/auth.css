@@ -50,10 +50,7 @@
 
 .auth-wrap .logo-container a:hover { opacity: 0.85; }
 
-/* ARCHITECT-PRIME: logo plus grand en contexte branding auth (pas dans la nav).
-   SVG vectoriel /favicon.svg (ratio 0.46:1 vertical) → on pilote la hauteur,
-   width: auto évite l'écrasement vertical d'un SVG sans dimensions intrinsèques. */
-.auth-wrap .logo-img { height: 72px; width: auto; }
+.auth-wrap .logo-img { height: 60px; width: auto; }
 
 /* ── Card ── */
 .auth-card {
